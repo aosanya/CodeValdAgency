@@ -22,7 +22,7 @@ The MVP delivers:
 
 | Task ID | Title | Status | Depends On |
 |---|---|---|---|
-| MVP-AGENCY-001 | Library Scaffolding & Agency Model | � In Progress | — |
+| MVP-AGENCY-001 | Library Scaffolding & Agency Model | ✅ Done | — |
 | MVP-AGENCY-002 | ArangoDB Backend | 🔲 Not Started | MVP-AGENCY-001 |
 | MVP-AGENCY-003 | gRPC Service (AgencyService) | 🔲 Not Started | MVP-AGENCY-001 |
 | MVP-AGENCY-004 | CodeValdCross Registration | 🔲 Not Started | MVP-AGENCY-003 |

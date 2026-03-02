@@ -25,7 +25,7 @@ The MVP delivers:
 | MVP-AGENCY-001 | Library Scaffolding & Agency Model | ✅ Done | — |
 | MVP-AGENCY-002 | ArangoDB Backend | ✅ Done | MVP-AGENCY-001 |
 | MVP-AGENCY-003 | gRPC Service (AgencyService) | ✅ Done | MVP-AGENCY-001 |
-| MVP-AGENCY-004 | CodeValdCross Registration | 🔲 Not Started | MVP-AGENCY-003 |
+| MVP-AGENCY-004 | CodeValdCross Registration | ✅ Done | MVP-AGENCY-003 |
 | MVP-AGENCY-005 | Unit & Integration Tests | 🔲 Not Started | MVP-AGENCY-001, MVP-AGENCY-002 |
 | MVP-AGENCY-006 | Service-Driven Route Registration | 🔲 Not Started | MVP-AGENCY-003, CROSS-007 |
 

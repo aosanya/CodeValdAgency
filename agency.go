@@ -79,28 +79,71 @@ type Backend interface {
 	InsertSnapshot(ctx context.Context, snapshot AgencySnapshot) error
 }
 
+// CrossPublisher publishes agency lifecycle events to CodeValdCross.
+// Implementations must be safe for concurrent use. A nil CrossPublisher is
+// valid — publish calls are silently skipped.
+type CrossPublisher interface {
+	// Publish delivers an event for the given topic and agencyID to
+	// CodeValdCross. Errors are non-fatal: implementations should log and
+	// return nil for best-effort delivery.
+	Publish(ctx context.Context, topic string, agencyID string) error
+}
+
+// AgencyManagerOption is a functional option for [NewAgencyManager].
+type AgencyManagerOption func(*agencyManager)
+
+// WithPublisher attaches a [CrossPublisher] to the [AgencyManager].
+// When provided, [AgencyManager.CreateAgency] calls Publish with
+// "cross.agency.created" after every successful insert.
+func WithPublisher(p CrossPublisher) AgencyManagerOption {
+	return func(m *agencyManager) {
+		m.publisher = p
+	}
+}
+
 // agencyManager is the concrete implementation of [AgencyManager].
 // It delegates all storage operations to the injected [Backend].
 type agencyManager struct {
-	backend Backend
+	backend   Backend
+	publisher CrossPublisher // optional; nil = skip event publishing
 }
 
 // NewAgencyManager constructs an [AgencyManager] backed by the given [Backend].
 // Use storage/arangodb.NewBackend to obtain a Backend, then pass it here.
+// Pass [WithPublisher] to enable cross-service event publishing.
 // Returns an error if b is nil.
-func NewAgencyManager(b Backend) (AgencyManager, error) {
+func NewAgencyManager(b Backend, opts ...AgencyManagerOption) (AgencyManager, error) {
 	if b == nil {
 		return nil, fmt.Errorf("NewAgencyManager: backend must not be nil")
 	}
-	return &agencyManager{backend: b}, nil
+	m := &agencyManager{backend: b}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m, nil
 }
 
 // CreateAgency validates the request and delegates to [Backend.Insert].
+// On success it publishes a "cross.agency.created" event via the injected
+// [CrossPublisher] (if one was provided via [WithPublisher]).
 func (m *agencyManager) CreateAgency(ctx context.Context, req CreateAgencyRequest) (Agency, error) {
 	if req.Name == "" {
 		return Agency{}, ErrInvalidAgency
 	}
-	return m.backend.Insert(ctx, req)
+	agency, err := m.backend.Insert(ctx, req)
+	if err != nil {
+		return Agency{}, err
+	}
+	// MANDATORY: publish so Cross can trigger git init + work setup.
+	// Best-effort: a publish error does not roll back the created agency.
+	if m.publisher != nil {
+		if pErr := m.publisher.Publish(ctx, "cross.agency.created", agency.ID); pErr != nil {
+			// Log at the manager level is not possible without importing log;
+			// the publisher implementation is responsible for logging its own errors.
+			_ = pErr
+		}
+	}
+	return agency, nil
 }
 
 // GetAgency delegates to [Backend.Get].

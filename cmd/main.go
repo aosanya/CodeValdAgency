@@ -4,8 +4,8 @@
 //
 //	CODEVALDAGENCY_GRPC_PORT       gRPC listener port (default "50053")
 //	CROSS_GRPC_ADDR                CodeValdCross gRPC address for service
-//	                               registration heartbeats (optional; omit to
-//	                               disable registration)
+//	                               registration heartbeats and event publishing
+//	                               (optional; omit to disable)
 //	AGENCY_GRPC_ADVERTISE_ADDR     address CodeValdCross dials back (default ":PORT")
 //	CROSS_PING_INTERVAL            heartbeat cadence (default "20s")
 //	CROSS_PING_TIMEOUT             per-RPC timeout for each Register call (default "5s")
@@ -30,10 +30,9 @@ import (
 	codevaldagency "github.com/aosanya/CodeValdAgency"
 	pb "github.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1"
 	"github.com/aosanya/CodeValdAgency/internal/config"
+	"github.com/aosanya/CodeValdAgency/internal/registrar"
 	"github.com/aosanya/CodeValdAgency/internal/server"
 	"github.com/aosanya/CodeValdAgency/storage/arangodb"
-	crossv1 "github.com/aosanya/CodeValdSharedLib/gen/go/codevaldcross/v1"
-	sharedregistrar "github.com/aosanya/CodeValdSharedLib/registrar"
 	"github.com/aosanya/CodeValdSharedLib/serverutil"
 )
 
@@ -45,7 +44,31 @@ func main() {
 		log.Fatalf("codevaldagency: failed to initialise backend: %v", err)
 	}
 
-	mgr, err := codevaldagency.NewAgencyManager(backend)
+	// Build AgencyManager options — attach a CrossPublisher if Cross is configured.
+	var mgrOpts []codevaldagency.AgencyManagerOption
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if cfg.CrossGRPCAddr != "" {
+		reg, err := registrar.New(
+			cfg.CrossGRPCAddr,
+			cfg.AdvertiseAddr,
+			cfg.PingInterval,
+			cfg.PingTimeout,
+		)
+		if err != nil {
+			log.Printf("codevaldagency: registrar: failed to create: %v — continuing without registration", err)
+		} else {
+			defer reg.Close()
+			go reg.Run(ctx)
+			mgrOpts = append(mgrOpts, codevaldagency.WithPublisher(reg))
+		}
+	} else {
+		log.Println("codevaldagency: CROSS_GRPC_ADDR not set — skipping CodeValdCross registration")
+	}
+
+	mgr, err := codevaldagency.NewAgencyManager(backend, mgrOpts...)
 	if err != nil {
 		log.Fatalf("codevaldagency: failed to create AgencyManager: %v", err)
 	}
@@ -57,31 +80,6 @@ func main() {
 
 	grpcServer, _ := serverutil.NewGRPCServer()
 	pb.RegisterAgencyServiceServer(grpcServer, server.New(mgr))
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if cfg.CrossGRPCAddr != "" {
-		reg, err := sharedregistrar.New(
-			cfg.CrossGRPCAddr,
-			cfg.AdvertiseAddr,
-			"", // agency-scoped ID — empty because this service manages all agencies
-			"codevaldagency",
-			[]string{"cross.agency.created"},
-			[]string{},
-			agencyRoutes(),
-			cfg.PingInterval,
-			cfg.PingTimeout,
-		)
-		if err != nil {
-			log.Printf("codevaldagency: registrar: failed to create: %v — continuing without registration", err)
-		} else {
-			defer reg.Close()
-			go reg.Run(ctx)
-		}
-	} else {
-		log.Println("codevaldagency: CROSS_GRPC_ADDR not set — skipping CodeValdCross registration")
-	}
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
@@ -105,47 +103,3 @@ func initBackend(cfg config.Config) (codevaldagency.Backend, error) {
 	})
 }
 
-// agencyRoutes returns the HTTP routes that CodeValdAgency declares to CodeValdCross.
-func agencyRoutes() []*crossv1.RouteDeclaration {
-	return []*crossv1.RouteDeclaration{
-		{
-			Method:     "POST",
-			Pattern:    "/agencies",
-			Capability: "create_agency",
-			GrpcMethod: "/codevaldagency.v1.AgencyService/CreateAgency",
-		},
-		{
-			Method:     "GET",
-			Pattern:    "/agencies",
-			Capability: "list_agencies",
-			GrpcMethod: "/codevaldagency.v1.AgencyService/ListAgencies",
-		},
-		{
-			Method:     "GET",
-			Pattern:    "/agencies/{agencyId}",
-			Capability: "get_agency",
-			GrpcMethod: "/codevaldagency.v1.AgencyService/GetAgency",
-			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "agencyId", Field: "agency_id"},
-			},
-		},
-		{
-			Method:     "PUT",
-			Pattern:    "/agencies/{agencyId}",
-			Capability: "update_agency",
-			GrpcMethod: "/codevaldagency.v1.AgencyService/UpdateAgency",
-			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "agencyId", Field: "agency_id"},
-			},
-		},
-		{
-			Method:     "DELETE",
-			Pattern:    "/agencies/{agencyId}",
-			Capability: "delete_agency",
-			GrpcMethod: "/codevaldagency.v1.AgencyService/DeleteAgency",
-			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "agencyId", Field: "agency_id"},
-			},
-		},
-	}
-}

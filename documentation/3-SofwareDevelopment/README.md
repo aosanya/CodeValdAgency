@@ -11,18 +11,42 @@ This directory contains development tracking, implementation notes, and coding s
 
 ---
 
-## 📁 Directory Structure
+## Index
+
+| Document | Description |
+|---|---|
+| [mvp.md](mvp.md) | Full MVP scope, task list, and completion status |
+| [mvp-details/](mvp-details/README.md) | Per-topic task specifications |
+
+---
+
+## MVP Status
+
+| Task ID | Title | Status |
+|---|---|---|
+| MVP-AGENCY-001 | Library Scaffolding & Agency Model | 🔲 Not Started |
+| MVP-AGENCY-002 | ArangoDB Backend | 🔲 Not Started |
+| MVP-AGENCY-003 | gRPC Service (AgencyService) | 🔲 Not Started |
+| MVP-AGENCY-004 | CodeValdCross Registration | 🔲 Not Started |
+| MVP-AGENCY-005 | Unit & Integration Tests | 🔲 Not Started |
+| MVP-AGENCY-006 | Service-Driven Route Registration | 🔲 Not Started |
+
+---
+
+## Execution Order
 
 ```
-3-SofwareDevelopment/
-├── README.md                         # This file — service overview & task index
-├── coding-sessions.md                # Chronological coding session log
-├── mvp-progress.md                   # MVP task tracker (active tasks)
-├── updates/
-│   ├── UPDATES_MVP005_COMMUNICATION_DESIGN.md  # MVP-005 design change log
-│   └── DOCUMENTATION_UPDATE_AGENCY_OPERATIONS.md  # Agency ops docs update log
-└── (future: core-systems/, deployment/, testing/)
+MVP-AGENCY-001 → MVP-AGENCY-002 → MVP-AGENCY-003 → MVP-AGENCY-004 → MVP-AGENCY-005 → MVP-AGENCY-006
 ```
+
+---
+
+## Task Detail Files
+
+| File | Tasks |
+|---|---|
+| [mvp-details/agency-management.md](mvp-details/agency-management.md) | MVP-AGENCY-001 through MVP-AGENCY-005 |
+| [mvp-details/route-registrar.md](mvp-details/route-registrar.md) | MVP-AGENCY-006 |
 
 ---
 
@@ -31,7 +55,7 @@ This directory contains development tracking, implementation notes, and coding s
 | Interface | Methods |
 |-----------|---------|
 | `AgencyManager` | `CreateAgency`, `GetAgency`, `UpdateAgency`, `DeleteAgency`, `ListAgencies` |
-| `Backend` | `Insert`, `Get`, `Update`, `Delete`, `List` |
+| `Backend` | `Insert`, `Get`, `Update`, `Delete`, `List`, `InsertSnapshot` |
 
 ## 🔄 Cross-Service Events
 
@@ -46,6 +70,10 @@ This directory contains development tracking, implementation notes, and coding s
 
 | Document | Description |
 |----------|-------------|
+| [mvp.md](mvp.md) | Full MVP scope and task list |
+| [mvp_done.md](mvp_done.md) | Completed tasks archive |
+| [mvp-details/agency-management.md](mvp-details/agency-management.md) | Implementation specs for MVP-AGENCY-001 to 005 |
+| [mvp-details/route-registrar.md](mvp-details/route-registrar.md) | Implementation spec for MVP-AGENCY-006 |
 | [coding-sessions.md](coding-sessions.md) | Session-by-session development log |
 | [updates/UPDATES_MVP005_COMMUNICATION_DESIGN.md](updates/UPDATES_MVP005_COMMUNICATION_DESIGN.md) | MVP-005 agent communication design changes |
 | [updates/DOCUMENTATION_UPDATE_AGENCY_OPERATIONS.md](updates/DOCUMENTATION_UPDATE_AGENCY_OPERATIONS.md) | Agency operations framework doc additions |

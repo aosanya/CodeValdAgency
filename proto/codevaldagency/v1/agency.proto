@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+package codevaldagency.v1;
+
+option go_package = "github.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1;codevaldagencyv1";
+
+import "google/protobuf/timestamp.proto";
+
+// ── Enumerations ─────────────────────────────────────────────────────────────
+
+// AgencyLifecycle mirrors the Go AgencyLifecycle type.
+enum AgencyLifecycle {
+  AGENCY_LIFECYCLE_UNSPECIFIED = 0;
+  AGENCY_LIFECYCLE_DRAFT       = 1;
+  AGENCY_LIFECYCLE_ACTIVE      = 2;
+  AGENCY_LIFECYCLE_ACHIEVED    = 3;
+}
+
+// RACILabel mirrors the Go RACILabel type.
+enum RACILabel {
+  RACI_LABEL_UNSPECIFIED  = 0;
+  RACI_LABEL_RESPONSIBLE  = 1;  // R
+  RACI_LABEL_ACCOUNTABLE  = 2;  // A
+  RACI_LABEL_CONSULTED    = 3;  // C
+  RACI_LABEL_INFORMED     = 4;  // I
+}
+
+// ── Sub-document messages ─────────────────────────────────────────────────────
+
+// RoleAssignment binds a role name to a RACI label for a specific Work Item.
+message RoleAssignment {
+  string    role  = 1;
+  RACILabel raci  = 2;
+}
+
+// WorkItem is a single unit of work within a Workflow.
+message WorkItem {
+  string               id          = 1;
+  string               title       = 2;
+  string               description = 3;
+  int32                order       = 4;
+  bool                 parallel    = 5;
+  repeated string      goal_ids    = 6;
+  repeated RoleAssignment assignments = 7;
+}
+
+// Workflow is a named container of ordered Work Items.
+message Workflow {
+  string              id         = 1;
+  string              name       = 2;
+  repeated WorkItem   work_items = 3;
+}
+
+// Goal is a strategic objective that one or more Work Items contribute to.
+message Goal {
+  string id          = 1;
+  string title       = 2;
+  string description = 3;
+  int32  ordinality  = 4;
+}
+
+// ── Core domain message ───────────────────────────────────────────────────────
+
+// Agency is the top-level organisational unit with Mission, Vision, Goals, and Workflows.
+message Agency {
+  string                    id               = 1;
+  string                    name             = 2;
+  string                    mission          = 3;
+  string                    vision           = 4;
+  AgencyLifecycle           status           = 5;
+  repeated Goal             goals            = 6;
+  repeated Workflow         workflows        = 7;
+  repeated string           configured_roles = 8;
+  google.protobuf.Timestamp created_at       = 9;
+  google.protobuf.Timestamp updated_at       = 10;
+}
+
+// ── Filter ───────────────────────────────────────────────────────────────────
+
+// AgencyFilter constrains ListAgencies results. Unset fields match all.
+message AgencyFilter {
+  AgencyLifecycle status = 1;
+  string          name   = 2;
+}
+
+// ── Request / Response messages ───────────────────────────────────────────────
+
+message CreateAgencyRequest {
+  string            name             = 1;
+  string            mission          = 2;
+  string            vision           = 3;
+  repeated Goal     goals            = 4;
+  repeated Workflow workflows        = 5;
+  repeated string   configured_roles = 6;
+}
+
+message GetAgencyRequest {
+  string agency_id = 1;
+}
+
+message UpdateAgencyRequest {
+  string          agency_id        = 1;
+  string          name             = 2;
+  string          mission          = 3;
+  string          vision           = 4;
+  AgencyLifecycle status           = 5;
+  repeated Goal     goals            = 6;
+  repeated Workflow workflows        = 7;
+  repeated string   configured_roles = 8;
+}
+
+message DeleteAgencyRequest {
+  string agency_id = 1;
+}
+
+message DeleteAgencyResponse {}
+
+message ListAgenciesRequest {
+  AgencyFilter filter = 1;
+}
+
+message ListAgenciesResponse {
+  repeated Agency agencies = 1;
+}
+
+// ── Service ───────────────────────────────────────────────────────────────────
+
+// AgencyService exposes all agency lifecycle management operations via gRPC.
+// All mutations are validated and lifecycle-guarded by the AgencyManager.
+service AgencyService {
+  // CreateAgency creates a new agency in draft status.
+  // Error: INVALID_ARGUMENT if name is empty.
+  // Error: ALREADY_EXISTS if an agency with the same ID already exists.
+  rpc CreateAgency(CreateAgencyRequest) returns (Agency);
+
+  // GetAgency retrieves a single agency by its ID.
+  // Error: NOT_FOUND if no matching agency exists.
+  rpc GetAgency(GetAgencyRequest) returns (Agency);
+
+  // UpdateAgency replaces the mutable fields of an existing agency.
+  // Error: FAILED_PRECONDITION on invalid lifecycle transition.
+  // Error: NOT_FOUND if the agency does not exist.
+  rpc UpdateAgency(UpdateAgencyRequest) returns (Agency);
+
+  // DeleteAgency permanently removes an agency.
+  // Error: NOT_FOUND if the agency does not exist.
+  rpc DeleteAgency(DeleteAgencyRequest) returns (DeleteAgencyResponse);
+
+  // ListAgencies returns all agencies matching the filter.
+  // Returns an empty list (not an error) when no agencies match.
+  rpc ListAgencies(ListAgenciesRequest) returns (ListAgenciesResponse);
+}

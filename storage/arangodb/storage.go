@@ -127,6 +127,12 @@ type roleAssignmentDoc struct {
 	RACI string `json:"raci"`
 }
 
+// configuredRoleDoc is the JSON representation of a [codevaldagency.ConfiguredRole].
+type configuredRoleDoc struct {
+	Role      string `json:"role"`
+	ActorType string `json:"actor_type"`
+}
+
 // workItemDoc is the JSON representation of a [codevaldagency.WorkItem].
 type workItemDoc struct {
 	ID          string              `json:"id"`
@@ -155,30 +161,30 @@ type goalDoc struct {
 
 // agencyDoc is the ArangoDB document representation of a [codevaldagency.Agency].
 type agencyDoc struct {
-	Key             string        `json:"_key,omitempty"`
-	Name            string        `json:"name"`
-	Mission         string        `json:"mission"`
-	Vision          string        `json:"vision"`
-	Status          string        `json:"status"`
-	Goals           []goalDoc     `json:"goals"`
-	Workflows       []workflowDoc `json:"workflows"`
-	ConfiguredRoles []string      `json:"configured_roles"`
-	CreatedAt       time.Time     `json:"created_at"`
-	UpdatedAt       time.Time     `json:"updated_at"`
+	Key             string              `json:"_key,omitempty"`
+	Name            string              `json:"name"`
+	Mission         string              `json:"mission"`
+	Vision          string              `json:"vision"`
+	Status          string              `json:"status"`
+	Goals           []goalDoc           `json:"goals"`
+	Workflows       []workflowDoc       `json:"workflows"`
+	ConfiguredRoles []configuredRoleDoc `json:"configured_roles"`
+	CreatedAt       time.Time           `json:"created_at"`
+	UpdatedAt       time.Time           `json:"updated_at"`
 }
 
 // snapshotDoc is the ArangoDB document representation of a
 // [codevaldagency.AgencySnapshot].
 type snapshotDoc struct {
-	Key             string        `json:"_key,omitempty"`
-	AgencyID        string        `json:"agency_id"`
-	Name            string        `json:"name"`
-	Mission         string        `json:"mission"`
-	Vision          string        `json:"vision"`
-	Goals           []goalDoc     `json:"goals"`
-	Workflows       []workflowDoc `json:"workflows"`
-	ConfiguredRoles []string      `json:"configured_roles"`
-	SnapshotAt      time.Time     `json:"snapshot_at"`
+	Key             string              `json:"_key,omitempty"`
+	AgencyID        string              `json:"agency_id"`
+	Name            string              `json:"name"`
+	Mission         string              `json:"mission"`
+	Vision          string              `json:"vision"`
+	Goals           []goalDoc           `json:"goals"`
+	Workflows       []workflowDoc       `json:"workflows"`
+	ConfiguredRoles []configuredRoleDoc `json:"configured_roles"`
+	SnapshotAt      time.Time           `json:"snapshot_at"`
 }
 
 // ── Conversion helpers ────────────────────────────────────────────────────────
@@ -284,6 +290,25 @@ func fromGoalDocs(in []goalDoc) []codevaldagency.Goal {
 	return out
 }
 
+func toConfiguredRoleDocs(in []codevaldagency.ConfiguredRole) []configuredRoleDoc {
+	out := make([]configuredRoleDoc, len(in))
+	for i, r := range in {
+		out[i] = configuredRoleDoc{Role: string(r.Role), ActorType: string(r.ActorType)}
+	}
+	return out
+}
+
+func fromConfiguredRoleDocs(in []configuredRoleDoc) []codevaldagency.ConfiguredRole {
+	out := make([]codevaldagency.ConfiguredRole, len(in))
+	for i, r := range in {
+		out[i] = codevaldagency.ConfiguredRole{
+			Role:      codevaldagency.AgencyRole(r.Role),
+			ActorType: codevaldagency.ActorType(r.ActorType),
+		}
+	}
+	return out
+}
+
 func toAgencyDoc(a codevaldagency.Agency) agencyDoc {
 	return agencyDoc{
 		Key:             a.ID,
@@ -293,7 +318,7 @@ func toAgencyDoc(a codevaldagency.Agency) agencyDoc {
 		Status:          string(a.Status),
 		Goals:           toGoalDocs(a.Goals),
 		Workflows:       toWorkflowDocs(a.Workflows),
-		ConfiguredRoles: a.ConfiguredRoles,
+		ConfiguredRoles: toConfiguredRoleDocs(a.ConfiguredRoles),
 		CreatedAt:       a.CreatedAt,
 		UpdatedAt:       a.UpdatedAt,
 	}
@@ -308,7 +333,7 @@ func fromAgencyDoc(key string, doc agencyDoc) codevaldagency.Agency {
 		Status:          codevaldagency.AgencyLifecycle(doc.Status),
 		Goals:           fromGoalDocs(doc.Goals),
 		Workflows:       fromWorkflowDocs(doc.Workflows),
-		ConfiguredRoles: doc.ConfiguredRoles,
+		ConfiguredRoles: fromConfiguredRoleDocs(doc.ConfiguredRoles),
 		CreatedAt:       doc.CreatedAt,
 		UpdatedAt:       doc.UpdatedAt,
 	}
@@ -321,16 +346,16 @@ func fromAgencyDoc(key string, doc agencyDoc) codevaldagency.Agency {
 // upserts (replace-or-create) the single document in the agency_details collection.
 func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagency.Agency, error) {
 	var raw struct {
-		ID              string        `json:"id"`
-		Name            string        `json:"name"`
-		Mission         string        `json:"mission"`
-		Vision          string        `json:"vision"`
-		Status          string        `json:"status"`
-		Goals           []goalDoc     `json:"goals"`
-		Workflows       []workflowDoc `json:"workflows"`
-		ConfiguredRoles []string      `json:"configured_roles"`
-		CreatedAt       time.Time     `json:"created_at"`
-		UpdatedAt       time.Time     `json:"updated_at"`
+		ID              string              `json:"id"`
+		Name            string              `json:"name"`
+		Mission         string              `json:"mission"`
+		Vision          string              `json:"vision"`
+		Status          string              `json:"status"`
+		Goals           []goalDoc           `json:"goals"`
+		Workflows       []workflowDoc       `json:"workflows"`
+		ConfiguredRoles []configuredRoleDoc `json:"configured_roles"`
+		CreatedAt       time.Time           `json:"created_at"`
+		UpdatedAt       time.Time           `json:"updated_at"`
 	}
 	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
 		return codevaldagency.Agency{}, codevaldagency.ErrInvalidJSON
@@ -440,7 +465,7 @@ func (b *Backend) InsertSnapshot(ctx context.Context, snap codevaldagency.Agency
 		Vision:          snap.Vision,
 		Goals:           toGoalDocs(snap.Goals),
 		Workflows:       toWorkflowDocs(snap.Workflows),
-		ConfiguredRoles: snap.ConfiguredRoles,
+		ConfiguredRoles: toConfiguredRoleDocs(snap.ConfiguredRoles),
 		SnapshotAt:      snap.SnapshotAt,
 	}
 	_, err := b.snapshots.CreateDocument(ctx, doc)

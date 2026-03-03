@@ -62,7 +62,7 @@ func protoToUpdateRequest(req *pb.UpdateAgencyRequest) codevaldagency.UpdateAgen
 		Status:          protoToLifecycle(req.GetStatus()),
 		Goals:           protoToGoals(req.GetGoals()),
 		Workflows:       protoToWorkflows(req.GetWorkflows()),
-		ConfiguredRoles: req.GetConfiguredRoles(),
+		ConfiguredRoles: protoToConfiguredRoles(req.GetConfiguredRoles()),
 	}
 }
 
@@ -169,7 +169,7 @@ func agencyToProto(a codevaldagency.Agency) *pb.Agency {
 		Status:          lifecycleToProto(a.Status),
 		Goals:           goalsToProto(a.Goals),
 		Workflows:       workflowsToProto(a.Workflows),
-		ConfiguredRoles: a.ConfiguredRoles,
+		ConfiguredRoles: configuredRolesToProto(a.ConfiguredRoles),
 		CreatedAt:       timeToProto(a.CreatedAt),
 		UpdatedAt:       timeToProto(a.UpdatedAt),
 	}
@@ -265,6 +265,60 @@ func raciLabelToProto(r codevaldagency.RACILabel) pb.RACILabel {
 	default:
 		return pb.RACILabel_RACI_LABEL_UNSPECIFIED
 	}
+}
+
+func protoToActorType(a pb.ActorType) codevaldagency.ActorType {
+	switch a {
+	case pb.ActorType_ACTOR_TYPE_HUMAN:
+		return codevaldagency.ActorTypeHuman
+	case pb.ActorType_ACTOR_TYPE_AI:
+		return codevaldagency.ActorTypeAI
+	case pb.ActorType_ACTOR_TYPE_EITHER:
+		return codevaldagency.ActorTypeEither
+	default:
+		return ""
+	}
+}
+
+func actorTypeToProto(a codevaldagency.ActorType) pb.ActorType {
+	switch a {
+	case codevaldagency.ActorTypeHuman:
+		return pb.ActorType_ACTOR_TYPE_HUMAN
+	case codevaldagency.ActorTypeAI:
+		return pb.ActorType_ACTOR_TYPE_AI
+	case codevaldagency.ActorTypeEither:
+		return pb.ActorType_ACTOR_TYPE_EITHER
+	default:
+		return pb.ActorType_ACTOR_TYPE_UNSPECIFIED
+	}
+}
+
+func protoToConfiguredRoles(prs []*pb.ConfiguredRole) []codevaldagency.ConfiguredRole {
+	if len(prs) == 0 {
+		return nil
+	}
+	out := make([]codevaldagency.ConfiguredRole, len(prs))
+	for i, pr := range prs {
+		out[i] = codevaldagency.ConfiguredRole{
+			Role:      codevaldagency.AgencyRole(pr.GetRole()),
+			ActorType: protoToActorType(pr.GetActorType()),
+		}
+	}
+	return out
+}
+
+func configuredRolesToProto(roles []codevaldagency.ConfiguredRole) []*pb.ConfiguredRole {
+	if len(roles) == 0 {
+		return nil
+	}
+	out := make([]*pb.ConfiguredRole, len(roles))
+	for i, r := range roles {
+		out[i] = &pb.ConfiguredRole{
+			Role:      string(r.Role),
+			ActorType: actorTypeToProto(r.ActorType),
+		}
+	}
+	return out
 }
 
 func timeToProto(t time.Time) *timestamppb.Timestamp {

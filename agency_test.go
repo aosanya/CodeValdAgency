@@ -25,12 +25,12 @@ func newFakeBackend() *fakeBackend {
 
 func (f *fakeBackend) SetDetails(_ context.Context, jsonStr string) (codevaldagency.Agency, error) {
 	var raw struct {
-		ID              string   `json:"id"`
-		Name            string   `json:"name"`
-		Mission         string   `json:"mission"`
-		Vision          string   `json:"vision"`
-		Status          string   `json:"status"`
-		ConfiguredRoles []string `json:"configured_roles"`
+		ID              string                       `json:"id"`
+		Name            string                       `json:"name"`
+		Mission         string                       `json:"mission"`
+		Vision          string                       `json:"vision"`
+		Status          string                       `json:"status"`
+		ConfiguredRoles []codevaldagency.ConfiguredRole `json:"configured_roles"`
 	}
 	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
 		return codevaldagency.Agency{}, codevaldagency.ErrInvalidJSON

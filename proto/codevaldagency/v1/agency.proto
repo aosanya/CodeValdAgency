@@ -25,12 +25,30 @@ enum RACILabel {
   RACI_LABEL_INFORMED     = 4;  // I
 }
 
+// ActorType mirrors the Go ActorType type.
+// It declares who is expected to fill a configured role —
+// a human actor, an AI agent, or either.
+enum ActorType {
+  ACTOR_TYPE_UNSPECIFIED = 0;
+  ACTOR_TYPE_HUMAN       = 1;
+  ACTOR_TYPE_AI          = 2;
+  ACTOR_TYPE_EITHER      = 3;
+}
+
 // ── Sub-document messages ─────────────────────────────────────────────────────
 
 // RoleAssignment binds a role name to a RACI label for a specific Work Item.
 message RoleAssignment {
   string    role  = 1;
   RACILabel raci  = 2;
+}
+
+// ConfiguredRole is a named role defined by an agency beyond the built-in
+// super_admin and admin roles. The actor_type field declares whether the role
+// is intended for a human actor, an AI agent, or either.
+message ConfiguredRole {
+  string    role       = 1;
+  ActorType actor_type = 2;
 }
 
 // WorkItem is a single unit of work within a Workflow.
@@ -70,7 +88,7 @@ message Agency {
   AgencyLifecycle           status           = 5;
   repeated Goal             goals            = 6;
   repeated Workflow         workflows        = 7;
-  repeated string           configured_roles = 8;
+  repeated ConfiguredRole   configured_roles = 8;
   google.protobuf.Timestamp created_at       = 9;
   google.protobuf.Timestamp updated_at       = 10;
 }
@@ -93,7 +111,7 @@ message UpdateAgencyRequest {
   AgencyLifecycle status           = 4;
   repeated Goal     goals            = 5;
   repeated Workflow workflows        = 6;
-  repeated string   configured_roles = 7;
+  repeated ConfiguredRole configured_roles = 7;
 }
 
 

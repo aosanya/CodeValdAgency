@@ -83,46 +83,30 @@ func (r *Registrar) Publish(ctx context.Context, topic string, agencyID string) 
 }
 
 // agencyRoutes returns the HTTP routes that CodeValdAgency exposes via Cross.
+// There is exactly one agency per database so no agency ID appears in any path.
 func agencyRoutes() []*crossv1.RouteDeclaration {
 	return []*crossv1.RouteDeclaration{
+		// POST /agency — replace (or create) the full agency document from a JSON body.
+		// Body: {"json": "<agency-document-as-JSON-string>"}
 		{
 			Method:     "POST",
-			Pattern:    "/agencies",
-			Capability: "create_agency",
-			GrpcMethod: "/codevaldagency.v1.AgencyService/CreateAgency",
+			Pattern:    "/agency",
+			Capability: "set_agency_details",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/SetAgencyDetails",
 		},
+		// GET /agency — retrieve the single agency for this database.
 		{
 			Method:     "GET",
-			Pattern:    "/agencies",
-			Capability: "list_agencies",
-			GrpcMethod: "/codevaldagency.v1.AgencyService/ListAgencies",
-		},
-		{
-			Method:     "GET",
-			Pattern:    "/agencies/{agencyId}",
+			Pattern:    "/agency",
 			Capability: "get_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/GetAgency",
-			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "agencyId", Field: "agency_id"},
-			},
 		},
+		// PUT /agency — apply incremental field edits with lifecycle validation.
 		{
 			Method:     "PUT",
-			Pattern:    "/agencies/{agencyId}",
+			Pattern:    "/agency",
 			Capability: "update_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/UpdateAgency",
-			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "agencyId", Field: "agency_id"},
-			},
-		},
-		{
-			Method:     "DELETE",
-			Pattern:    "/agencies/{agencyId}",
-			Capability: "delete_agency",
-			GrpcMethod: "/codevaldagency.v1.AgencyService/DeleteAgency",
-			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "agencyId", Field: "agency_id"},
-			},
 		},
 	}
 }

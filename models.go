@@ -184,15 +184,6 @@ type AgencySnapshot struct {
 	SnapshotAt time.Time
 }
 
-// CreateAgencyRequest carries the fields required to create a new agency.
-// The agency starts in [LifecycleDraft] with the supplied Name, Mission, and
-// Vision.
-type CreateAgencyRequest struct {
-	Name    string
-	Mission string
-	Vision  string
-}
-
 // UpdateAgencyRequest carries the mutable fields of an existing agency.
 // Set only the fields you want to change; the manager validates lifecycle
 // transitions before delegating to the storage backend.
@@ -204,18 +195,4 @@ type UpdateAgencyRequest struct {
 	Goals           []Goal
 	Workflows       []Workflow
 	ConfiguredRoles []string
-}
-
-// AgencyFilter constrains the result set returned by [AgencyManager.ListAgencies].
-type AgencyFilter struct {
-	// Offset is the zero-based index of the first result to return.
-	Offset int
-
-	// Limit is the maximum number of results to return.
-	// A value of 0 means no limit.
-	Limit int
-
-	// Status optionally restricts results to agencies in the given lifecycle
-	// state. An empty string means no filter is applied.
-	Status AgencyLifecycle
 }

@@ -41,7 +41,7 @@ type Config struct {
 // Load reads configuration from environment variables, falling back to defaults
 // for any variable that is unset or empty.
 func Load() Config {
-	port := serverutil.EnvOrDefault("CODEVALDAGENCY_GRPC_PORT", "50053")
+	port := serverutil.EnvOrDefault("CODEVALDAGENCY_GRPC_PORT", "50054")
 	return Config{
 		GRPCPort:       port,
 		ArangoEndpoint: serverutil.EnvOrDefault("AGENCY_ARANGO_ENDPOINT", "http://localhost:8529"),

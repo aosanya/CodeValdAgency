@@ -2,60 +2,66 @@ package codevaldagency_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
-	"time"
 
 	codevaldagency "github.com/aosanya/CodeValdAgency"
 )
 
-// ── Fake Backend ──────────────────────────────────────────────────────────────
+// ── Fake Backend ────────────────────────────────────────────────────────────────────────────
 
 // fakeBackend is an in-memory codevaldagency.Backend used for unit tests.
+// It holds a single agency document, mirroring the single-agency-per-database model.
 type fakeBackend struct {
-	agencies  map[string]codevaldagency.Agency
+	agency    *codevaldagency.Agency // nil until SetDetails is called
 	snapshots []codevaldagency.AgencySnapshot
 }
 
 func newFakeBackend() *fakeBackend {
-	return &fakeBackend{
-		agencies: make(map[string]codevaldagency.Agency),
-	}
+	return &fakeBackend{}
 }
 
-func (f *fakeBackend) Insert(_ context.Context, req codevaldagency.CreateAgencyRequest) (codevaldagency.Agency, error) {
-	// Generate a deterministic key from the name for test predictability.
-	id := "agency-" + req.Name
-	if _, exists := f.agencies[id]; exists {
-		return codevaldagency.Agency{}, codevaldagency.ErrAgencyAlreadyExists
+func (f *fakeBackend) SetDetails(_ context.Context, jsonStr string) (codevaldagency.Agency, error) {
+	var raw struct {
+		ID              string   `json:"id"`
+		Name            string   `json:"name"`
+		Mission         string   `json:"mission"`
+		Vision          string   `json:"vision"`
+		Status          string   `json:"status"`
+		ConfiguredRoles []string `json:"configured_roles"`
 	}
-	now := time.Now().UTC()
+	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
+		return codevaldagency.Agency{}, codevaldagency.ErrInvalidJSON
+	}
+	if raw.ID == "" {
+		return codevaldagency.Agency{}, codevaldagency.ErrInvalidJSON
+	}
 	a := codevaldagency.Agency{
-		ID:        id,
-		Name:      req.Name,
-		Mission:   req.Mission,
-		Vision:    req.Vision,
-		Status:    codevaldagency.LifecycleDraft,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:              raw.ID,
+		Name:            raw.Name,
+		Mission:         raw.Mission,
+		Vision:          raw.Vision,
+		Status:          codevaldagency.AgencyLifecycle(raw.Status),
+		ConfiguredRoles: raw.ConfiguredRoles,
 	}
-	f.agencies[id] = a
+	f.agency = &a
 	return a, nil
 }
 
 func (f *fakeBackend) Get(_ context.Context, agencyID string) (codevaldagency.Agency, error) {
-	a, ok := f.agencies[agencyID]
-	if !ok {
+	if f.agency == nil || f.agency.ID != agencyID {
 		return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound
 	}
-	return a, nil
+	return *f.agency, nil
 }
 
 func (f *fakeBackend) Update(_ context.Context, agencyID string, req codevaldagency.UpdateAgencyRequest) (codevaldagency.Agency, error) {
-	a, ok := f.agencies[agencyID]
-	if !ok {
+	if f.agency == nil || f.agency.ID != agencyID {
 		return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound
 	}
+	a := *f.agency
 	if req.Name != "" {
 		a.Name = req.Name
 	}
@@ -77,31 +83,8 @@ func (f *fakeBackend) Update(_ context.Context, agencyID string, req codevaldage
 	if req.ConfiguredRoles != nil {
 		a.ConfiguredRoles = req.ConfiguredRoles
 	}
-	a.UpdatedAt = time.Now().UTC()
-	f.agencies[agencyID] = a
+	f.agency = &a
 	return a, nil
-}
-
-func (f *fakeBackend) Delete(_ context.Context, agencyID string) error {
-	if _, ok := f.agencies[agencyID]; !ok {
-		return codevaldagency.ErrAgencyNotFound
-	}
-	delete(f.agencies, agencyID)
-	return nil
-}
-
-func (f *fakeBackend) List(_ context.Context, filter codevaldagency.AgencyFilter) ([]codevaldagency.Agency, error) {
-	var out []codevaldagency.Agency
-	for _, a := range f.agencies {
-		if filter.Status != "" && a.Status != filter.Status {
-			continue
-		}
-		out = append(out, a)
-	}
-	if out == nil {
-		out = []codevaldagency.Agency{}
-	}
-	return out, nil
 }
 
 func (f *fakeBackend) InsertSnapshot(_ context.Context, snap codevaldagency.AgencySnapshot) error {
@@ -109,7 +92,7 @@ func (f *fakeBackend) InsertSnapshot(_ context.Context, snap codevaldagency.Agen
 	return nil
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────────────────
 
 func mustNewManager(t *testing.T) (codevaldagency.AgencyManager, *fakeBackend) {
 	t.Helper()
@@ -121,7 +104,18 @@ func mustNewManager(t *testing.T) (codevaldagency.AgencyManager, *fakeBackend) {
 	return mgr, fb
 }
 
-// ── NewAgencyManager ──────────────────────────────────────────────────────────
+// mustSetupAgency calls SetAgencyDetails with a minimal valid JSON payload.
+func mustSetupAgency(t *testing.T, mgr codevaldagency.AgencyManager, id, name string) codevaldagency.Agency {
+	t.Helper()
+	jsonStr := fmt.Sprintf(`{"id":%q,"name":%q,"status":"draft"}`, id, name)
+	agency, err := mgr.SetAgencyDetails(context.Background(), jsonStr)
+	if err != nil {
+		t.Fatalf("SetAgencyDetails: %v", err)
+	}
+	return agency
+}
+
+// ── NewAgencyManager ─────────────────────────────────────────────────────────────────
 
 func TestNewAgencyManager_NilBackend(t *testing.T) {
 	_, err := codevaldagency.NewAgencyManager(nil)
@@ -137,42 +131,56 @@ func TestNewAgencyManager_ValidBackend(t *testing.T) {
 	}
 }
 
-// ── CreateAgency ──────────────────────────────────────────────────────────────
+// ── SetAgencyDetails ─────────────────────────────────────────────────────────────────
 
-func TestCreateAgency_EmptyName_ReturnsErrInvalidAgency(t *testing.T) {
+func TestSetAgencyDetails_InvalidJSON_ReturnsErrInvalidJSON(t *testing.T) {
+	t.Parallel()
 	mgr, _ := mustNewManager(t)
-	_, err := mgr.CreateAgency(context.Background(), codevaldagency.CreateAgencyRequest{
-		Name: "",
-	})
-	if !errors.Is(err, codevaldagency.ErrInvalidAgency) {
-		t.Fatalf("expected ErrInvalidAgency, got %v", err)
+	_, err := mgr.SetAgencyDetails(context.Background(), "not valid json")
+	if !errors.Is(err, codevaldagency.ErrInvalidJSON) {
+		t.Fatalf("expected ErrInvalidJSON, got %v", err)
 	}
 }
 
-func TestCreateAgency_ValidRequest_ReturnsDraftAgency(t *testing.T) {
+func TestSetAgencyDetails_MissingID_ReturnsErrInvalidJSON(t *testing.T) {
+	t.Parallel()
 	mgr, _ := mustNewManager(t)
-	agency, err := mgr.CreateAgency(context.Background(), codevaldagency.CreateAgencyRequest{
-		Name:    "Alpha",
-		Mission: "Build great software",
-		Vision:  "A world of automated excellence",
-	})
+	_, err := mgr.SetAgencyDetails(context.Background(), `{"name":"Alpha","status":"draft"}`)
+	if !errors.Is(err, codevaldagency.ErrInvalidJSON) {
+		t.Fatalf("expected ErrInvalidJSON, got %v", err)
+	}
+}
+
+func TestSetAgencyDetails_ValidJSON_ReturnsAgency(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	agency, err := mgr.SetAgencyDetails(context.Background(),
+		`{"id":"agency-001","name":"Alpha","mission":"Build great software","status":"draft"}`)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	if agency.ID != "agency-001" {
+		t.Errorf("ID: want %q, got %q", "agency-001", agency.ID)
+	}
 	if agency.Name != "Alpha" {
-		t.Errorf("expected Name=Alpha, got %q", agency.Name)
-	}
-	if agency.Status != codevaldagency.LifecycleDraft {
-		t.Errorf("expected Status=draft, got %q", agency.Status)
-	}
-	if agency.ID == "" {
-		t.Error("expected non-empty ID")
+		t.Errorf("Name: want %q, got %q", "Alpha", agency.Name)
 	}
 }
 
-// ── GetAgency ─────────────────────────────────────────────────────────────────
+func TestSetAgencyDetails_CalledTwice_ReplacesDocument(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+	updated := mustSetupAgency(t, mgr, "agency-001", "Alpha Updated")
+	if updated.Name != "Alpha Updated" {
+		t.Errorf("expected Name=%q, got %q", "Alpha Updated", updated.Name)
+	}
+}
+
+// ── GetAgency ────────────────────────────────────────────────────────────────────────────
 
 func TestGetAgency_NotFound(t *testing.T) {
+	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	_, err := mgr.GetAgency(context.Background(), "nonexistent")
 	if !errors.Is(err, codevaldagency.ErrAgencyNotFound) {
@@ -181,34 +189,28 @@ func TestGetAgency_NotFound(t *testing.T) {
 }
 
 func TestGetAgency_RoundTrip(t *testing.T) {
+	t.Parallel()
 	mgr, _ := mustNewManager(t)
-	created, err := mgr.CreateAgency(context.Background(), codevaldagency.CreateAgencyRequest{Name: "Beta"})
-	if err != nil {
-		t.Fatalf("CreateAgency: %v", err)
-	}
-	got, err := mgr.GetAgency(context.Background(), created.ID)
+	set := mustSetupAgency(t, mgr, "agency-001", "Beta")
+	got, err := mgr.GetAgency(context.Background(), set.ID)
 	if err != nil {
 		t.Fatalf("GetAgency: %v", err)
 	}
-	if got.ID != created.ID {
-		t.Errorf("ID mismatch: want %q, got %q", created.ID, got.ID)
+	if got.ID != set.ID {
+		t.Errorf("ID mismatch: want %q, got %q", set.ID, got.ID)
 	}
-	if got.Name != created.Name {
-		t.Errorf("Name mismatch: want %q, got %q", created.Name, got.Name)
+	if got.Name != set.Name {
+		t.Errorf("Name mismatch: want %q, got %q", set.Name, got.Name)
 	}
 }
 
-// ── UpdateAgency — lifecycle transitions ─────────────────────────────────────
+// ── UpdateAgency — lifecycle transitions ─────────────────────────────────────────────
 
 func TestUpdateAgency_DraftToActive_Succeeds_WritesSnapshot(t *testing.T) {
+	t.Parallel()
 	mgr, fb := mustNewManager(t)
-
-	created, err := mgr.CreateAgency(context.Background(), codevaldagency.CreateAgencyRequest{Name: "Gamma"})
-	if err != nil {
-		t.Fatalf("CreateAgency: %v", err)
-	}
-
-	updated, err := mgr.UpdateAgency(context.Background(), created.ID, codevaldagency.UpdateAgencyRequest{
+	set := mustSetupAgency(t, mgr, "agency-001", "Gamma")
+	updated, err := mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{
 		Status: codevaldagency.LifecycleActive,
 	})
 	if err != nil {
@@ -217,14 +219,12 @@ func TestUpdateAgency_DraftToActive_Succeeds_WritesSnapshot(t *testing.T) {
 	if updated.Status != codevaldagency.LifecycleActive {
 		t.Errorf("expected Status=active, got %q", updated.Status)
 	}
-
-	// Verify a snapshot was written.
 	if len(fb.snapshots) != 1 {
 		t.Fatalf("expected 1 snapshot, got %d", len(fb.snapshots))
 	}
 	snap := fb.snapshots[0]
-	if snap.AgencyID != created.ID {
-		t.Errorf("snapshot AgencyID: want %q, got %q", created.ID, snap.AgencyID)
+	if snap.AgencyID != set.ID {
+		t.Errorf("snapshot AgencyID: want %q, got %q", set.ID, snap.AgencyID)
 	}
 	if snap.ID == "" {
 		t.Error("snapshot ID must not be empty")
@@ -235,22 +235,16 @@ func TestUpdateAgency_DraftToActive_Succeeds_WritesSnapshot(t *testing.T) {
 }
 
 func TestUpdateAgency_ActiveToDraft_ReturnsErrInvalidLifecycleTransition(t *testing.T) {
+	t.Parallel()
 	mgr, _ := mustNewManager(t)
-
-	created, err := mgr.CreateAgency(context.Background(), codevaldagency.CreateAgencyRequest{Name: "Delta"})
-	if err != nil {
-		t.Fatalf("CreateAgency: %v", err)
-	}
-	// Move to active first.
-	_, err = mgr.UpdateAgency(context.Background(), created.ID, codevaldagency.UpdateAgencyRequest{
+	set := mustSetupAgency(t, mgr, "agency-001", "Delta")
+	_, err := mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{
 		Status: codevaldagency.LifecycleActive,
 	})
 	if err != nil {
 		t.Fatalf("draft→active: %v", err)
 	}
-
-	// Attempting active → draft must fail.
-	_, err = mgr.UpdateAgency(context.Background(), created.ID, codevaldagency.UpdateAgencyRequest{
+	_, err = mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{
 		Status: codevaldagency.LifecycleDraft,
 	})
 	if !errors.Is(err, codevaldagency.ErrInvalidLifecycleTransition) {
@@ -259,30 +253,17 @@ func TestUpdateAgency_ActiveToDraft_ReturnsErrInvalidLifecycleTransition(t *test
 }
 
 func TestUpdateAgency_AchievedToAny_ReturnsErrInvalidLifecycleTransition(t *testing.T) {
+	t.Parallel()
 	mgr, _ := mustNewManager(t)
-
-	created, err := mgr.CreateAgency(context.Background(), codevaldagency.CreateAgencyRequest{Name: "Epsilon"})
-	if err != nil {
-		t.Fatalf("CreateAgency: %v", err)
-	}
-	// draft → active
-	_, err = mgr.UpdateAgency(context.Background(), created.ID, codevaldagency.UpdateAgencyRequest{Status: codevaldagency.LifecycleActive})
-	if err != nil {
-		t.Fatalf("draft→active: %v", err)
-	}
-	// active → achieved
-	_, err = mgr.UpdateAgency(context.Background(), created.ID, codevaldagency.UpdateAgencyRequest{Status: codevaldagency.LifecycleAchieved})
-	if err != nil {
-		t.Fatalf("active→achieved: %v", err)
-	}
-
-	// Any further transition from achieved must fail.
+	set := mustSetupAgency(t, mgr, "agency-001", "Epsilon")
+	_, _ = mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{Status: codevaldagency.LifecycleActive})
+	_, _ = mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{Status: codevaldagency.LifecycleAchieved})
 	for _, next := range []codevaldagency.AgencyLifecycle{
 		codevaldagency.LifecycleDraft,
 		codevaldagency.LifecycleActive,
 		codevaldagency.LifecycleAchieved,
 	} {
-		_, err = mgr.UpdateAgency(context.Background(), created.ID, codevaldagency.UpdateAgencyRequest{Status: next})
+		_, err := mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{Status: next})
 		if !errors.Is(err, codevaldagency.ErrInvalidLifecycleTransition) {
 			t.Errorf("achieved→%q: expected ErrInvalidLifecycleTransition, got %v", next, err)
 		}
@@ -290,14 +271,10 @@ func TestUpdateAgency_AchievedToAny_ReturnsErrInvalidLifecycleTransition(t *test
 }
 
 func TestUpdateAgency_NoStatusChange_DoesNotWriteSnapshot(t *testing.T) {
+	t.Parallel()
 	mgr, fb := mustNewManager(t)
-
-	created, err := mgr.CreateAgency(context.Background(), codevaldagency.CreateAgencyRequest{Name: "Zeta"})
-	if err != nil {
-		t.Fatalf("CreateAgency: %v", err)
-	}
-	// Update name only — no lifecycle change.
-	_, err = mgr.UpdateAgency(context.Background(), created.ID, codevaldagency.UpdateAgencyRequest{
+	set := mustSetupAgency(t, mgr, "agency-001", "Zeta")
+	_, err := mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{
 		Name: "Zeta Updated",
 	})
 	if err != nil {
@@ -308,81 +285,7 @@ func TestUpdateAgency_NoStatusChange_DoesNotWriteSnapshot(t *testing.T) {
 	}
 }
 
-// ── DeleteAgency ──────────────────────────────────────────────────────────────
-
-func TestDeleteAgency_NotFound(t *testing.T) {
-	mgr, _ := mustNewManager(t)
-	err := mgr.DeleteAgency(context.Background(), "nonexistent")
-	if !errors.Is(err, codevaldagency.ErrAgencyNotFound) {
-		t.Fatalf("expected ErrAgencyNotFound, got %v", err)
-	}
-}
-
-func TestDeleteAgency_ThenGet_ReturnsNotFound(t *testing.T) {
-	mgr, _ := mustNewManager(t)
-
-	created, err := mgr.CreateAgency(context.Background(), codevaldagency.CreateAgencyRequest{Name: "Eta"})
-	if err != nil {
-		t.Fatalf("CreateAgency: %v", err)
-	}
-	if err := mgr.DeleteAgency(context.Background(), created.ID); err != nil {
-		t.Fatalf("DeleteAgency: %v", err)
-	}
-	_, err = mgr.GetAgency(context.Background(), created.ID)
-	if !errors.Is(err, codevaldagency.ErrAgencyNotFound) {
-		t.Fatalf("expected ErrAgencyNotFound after delete, got %v", err)
-	}
-}
-
-// ── ListAgencies ──────────────────────────────────────────────────────────────
-
-func TestListAgencies_EmptyFilter_ReturnsAll(t *testing.T) {
-	mgr, _ := mustNewManager(t)
-
-	names := []string{"Theta", "Iota", "Kappa"}
-	for _, n := range names {
-		if _, err := mgr.CreateAgency(context.Background(), codevaldagency.CreateAgencyRequest{Name: n}); err != nil {
-			t.Fatalf("CreateAgency %q: %v", n, err)
-		}
-	}
-
-	list, err := mgr.ListAgencies(context.Background(), codevaldagency.AgencyFilter{})
-	if err != nil {
-		t.Fatalf("ListAgencies: %v", err)
-	}
-	if len(list) != 3 {
-		t.Errorf("expected 3 agencies, got %d", len(list))
-	}
-}
-
-func TestListAgencies_StatusFilter(t *testing.T) {
-	mgr, _ := mustNewManager(t)
-
-	// Create two draft agencies.
-	a1, _ := mgr.CreateAgency(context.Background(), codevaldagency.CreateAgencyRequest{Name: "Lambda"})
-	_, _ = mgr.CreateAgency(context.Background(), codevaldagency.CreateAgencyRequest{Name: "Mu"})
-
-	// Activate one.
-	_, err := mgr.UpdateAgency(context.Background(), a1.ID, codevaldagency.UpdateAgencyRequest{
-		Status: codevaldagency.LifecycleActive,
-	})
-	if err != nil {
-		t.Fatalf("UpdateAgency: %v", err)
-	}
-
-	active, err := mgr.ListAgencies(context.Background(), codevaldagency.AgencyFilter{Status: codevaldagency.LifecycleActive})
-	if err != nil {
-		t.Fatalf("ListAgencies: %v", err)
-	}
-	if len(active) != 1 {
-		t.Errorf("expected 1 active agency, got %d", len(active))
-	}
-	if active[0].ID != a1.ID {
-		t.Errorf("unexpected active agency ID: %q", active[0].ID)
-	}
-}
-
-// ── AgencyLifecycle.CanTransitionTo ──────────────────────────────────────────
+// ── AgencyLifecycle.CanTransitionTo ───────────────────────────────────────────────
 
 func TestAgencyLifecycle_CanTransitionTo(t *testing.T) {
 	tests := []struct {

@@ -524,143 +524,6 @@ func (x *Agency) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// AgencyFilter constrains ListAgencies results. Unset fields match all.
-type AgencyFilter struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        AgencyLifecycle        `protobuf:"varint,1,opt,name=status,proto3,enum=codevaldagency.v1.AgencyLifecycle" json:"status,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AgencyFilter) Reset() {
-	*x = AgencyFilter{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AgencyFilter) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AgencyFilter) ProtoMessage() {}
-
-func (x *AgencyFilter) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AgencyFilter.ProtoReflect.Descriptor instead.
-func (*AgencyFilter) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *AgencyFilter) GetStatus() AgencyLifecycle {
-	if x != nil {
-		return x.Status
-	}
-	return AgencyLifecycle_AGENCY_LIFECYCLE_UNSPECIFIED
-}
-
-func (x *AgencyFilter) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-type CreateAgencyRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Mission         string                 `protobuf:"bytes,2,opt,name=mission,proto3" json:"mission,omitempty"`
-	Vision          string                 `protobuf:"bytes,3,opt,name=vision,proto3" json:"vision,omitempty"`
-	Goals           []*Goal                `protobuf:"bytes,4,rep,name=goals,proto3" json:"goals,omitempty"`
-	Workflows       []*Workflow            `protobuf:"bytes,5,rep,name=workflows,proto3" json:"workflows,omitempty"`
-	ConfiguredRoles []string               `protobuf:"bytes,6,rep,name=configured_roles,json=configuredRoles,proto3" json:"configured_roles,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *CreateAgencyRequest) Reset() {
-	*x = CreateAgencyRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateAgencyRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateAgencyRequest) ProtoMessage() {}
-
-func (x *CreateAgencyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateAgencyRequest.ProtoReflect.Descriptor instead.
-func (*CreateAgencyRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *CreateAgencyRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *CreateAgencyRequest) GetMission() string {
-	if x != nil {
-		return x.Mission
-	}
-	return ""
-}
-
-func (x *CreateAgencyRequest) GetVision() string {
-	if x != nil {
-		return x.Vision
-	}
-	return ""
-}
-
-func (x *CreateAgencyRequest) GetGoals() []*Goal {
-	if x != nil {
-		return x.Goals
-	}
-	return nil
-}
-
-func (x *CreateAgencyRequest) GetWorkflows() []*Workflow {
-	if x != nil {
-		return x.Workflows
-	}
-	return nil
-}
-
-func (x *CreateAgencyRequest) GetConfiguredRoles() []string {
-	if x != nil {
-		return x.ConfiguredRoles
-	}
-	return nil
-}
-
 type GetAgencyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AgencyId      string                 `protobuf:"bytes,1,opt,name=agency_id,json=agencyId,proto3" json:"agency_id,omitempty"`
@@ -670,7 +533,7 @@ type GetAgencyRequest struct {
 
 func (x *GetAgencyRequest) Reset() {
 	*x = GetAgencyRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[7]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -682,7 +545,7 @@ func (x *GetAgencyRequest) String() string {
 func (*GetAgencyRequest) ProtoMessage() {}
 
 func (x *GetAgencyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[7]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -695,12 +558,58 @@ func (x *GetAgencyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgencyRequest.ProtoReflect.Descriptor instead.
 func (*GetAgencyRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{7}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetAgencyRequest) GetAgencyId() string {
 	if x != nil {
 		return x.AgencyId
+	}
+	return ""
+}
+
+type SetAgencyDetailsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// json is the full agency document serialised as a JSON string.
+	// Must include a non-empty "id" field.
+	Json          string `protobuf:"bytes,1,opt,name=json,proto3" json:"json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetAgencyDetailsRequest) Reset() {
+	*x = SetAgencyDetailsRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetAgencyDetailsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetAgencyDetailsRequest) ProtoMessage() {}
+
+func (x *SetAgencyDetailsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetAgencyDetailsRequest.ProtoReflect.Descriptor instead.
+func (*SetAgencyDetailsRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *SetAgencyDetailsRequest) GetJson() string {
+	if x != nil {
+		return x.Json
 	}
 	return ""
 }
@@ -721,7 +630,7 @@ type UpdateAgencyRequest struct {
 
 func (x *UpdateAgencyRequest) Reset() {
 	*x = UpdateAgencyRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[8]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -733,7 +642,7 @@ func (x *UpdateAgencyRequest) String() string {
 func (*UpdateAgencyRequest) ProtoMessage() {}
 
 func (x *UpdateAgencyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[8]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -746,7 +655,7 @@ func (x *UpdateAgencyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAgencyRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAgencyRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{8}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UpdateAgencyRequest) GetAgencyId() string {
@@ -805,174 +714,6 @@ func (x *UpdateAgencyRequest) GetConfiguredRoles() []string {
 	return nil
 }
 
-type DeleteAgencyRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgencyId      string                 `protobuf:"bytes,1,opt,name=agency_id,json=agencyId,proto3" json:"agency_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteAgencyRequest) Reset() {
-	*x = DeleteAgencyRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteAgencyRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteAgencyRequest) ProtoMessage() {}
-
-func (x *DeleteAgencyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteAgencyRequest.ProtoReflect.Descriptor instead.
-func (*DeleteAgencyRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *DeleteAgencyRequest) GetAgencyId() string {
-	if x != nil {
-		return x.AgencyId
-	}
-	return ""
-}
-
-type DeleteAgencyResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteAgencyResponse) Reset() {
-	*x = DeleteAgencyResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteAgencyResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteAgencyResponse) ProtoMessage() {}
-
-func (x *DeleteAgencyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteAgencyResponse.ProtoReflect.Descriptor instead.
-func (*DeleteAgencyResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{10}
-}
-
-type ListAgenciesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Filter        *AgencyFilter          `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListAgenciesRequest) Reset() {
-	*x = ListAgenciesRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListAgenciesRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListAgenciesRequest) ProtoMessage() {}
-
-func (x *ListAgenciesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListAgenciesRequest.ProtoReflect.Descriptor instead.
-func (*ListAgenciesRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *ListAgenciesRequest) GetFilter() *AgencyFilter {
-	if x != nil {
-		return x.Filter
-	}
-	return nil
-}
-
-type ListAgenciesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Agencies      []*Agency              `protobuf:"bytes,1,rep,name=agencies,proto3" json:"agencies,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListAgenciesResponse) Reset() {
-	*x = ListAgenciesResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[12]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListAgenciesResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListAgenciesResponse) ProtoMessage() {}
-
-func (x *ListAgenciesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[12]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListAgenciesResponse.ProtoReflect.Descriptor instead.
-func (*ListAgenciesResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *ListAgenciesResponse) GetAgencies() []*Agency {
-	if x != nil {
-		return x.Agencies
-	}
-	return nil
-}
-
 var File_codevaldagency_v1_agency_proto protoreflect.FileDescriptor
 
 const file_codevaldagency_v1_agency_proto_rawDesc = "" +
@@ -1014,19 +755,11 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"^\n" +
-	"\fAgencyFilter\x12:\n" +
-	"\x06status\x18\x01 \x01(\x0e2\".codevaldagency.v1.AgencyLifecycleR\x06status\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\xf0\x01\n" +
-	"\x13CreateAgencyRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
-	"\amission\x18\x02 \x01(\tR\amission\x12\x16\n" +
-	"\x06vision\x18\x03 \x01(\tR\x06vision\x12-\n" +
-	"\x05goals\x18\x04 \x03(\v2\x17.codevaldagency.v1.GoalR\x05goals\x129\n" +
-	"\tworkflows\x18\x05 \x03(\v2\x1b.codevaldagency.v1.WorkflowR\tworkflows\x12)\n" +
-	"\x10configured_roles\x18\x06 \x03(\tR\x0fconfiguredRoles\"/\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"/\n" +
 	"\x10GetAgencyRequest\x12\x1b\n" +
-	"\tagency_id\x18\x01 \x01(\tR\bagencyId\"\xc9\x02\n" +
+	"\tagency_id\x18\x01 \x01(\tR\bagencyId\"-\n" +
+	"\x17SetAgencyDetailsRequest\x12\x12\n" +
+	"\x04json\x18\x01 \x01(\tR\x04json\"\xc9\x02\n" +
 	"\x13UpdateAgencyRequest\x12\x1b\n" +
 	"\tagency_id\x18\x01 \x01(\tR\bagencyId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -1035,14 +768,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x06status\x18\x05 \x01(\x0e2\".codevaldagency.v1.AgencyLifecycleR\x06status\x12-\n" +
 	"\x05goals\x18\x06 \x03(\v2\x17.codevaldagency.v1.GoalR\x05goals\x129\n" +
 	"\tworkflows\x18\a \x03(\v2\x1b.codevaldagency.v1.WorkflowR\tworkflows\x12)\n" +
-	"\x10configured_roles\x18\b \x03(\tR\x0fconfiguredRoles\"2\n" +
-	"\x13DeleteAgencyRequest\x12\x1b\n" +
-	"\tagency_id\x18\x01 \x01(\tR\bagencyId\"\x16\n" +
-	"\x14DeleteAgencyResponse\"N\n" +
-	"\x13ListAgenciesRequest\x127\n" +
-	"\x06filter\x18\x01 \x01(\v2\x1f.codevaldagency.v1.AgencyFilterR\x06filter\"M\n" +
-	"\x14ListAgenciesResponse\x125\n" +
-	"\bagencies\x18\x01 \x03(\v2\x19.codevaldagency.v1.AgencyR\bagencies*\x8b\x01\n" +
+	"\x10configured_roles\x18\b \x03(\tR\x0fconfiguredRoles*\x8b\x01\n" +
 	"\x0fAgencyLifecycle\x12 \n" +
 	"\x1cAGENCY_LIFECYCLE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16AGENCY_LIFECYCLE_DRAFT\x10\x01\x12\x1b\n" +
@@ -1053,13 +779,11 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x16RACI_LABEL_RESPONSIBLE\x10\x01\x12\x1a\n" +
 	"\x16RACI_LABEL_ACCOUNTABLE\x10\x02\x12\x18\n" +
 	"\x14RACI_LABEL_CONSULTED\x10\x03\x12\x17\n" +
-	"\x13RACI_LABEL_INFORMED\x10\x042\xc4\x03\n" +
-	"\rAgencyService\x12Q\n" +
-	"\fCreateAgency\x12&.codevaldagency.v1.CreateAgencyRequest\x1a\x19.codevaldagency.v1.Agency\x12K\n" +
+	"\x13RACI_LABEL_INFORMED\x10\x042\x8a\x02\n" +
+	"\rAgencyService\x12Y\n" +
+	"\x10SetAgencyDetails\x12*.codevaldagency.v1.SetAgencyDetailsRequest\x1a\x19.codevaldagency.v1.Agency\x12K\n" +
 	"\tGetAgency\x12#.codevaldagency.v1.GetAgencyRequest\x1a\x19.codevaldagency.v1.Agency\x12Q\n" +
-	"\fUpdateAgency\x12&.codevaldagency.v1.UpdateAgencyRequest\x1a\x19.codevaldagency.v1.Agency\x12_\n" +
-	"\fDeleteAgency\x12&.codevaldagency.v1.DeleteAgencyRequest\x1a'.codevaldagency.v1.DeleteAgencyResponse\x12_\n" +
-	"\fListAgencies\x12&.codevaldagency.v1.ListAgenciesRequest\x1a'.codevaldagency.v1.ListAgenciesResponseBMZKgithub.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1;codevaldagencyv1b\x06proto3"
+	"\fUpdateAgency\x12&.codevaldagency.v1.UpdateAgencyRequest\x1a\x19.codevaldagency.v1.AgencyBMZKgithub.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1;codevaldagencyv1b\x06proto3"
 
 var (
 	file_codevaldagency_v1_agency_proto_rawDescOnce sync.Once
@@ -1074,24 +798,19 @@ func file_codevaldagency_v1_agency_proto_rawDescGZIP() []byte {
 }
 
 var file_codevaldagency_v1_agency_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_codevaldagency_v1_agency_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_codevaldagency_v1_agency_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_codevaldagency_v1_agency_proto_goTypes = []any{
-	(AgencyLifecycle)(0),          // 0: codevaldagency.v1.AgencyLifecycle
-	(RACILabel)(0),                // 1: codevaldagency.v1.RACILabel
-	(*RoleAssignment)(nil),        // 2: codevaldagency.v1.RoleAssignment
-	(*WorkItem)(nil),              // 3: codevaldagency.v1.WorkItem
-	(*Workflow)(nil),              // 4: codevaldagency.v1.Workflow
-	(*Goal)(nil),                  // 5: codevaldagency.v1.Goal
-	(*Agency)(nil),                // 6: codevaldagency.v1.Agency
-	(*AgencyFilter)(nil),          // 7: codevaldagency.v1.AgencyFilter
-	(*CreateAgencyRequest)(nil),   // 8: codevaldagency.v1.CreateAgencyRequest
-	(*GetAgencyRequest)(nil),      // 9: codevaldagency.v1.GetAgencyRequest
-	(*UpdateAgencyRequest)(nil),   // 10: codevaldagency.v1.UpdateAgencyRequest
-	(*DeleteAgencyRequest)(nil),   // 11: codevaldagency.v1.DeleteAgencyRequest
-	(*DeleteAgencyResponse)(nil),  // 12: codevaldagency.v1.DeleteAgencyResponse
-	(*ListAgenciesRequest)(nil),   // 13: codevaldagency.v1.ListAgenciesRequest
-	(*ListAgenciesResponse)(nil),  // 14: codevaldagency.v1.ListAgenciesResponse
-	(*timestamppb.Timestamp)(nil), // 15: google.protobuf.Timestamp
+	(AgencyLifecycle)(0),            // 0: codevaldagency.v1.AgencyLifecycle
+	(RACILabel)(0),                  // 1: codevaldagency.v1.RACILabel
+	(*RoleAssignment)(nil),          // 2: codevaldagency.v1.RoleAssignment
+	(*WorkItem)(nil),                // 3: codevaldagency.v1.WorkItem
+	(*Workflow)(nil),                // 4: codevaldagency.v1.Workflow
+	(*Goal)(nil),                    // 5: codevaldagency.v1.Goal
+	(*Agency)(nil),                  // 6: codevaldagency.v1.Agency
+	(*GetAgencyRequest)(nil),        // 7: codevaldagency.v1.GetAgencyRequest
+	(*SetAgencyDetailsRequest)(nil), // 8: codevaldagency.v1.SetAgencyDetailsRequest
+	(*UpdateAgencyRequest)(nil),     // 9: codevaldagency.v1.UpdateAgencyRequest
+	(*timestamppb.Timestamp)(nil),   // 10: google.protobuf.Timestamp
 }
 var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	1,  // 0: codevaldagency.v1.RoleAssignment.raci:type_name -> codevaldagency.v1.RACILabel
@@ -1100,31 +819,22 @@ var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	0,  // 3: codevaldagency.v1.Agency.status:type_name -> codevaldagency.v1.AgencyLifecycle
 	5,  // 4: codevaldagency.v1.Agency.goals:type_name -> codevaldagency.v1.Goal
 	4,  // 5: codevaldagency.v1.Agency.workflows:type_name -> codevaldagency.v1.Workflow
-	15, // 6: codevaldagency.v1.Agency.created_at:type_name -> google.protobuf.Timestamp
-	15, // 7: codevaldagency.v1.Agency.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 8: codevaldagency.v1.AgencyFilter.status:type_name -> codevaldagency.v1.AgencyLifecycle
-	5,  // 9: codevaldagency.v1.CreateAgencyRequest.goals:type_name -> codevaldagency.v1.Goal
-	4,  // 10: codevaldagency.v1.CreateAgencyRequest.workflows:type_name -> codevaldagency.v1.Workflow
-	0,  // 11: codevaldagency.v1.UpdateAgencyRequest.status:type_name -> codevaldagency.v1.AgencyLifecycle
-	5,  // 12: codevaldagency.v1.UpdateAgencyRequest.goals:type_name -> codevaldagency.v1.Goal
-	4,  // 13: codevaldagency.v1.UpdateAgencyRequest.workflows:type_name -> codevaldagency.v1.Workflow
-	7,  // 14: codevaldagency.v1.ListAgenciesRequest.filter:type_name -> codevaldagency.v1.AgencyFilter
-	6,  // 15: codevaldagency.v1.ListAgenciesResponse.agencies:type_name -> codevaldagency.v1.Agency
-	8,  // 16: codevaldagency.v1.AgencyService.CreateAgency:input_type -> codevaldagency.v1.CreateAgencyRequest
-	9,  // 17: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
-	10, // 18: codevaldagency.v1.AgencyService.UpdateAgency:input_type -> codevaldagency.v1.UpdateAgencyRequest
-	11, // 19: codevaldagency.v1.AgencyService.DeleteAgency:input_type -> codevaldagency.v1.DeleteAgencyRequest
-	13, // 20: codevaldagency.v1.AgencyService.ListAgencies:input_type -> codevaldagency.v1.ListAgenciesRequest
-	6,  // 21: codevaldagency.v1.AgencyService.CreateAgency:output_type -> codevaldagency.v1.Agency
-	6,  // 22: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
-	6,  // 23: codevaldagency.v1.AgencyService.UpdateAgency:output_type -> codevaldagency.v1.Agency
-	12, // 24: codevaldagency.v1.AgencyService.DeleteAgency:output_type -> codevaldagency.v1.DeleteAgencyResponse
-	14, // 25: codevaldagency.v1.AgencyService.ListAgencies:output_type -> codevaldagency.v1.ListAgenciesResponse
-	21, // [21:26] is the sub-list for method output_type
-	16, // [16:21] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	10, // 6: codevaldagency.v1.Agency.created_at:type_name -> google.protobuf.Timestamp
+	10, // 7: codevaldagency.v1.Agency.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 8: codevaldagency.v1.UpdateAgencyRequest.status:type_name -> codevaldagency.v1.AgencyLifecycle
+	5,  // 9: codevaldagency.v1.UpdateAgencyRequest.goals:type_name -> codevaldagency.v1.Goal
+	4,  // 10: codevaldagency.v1.UpdateAgencyRequest.workflows:type_name -> codevaldagency.v1.Workflow
+	8,  // 11: codevaldagency.v1.AgencyService.SetAgencyDetails:input_type -> codevaldagency.v1.SetAgencyDetailsRequest
+	7,  // 12: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
+	9,  // 13: codevaldagency.v1.AgencyService.UpdateAgency:input_type -> codevaldagency.v1.UpdateAgencyRequest
+	6,  // 14: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
+	6,  // 15: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
+	6,  // 16: codevaldagency.v1.AgencyService.UpdateAgency:output_type -> codevaldagency.v1.Agency
+	14, // [14:17] is the sub-list for method output_type
+	11, // [11:14] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_codevaldagency_v1_agency_proto_init() }
@@ -1138,7 +848,7 @@ func file_codevaldagency_v1_agency_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_codevaldagency_v1_agency_proto_rawDesc), len(file_codevaldagency_v1_agency_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   13,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

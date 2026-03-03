@@ -77,25 +77,14 @@ message Agency {
 
 // ── Filter ───────────────────────────────────────────────────────────────────
 
-// AgencyFilter constrains ListAgencies results. Unset fields match all.
-message AgencyFilter {
-  AgencyLifecycle status = 1;
-  string          name   = 2;
-}
-
-// ── Request / Response messages ───────────────────────────────────────────────
-
-message CreateAgencyRequest {
-  string            name             = 1;
-  string            mission          = 2;
-  string            vision           = 3;
-  repeated Goal     goals            = 4;
-  repeated Workflow workflows        = 5;
-  repeated string   configured_roles = 6;
-}
-
 message GetAgencyRequest {
   string agency_id = 1;
+}
+
+message SetAgencyDetailsRequest {
+  // json is the full agency document serialised as a JSON string.
+  // Must include a non-empty "id" field.
+  string json = 1;
 }
 
 message UpdateAgencyRequest {
@@ -109,44 +98,22 @@ message UpdateAgencyRequest {
   repeated string   configured_roles = 8;
 }
 
-message DeleteAgencyRequest {
-  string agency_id = 1;
-}
-
-message DeleteAgencyResponse {}
-
-message ListAgenciesRequest {
-  AgencyFilter filter = 1;
-}
-
-message ListAgenciesResponse {
-  repeated Agency agencies = 1;
-}
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
-// AgencyService exposes all agency lifecycle management operations via gRPC.
+// AgencyService exposes agency lifecycle management operations via gRPC.
 // All mutations are validated and lifecycle-guarded by the AgencyManager.
 service AgencyService {
-  // CreateAgency creates a new agency in draft status.
-  // Error: INVALID_ARGUMENT if name is empty.
-  // Error: ALREADY_EXISTS if an agency with the same ID already exists.
-  rpc CreateAgency(CreateAgencyRequest) returns (Agency);
+  // SetAgencyDetails replaces the full agency document from a JSON string.
+  // Error: INVALID_ARGUMENT if the JSON is malformed or the id field is missing.
+  rpc SetAgencyDetails(SetAgencyDetailsRequest) returns (Agency);
 
-  // GetAgency retrieves a single agency by its ID.
+  // GetAgency retrieves the single agency by its ID.
   // Error: NOT_FOUND if no matching agency exists.
   rpc GetAgency(GetAgencyRequest) returns (Agency);
 
-  // UpdateAgency replaces the mutable fields of an existing agency.
+  // UpdateAgency applies incremental field edits with lifecycle validation.
   // Error: FAILED_PRECONDITION on invalid lifecycle transition.
   // Error: NOT_FOUND if the agency does not exist.
   rpc UpdateAgency(UpdateAgencyRequest) returns (Agency);
-
-  // DeleteAgency permanently removes an agency.
-  // Error: NOT_FOUND if the agency does not exist.
-  rpc DeleteAgency(DeleteAgencyRequest) returns (DeleteAgencyResponse);
-
-  // ListAgencies returns all agencies matching the filter.
-  // Returns an empty list (not an error) when no agencies match.
-  rpc ListAgencies(ListAgenciesRequest) returns (ListAgenciesResponse);
 }

@@ -25,15 +25,6 @@ func New(mgr codevaldagency.AgencyManager) *Server {
 	return &Server{mgr: mgr}
 }
 
-// CreateAgency implements pb.AgencyServiceServer.
-func (s *Server) CreateAgency(ctx context.Context, req *pb.CreateAgencyRequest) (*pb.Agency, error) {
-	agency, err := s.mgr.CreateAgency(ctx, protoToCreateRequest(req))
-	if err != nil {
-		return nil, toGRPCError(err)
-	}
-	return agencyToProto(agency), nil
-}
-
 // GetAgency implements pb.AgencyServiceServer.
 func (s *Server) GetAgency(ctx context.Context, req *pb.GetAgencyRequest) (*pb.Agency, error) {
 	agency, err := s.mgr.GetAgency(ctx, req.GetAgencyId())
@@ -52,36 +43,16 @@ func (s *Server) UpdateAgency(ctx context.Context, req *pb.UpdateAgencyRequest) 
 	return agencyToProto(agency), nil
 }
 
-// DeleteAgency implements pb.AgencyServiceServer.
-func (s *Server) DeleteAgency(ctx context.Context, req *pb.DeleteAgencyRequest) (*pb.DeleteAgencyResponse, error) {
-	if err := s.mgr.DeleteAgency(ctx, req.GetAgencyId()); err != nil {
-		return nil, toGRPCError(err)
-	}
-	return &pb.DeleteAgencyResponse{}, nil
-}
-
-// ListAgencies implements pb.AgencyServiceServer.
-func (s *Server) ListAgencies(ctx context.Context, req *pb.ListAgenciesRequest) (*pb.ListAgenciesResponse, error) {
-	agencies, err := s.mgr.ListAgencies(ctx, protoToFilter(req.GetFilter()))
+// SetAgencyDetails implements pb.AgencyServiceServer.
+func (s *Server) SetAgencyDetails(ctx context.Context, req *pb.SetAgencyDetailsRequest) (*pb.Agency, error) {
+	agency, err := s.mgr.SetAgencyDetails(ctx, req.GetJson())
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	pbAgencies := make([]*pb.Agency, 0, len(agencies))
-	for _, a := range agencies {
-		pbAgencies = append(pbAgencies, agencyToProto(a))
-	}
-	return &pb.ListAgenciesResponse{Agencies: pbAgencies}, nil
+	return agencyToProto(agency), nil
 }
 
 // ── Proto → Domain converters ─────────────────────────────────────────────────
-
-func protoToCreateRequest(req *pb.CreateAgencyRequest) codevaldagency.CreateAgencyRequest {
-	return codevaldagency.CreateAgencyRequest{
-		Name:    req.GetName(),
-		Mission: req.GetMission(),
-		Vision:  req.GetVision(),
-	}
-}
 
 func protoToUpdateRequest(req *pb.UpdateAgencyRequest) codevaldagency.UpdateAgencyRequest {
 	return codevaldagency.UpdateAgencyRequest{
@@ -92,15 +63,6 @@ func protoToUpdateRequest(req *pb.UpdateAgencyRequest) codevaldagency.UpdateAgen
 		Goals:           protoToGoals(req.GetGoals()),
 		Workflows:       protoToWorkflows(req.GetWorkflows()),
 		ConfiguredRoles: req.GetConfiguredRoles(),
-	}
-}
-
-func protoToFilter(f *pb.AgencyFilter) codevaldagency.AgencyFilter {
-	if f == nil {
-		return codevaldagency.AgencyFilter{}
-	}
-	return codevaldagency.AgencyFilter{
-		Status: protoToLifecycle(f.GetStatus()),
 	}
 }
 

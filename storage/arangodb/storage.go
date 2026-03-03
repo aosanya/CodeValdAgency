@@ -8,7 +8,7 @@ package arangodb
 
 import (
 	"context"
-	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	colAgencies  = "agencies"
+	colAgencies  = "agency_details"
 	colSnapshots = "agency_snapshots"
 )
 
@@ -40,9 +40,9 @@ type Config struct {
 
 // Backend is the ArangoDB implementation of [codevaldagency.Backend].
 type Backend struct {
-	db        driver.Database
-	agencies  driver.Collection
-	snapshots driver.Collection
+	db            driver.Database
+	agencyDetails driver.Collection
+	snapshots     driver.Collection
 }
 
 // NewBackend connects to ArangoDB, ensures both collections exist, and returns
@@ -86,7 +86,7 @@ func NewBackendFromDB(db driver.Database) (*Backend, error) {
 }
 
 func newBackendFromDB(ctx context.Context, db driver.Database) (*Backend, error) {
-	agencies, err := ensureCollection(ctx, db, colAgencies)
+	agencyDetails, err := ensureCollection(ctx, db, colAgencies)
 	if err != nil {
 		return nil, fmt.Errorf("arangodb: ensure %q: %w", colAgencies, err)
 	}
@@ -96,7 +96,7 @@ func newBackendFromDB(ctx context.Context, db driver.Database) (*Backend, error)
 		return nil, fmt.Errorf("arangodb: ensure %q: %w", colSnapshots, err)
 	}
 
-	return &Backend{db: db, agencies: agencies, snapshots: snapshots}, nil
+	return &Backend{db: db, agencyDetails: agencyDetails, snapshots: snapshots}, nil
 }
 
 func ensureCollection(ctx context.Context, db driver.Database, name string) (driver.Collection, error) {
@@ -107,7 +107,16 @@ func ensureCollection(ctx context.Context, db driver.Database, name string) (dri
 	if exists {
 		return db.Collection(ctx, name)
 	}
-	return db.CreateCollection(ctx, name, nil)
+	col, err := db.CreateCollection(ctx, name, nil)
+	if err != nil {
+		// Another goroutine may have created it concurrently (TOCTOU).
+		// Fall back to opening the existing collection.
+		if driver.IsConflict(err) {
+			return db.Collection(ctx, name)
+		}
+		return nil, err
+	}
+	return col, nil
 }
 
 // ── Document types ────────────────────────────────────────────────────────────
@@ -307,35 +316,61 @@ func fromAgencyDoc(key string, doc agencyDoc) codevaldagency.Agency {
 
 // ── Backend interface implementation ─────────────────────────────────────────
 
-// Insert implements [codevaldagency.Backend].
-func (b *Backend) Insert(ctx context.Context, req codevaldagency.CreateAgencyRequest) (codevaldagency.Agency, error) {
-	now := time.Now().UTC()
-	id := newID()
-	agency := codevaldagency.Agency{
-		ID:        id,
-		Name:      req.Name,
-		Mission:   req.Mission,
-		Vision:    req.Vision,
-		Status:    codevaldagency.LifecycleDraft,
-		CreatedAt: now,
-		UpdatedAt: now,
+// SetDetails implements [codevaldagency.Backend].
+// It parses the raw JSON, builds an agencyDoc keyed by agency.id, then
+// upserts (replace-or-create) the single document in the agency_details collection.
+func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagency.Agency, error) {
+	var raw struct {
+		ID              string        `json:"id"`
+		Name            string        `json:"name"`
+		Mission         string        `json:"mission"`
+		Vision          string        `json:"vision"`
+		Status          string        `json:"status"`
+		Goals           []goalDoc     `json:"goals"`
+		Workflows       []workflowDoc `json:"workflows"`
+		ConfiguredRoles []string      `json:"configured_roles"`
+		CreatedAt       time.Time     `json:"created_at"`
+		UpdatedAt       time.Time     `json:"updated_at"`
+	}
+	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
+		return codevaldagency.Agency{}, codevaldagency.ErrInvalidJSON
+	}
+	if raw.ID == "" {
+		return codevaldagency.Agency{}, codevaldagency.ErrInvalidJSON
 	}
 
-	doc := toAgencyDoc(agency)
-	_, err := b.agencies.CreateDocument(ctx, doc)
-	if err != nil {
-		if driver.IsConflict(err) {
-			return codevaldagency.Agency{}, codevaldagency.ErrAgencyAlreadyExists
-		}
-		return codevaldagency.Agency{}, fmt.Errorf("Insert: %w", err)
+	doc := agencyDoc{
+		Key:             raw.ID,
+		Name:            raw.Name,
+		Mission:         raw.Mission,
+		Vision:          raw.Vision,
+		Status:          raw.Status,
+		Goals:           raw.Goals,
+		Workflows:       raw.Workflows,
+		ConfiguredRoles: raw.ConfiguredRoles,
+		CreatedAt:       raw.CreatedAt,
+		UpdatedAt:       raw.UpdatedAt,
 	}
-	return agency, nil
+
+	// Upsert: try replace first; fall back to create on first write.
+	_, err := b.agencyDetails.ReplaceDocument(ctx, doc.Key, doc)
+	if err != nil {
+		if driver.IsNotFound(err) {
+			if _, err = b.agencyDetails.CreateDocument(ctx, doc); err != nil {
+				return codevaldagency.Agency{}, fmt.Errorf("SetDetails: create: %w", err)
+			}
+		} else {
+			return codevaldagency.Agency{}, fmt.Errorf("SetDetails: replace: %w", err)
+		}
+	}
+
+	return fromAgencyDoc(doc.Key, doc), nil
 }
 
 // Get implements [codevaldagency.Backend].
 func (b *Backend) Get(ctx context.Context, agencyID string) (codevaldagency.Agency, error) {
 	var doc agencyDoc
-	_, err := b.agencies.ReadDocument(ctx, agencyID, &doc)
+	_, err := b.agencyDetails.ReadDocument(ctx, agencyID, &doc)
 	if err != nil {
 		if driver.IsNotFound(err) {
 			return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound
@@ -377,7 +412,7 @@ func (b *Backend) Update(ctx context.Context, agencyID string, req codevaldagenc
 	current.UpdatedAt = time.Now().UTC()
 
 	doc := toAgencyDoc(current)
-	_, err = b.agencies.ReplaceDocument(ctx, agencyID, doc)
+	_, err = b.agencyDetails.ReplaceDocument(ctx, agencyID, doc)
 	if err != nil {
 		if driver.IsNotFound(err) {
 			return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound
@@ -387,56 +422,6 @@ func (b *Backend) Update(ctx context.Context, agencyID string, req codevaldagenc
 	return current, nil
 }
 
-// Delete implements [codevaldagency.Backend].
-func (b *Backend) Delete(ctx context.Context, agencyID string) error {
-	_, err := b.agencies.RemoveDocument(ctx, agencyID)
-	if err != nil {
-		if driver.IsNotFound(err) {
-			return codevaldagency.ErrAgencyNotFound
-		}
-		return fmt.Errorf("Delete: %w", err)
-	}
-	return nil
-}
-
-// List implements [codevaldagency.Backend].
-func (b *Backend) List(ctx context.Context, filter codevaldagency.AgencyFilter) ([]codevaldagency.Agency, error) {
-	query, bindVars := buildListQuery(filter)
-	cursor, err := b.db.Query(ctx, query, bindVars)
-	if err != nil {
-		return nil, fmt.Errorf("List: %w", err)
-	}
-	defer cursor.Close()
-
-	var agencies []codevaldagency.Agency
-	for cursor.HasMore() {
-		var doc agencyDoc
-		meta, err := cursor.ReadDocument(ctx, &doc)
-		if err != nil {
-			return nil, fmt.Errorf("List: read: %w", err)
-		}
-		agencies = append(agencies, fromAgencyDoc(meta.Key, doc))
-	}
-	if agencies == nil {
-		agencies = []codevaldagency.Agency{}
-	}
-	return agencies, nil
-}
-
-func buildListQuery(filter codevaldagency.AgencyFilter) (string, map[string]interface{}) {
-	bindVars := map[string]interface{}{
-		"@col": colAgencies,
-	}
-	query := "FOR a IN @@col"
-
-	if filter.Status != "" {
-		query += " FILTER a.status == @status"
-		bindVars["status"] = string(filter.Status)
-	}
-
-	query += " RETURN a"
-	return query, bindVars
-}
 
 // InsertSnapshot implements [codevaldagency.Backend].
 func (b *Backend) InsertSnapshot(ctx context.Context, snap codevaldagency.AgencySnapshot) error {
@@ -458,12 +443,3 @@ func (b *Backend) InsertSnapshot(ctx context.Context, snap codevaldagency.Agency
 	return nil
 }
 
-// newID returns a random UUID v4 string using crypto/rand.
-func newID() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	b[6] = (b[6] & 0x0f) | 0x40 // version 4
-	b[8] = (b[8] & 0x3f) | 0x80 // variant bits
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-		b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
-}

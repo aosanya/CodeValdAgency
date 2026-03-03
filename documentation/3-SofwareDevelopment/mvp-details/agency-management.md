@@ -1,5 +1,17 @@
 # Agency Management — Implementation Details
 
+## Design Decision: Single-Agency Database
+
+Each CodeValdAgency database instance holds **exactly one agency**. There is no
+listing, no multi-tenancy, and no deletion. The `agency_details` collection always
+contains a single document keyed by the agency's own ID.
+
+`SetAgencyDetails` is the authoritative write path. It accepts a full JSON
+representation of the agency, validates structure, and upserts the document.
+`UpdateAgency` remains for incremental field edits with lifecycle-guarded transitions.
+
+---
+
 ## MVP-AGENCY-001 — Library Scaffolding & Agency Model
 
 **Status**: 🔲 Not Started  
@@ -7,7 +19,8 @@
 
 ### Goal
 
-Scaffold the Go module with the `AgencyManager` interface, `Agency` domain type, lifecycle enforcement, and exported errors.
+Scaffold the Go module with the `AgencyManager` interface, `Agency` domain type,
+lifecycle enforcement, and exported errors.
 
 ### Files to Create/Modify
 
@@ -15,10 +28,31 @@ Scaffold the Go module with the `AgencyManager` interface, `Agency` domain type,
 |---|---|
 | `go.mod` | Module declaration (`github.com/aosanya/CodeValdAgency`) |
 | `agency.go` | `AgencyManager` interface, `Backend` interface, `agencyManager` implementation |
-| `models.go` | `Agency`, `Goal`, `Workflow`, `WorkItem`, `RoleAssignment`, `AgencyRole`, `RACILabel`, `AgencyLifecycle`, `AgencySnapshot`, request/filter types |
-| `errors.go` | `ErrAgencyNotFound`, `ErrAgencyAlreadyExists`, `ErrInvalidLifecycleTransition`, `ErrInvalidAgency` |
+| `models.go` | `Agency`, `Goal`, `Workflow`, `WorkItem`, `RoleAssignment`, `AgencyRole`, `RACILabel`, `AgencyLifecycle`, `AgencySnapshot`, `UpdateAgencyRequest` |
+| `errors.go` | `ErrAgencyNotFound`, `ErrInvalidLifecycleTransition`, `ErrInvalidAgency`, `ErrInvalidJSON` |
 
-### Lifecycle Transition Rules
+### AgencyManager Interface
+
+```go
+type AgencyManager interface {
+    // SetAgencyDetails replaces the full agency document from raw JSON.
+    // Returns ErrInvalidJSON (→ INVALID_ARGUMENT) if the payload cannot be
+    // parsed or if the id field is missing. Lifecycle validation is NOT applied.
+    // Publishes cross.agency.created after every successful write.
+    SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
+
+    // GetAgency retrieves the single agency by its ID.
+    // Returns ErrAgencyNotFound if no agency document exists yet.
+    GetAgency(ctx context.Context, agencyID string) (Agency, error)
+
+    // UpdateAgency applies incremental field edits with lifecycle validation.
+    // Returns ErrInvalidLifecycleTransition on invalid status change.
+    // Returns ErrAgencyNotFound if the agency does not exist.
+    UpdateAgency(ctx context.Context, agencyID string, req UpdateAgencyRequest) (Agency, error)
+}
+```
+
+### Lifecycle Transition Rules (UpdateAgency only)
 
 | From | To | Allowed |
 |---|---|---|
@@ -27,9 +61,16 @@ Scaffold the Go module with the `AgencyManager` interface, `Agency` domain type,
 | `active` | `draft` | ❌ |
 | `achieved` | anything | ❌ (terminal) |
 
+> `SetAgencyDetails` bypasses lifecycle validation entirely — any status value
+> in the JSON is written as-is.
+
 ### Acceptance Tests
 
-- `CreateAgency` with empty `Name` returns `ErrInvalidAgency`
+- `SetAgencyDetails` with invalid JSON returns `ErrInvalidJSON`
+- `SetAgencyDetails` with missing `id` field returns `ErrInvalidJSON`
+- `SetAgencyDetails` with valid JSON returns the stored agency
+- `GetAgency` after `SetAgencyDetails` returns matching data
+- `SetAgencyDetails` called twice replaces the document
 - `UpdateAgency` with `active → draft` returns `ErrInvalidLifecycleTransition`
 - `UpdateAgency` with `draft → active` succeeds and triggers snapshot write
 - `UpdateAgency` on an `achieved` agency returns `ErrInvalidLifecycleTransition`
@@ -44,31 +85,61 @@ Scaffold the Go module with the `AgencyManager` interface, `Agency` domain type,
 
 ### Goal
 
-Implement `codevaldagency.Backend` backed by ArangoDB. Agencies are stored in the `agencies` collection, keyed by agency ID. Activation snapshots are written to `agency_snapshots`.
+Implement `codevaldagency.Backend` backed by ArangoDB. The single agency document
+is stored in the `agency_details` collection, keyed by agency ID. Activation
+snapshots are written to `agency_snapshots`.
 
 ### Files to Create/Modify
 
 | File | Purpose |
 |---|---|
-| `storage/arangodb/storage.go` | `ArangoBackend` implementing `codevaldagency.Backend` |
+| `storage/arangodb/storage.go` | `Backend` implementing `codevaldagency.Backend` |
 | `storage/arangodb/storage_test.go` | Integration tests (skip when `AGENCY_ARANGO_ENDPOINT` not set) |
+
+### Backend Interface
+
+```go
+type Backend interface {
+    // SetDetails parses the raw JSON and upserts the agency document at
+    // _key = agency.id in the agency_details collection.
+    // Returns ErrInvalidJSON if the JSON is malformed or id is missing.
+    SetDetails(ctx context.Context, jsonStr string) (Agency, error)
+
+    // Get retrieves the agency document by its ID.
+    // Returns ErrAgencyNotFound if the document does not exist.
+    Get(ctx context.Context, agencyID string) (Agency, error)
+
+    // Update applies a partial field merge and returns the updated agency.
+    // Returns ErrAgencyNotFound if the document does not exist.
+    Update(ctx context.Context, agencyID string, req UpdateAgencyRequest) (Agency, error)
+
+    // InsertSnapshot writes an immutable activation snapshot to agency_snapshots.
+    InsertSnapshot(ctx context.Context, snapshot AgencySnapshot) error
+}
+```
+
+### Collections
+
+| Collection | Purpose |
+|---|---|
+| `agency_details` | Single agency document (keyed by agency ID) |
+| `agency_snapshots` | Immutable activation snapshots |
 
 ### Key Behaviours
 
-- `Insert` with `_key = agency.ID` — returns `ErrAgencyAlreadyExists` on conflict
-- `Get` returns `ErrAgencyNotFound` if key missing
-- `Update` — full document replace with refreshed `updated_at`; validates lifecycle transition before write
-- `Delete` after existence check
-- `List` with optional `lifecycle` and `name` filters via AQL
-- `InsertSnapshot` writes to `agency_snapshots` collection on `draft → active` transition
+- `SetDetails` upserts using `_key = agency.id` — creates on first call, replaces on subsequent calls
+- `Get` returns `ErrAgencyNotFound` if key is missing
+- `Update` — partial field merge with refreshed `updated_at`
+- `InsertSnapshot` writes to `agency_snapshots` on `draft → active` transition
 
 ### Acceptance Tests
 
-- Create an agency and read it back — all fields match
-- Create two agencies and list both
-- Delete an agency — subsequent `GetAgency` returns `ErrAgencyNotFound`
-- Get a non-existent agency — returns `ErrAgencyNotFound`
-- `InsertSnapshot` on `draft → active` — snapshot is retrievable with the same agency ID
+- `SetDetails` with valid JSON → document upserted; `Get` returns same data
+- `SetDetails` with invalid JSON → `ErrInvalidJSON`
+- `SetDetails` called twice → second call replaces document; `Get` returns latest
+- `Get` on non-existent agency → `ErrAgencyNotFound`
+- `Update` on non-existent agency → `ErrAgencyNotFound`
+- `InsertSnapshot` → snapshot is retrievable with the same agency ID
 
 ---
 
@@ -90,21 +161,46 @@ Generate proto stubs and implement the `AgencyService` gRPC handler in `internal
 | `internal/server/errors.go` | Domain error → gRPC status code mapping |
 | `cmd/main.go` | Binary wiring |
 
+### Proto Service
+
+```protobuf
+service AgencyService {
+  // SetAgencyDetails replaces the full agency document from a JSON string.
+  // Error: INVALID_ARGUMENT if the JSON is malformed or id is missing.
+  rpc SetAgencyDetails(SetAgencyDetailsRequest) returns (Agency);
+
+  // GetAgency retrieves the single agency by its ID.
+  // Error: NOT_FOUND if no agency document exists.
+  rpc GetAgency(GetAgencyRequest) returns (Agency);
+
+  // UpdateAgency applies incremental field edits with lifecycle validation.
+  // Error: FAILED_PRECONDITION on invalid lifecycle transition.
+  // Error: NOT_FOUND if the agency does not exist.
+  rpc UpdateAgency(UpdateAgencyRequest) returns (Agency);
+}
+
+message SetAgencyDetailsRequest {
+  // json is the full agency document serialised as a JSON string.
+  // Must include a non-empty "id" field.
+  string json = 1;
+}
+```
+
 ### Error Mapping
 
-| Domain Error | gRPC Code |
-|---|---|
-| `ErrAgencyNotFound` | `NOT_FOUND` |
-| `ErrAgencyAlreadyExists` | `ALREADY_EXISTS` |
-| `ErrInvalidLifecycleTransition` | `FAILED_PRECONDITION` |
-| `ErrInvalidAgency` | `INVALID_ARGUMENT` |
+| Domain Error | gRPC Code | Trigger |
+|---|---|---|
+| `ErrAgencyNotFound` | `NOT_FOUND` | `GetAgency`, `UpdateAgency` |
+| `ErrInvalidLifecycleTransition` | `FAILED_PRECONDITION` | `UpdateAgency` |
+| `ErrInvalidAgency` | `INVALID_ARGUMENT` | `UpdateAgency` (empty name) |
+| `ErrInvalidJSON` | `INVALID_ARGUMENT` | `SetAgencyDetails` (bad JSON) |
 
 ### Acceptance Tests
 
-- `CreateAgency` RPC returns `ALREADY_EXISTS` when agency ID is duplicate
+- `SetAgencyDetails` RPC with valid JSON → returns populated `Agency`
+- `SetAgencyDetails` RPC with invalid JSON → `INVALID_ARGUMENT`
 - `UpdateAgency` RPC returns `FAILED_PRECONDITION` on invalid lifecycle transition
-- `DeleteAgency` RPC returns `NOT_FOUND` for unknown agency
-- `ListAgencies` RPC with lifecycle filter only returns matching agencies
+- `GetAgency` RPC returns `NOT_FOUND` for unknown agency
 
 ---
 
@@ -115,7 +211,8 @@ Generate proto stubs and implement the `AgencyService` gRPC handler in `internal
 
 ### Goal
 
-Register with CodeValdCross on startup and send periodic heartbeats. Publish `cross.agency.created` after every successful `CreateAgency`.
+Register with CodeValdCross on startup and send periodic heartbeats. Publish
+`cross.agency.created` after every successful `SetAgencyDetails`.
 
 ### Files to Create/Modify
 
@@ -134,7 +231,7 @@ Register with CodeValdCross on startup and send periodic heartbeats. Publish `cr
 - When `CROSS_GRPC_ADDR` is unset, server starts without error and skips registration
 - When `CROSS_GRPC_ADDR` is set but unreachable, server continues running (non-fatal)
 - Registrar sends heartbeat at configured interval
-- `cross.agency.created` is published once per successful `CreateAgency` call
+- `cross.agency.created` is published once per successful `SetAgencyDetails` call
 
 ---
 
@@ -145,15 +242,17 @@ Register with CodeValdCross on startup and send periodic heartbeats. Publish `cr
 
 ### Goal
 
-End-to-end tests covering the full gRPC + ArangoDB stack using a real ArangoDB instance. Tests skip when `AGENCY_ARANGO_ENDPOINT` is not set.
+End-to-end tests covering the full gRPC + ArangoDB stack using a real ArangoDB
+instance. Tests skip when `AGENCY_ARANGO_ENDPOINT` is not set.
 
 ### Test Matrix
 
-- Create → Get round-trip
-- Create → Update (valid lifecycle transition `draft → active`)
-- Create → Update (invalid transition → `FAILED_PRECONDITION`)
-- Create → Update `active → achieved` (terminal; subsequent update → `FAILED_PRECONDITION`)
-- Create → Delete → Get (`NOT_FOUND`)
-- Create multiple → List with lifecycle filter
-- Create with duplicate ID → `ALREADY_EXISTS`
-- `draft → active` transition → snapshot exists in `agency_snapshots`
+- `SetAgencyDetails` with valid JSON → `GetAgency` returns same data
+- `SetAgencyDetails` called twice → `GetAgency` returns latest data
+- `SetAgencyDetails` with invalid JSON → `INVALID_ARGUMENT`
+- `SetAgencyDetails` → `UpdateAgency` (valid lifecycle transition `draft → active`)
+- `SetAgencyDetails` → `UpdateAgency` (invalid transition → `FAILED_PRECONDITION`)
+- `SetAgencyDetails` → `UpdateAgency` `draft → active` → `active → achieved`
+  (terminal; subsequent update → `FAILED_PRECONDITION`)
+- `GetAgency` on empty database → `NOT_FOUND`
+- `draft → active` transition via `UpdateAgency` → snapshot exists in `agency_snapshots`

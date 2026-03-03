@@ -30,7 +30,7 @@ codevaldagency "github.com/aosanya/CodeValdAgency"
 // openTestBackend connects to the ArangoDB instance at AGENCY_ARANGO_ENDPOINT
 // (default http://localhost:8529) and opens AGENCY_ARANGO_DATABASE_TEST
 // (default "codevald_tests"). Skips the test if the server is unreachable.
-func openTestBackend(t *testing.T) *arangodb.Backend {
+func openTestBackend(t *testing.T) (*arangodb.Backend, driver.Database) {
 t.Helper()
 
 endpoint := envOrDefault("AGENCY_ARANGO_ENDPOINT", "")
@@ -83,7 +83,20 @@ b, err := arangodb.NewBackendFromDB(db)
 if err != nil {
 t.Fatalf("NewBackendFromDB: %v", err)
 }
-return b
+return b, db
+}
+
+// clearCollection truncates the agency_details collection so Get returns ErrAgencyNotFound.
+func clearCollection(t *testing.T, db driver.Database) {
+t.Helper()
+ctx := context.Background()
+col, err := db.Collection(ctx, "agency_details")
+if err != nil {
+t.Fatalf("clearCollection: open collection: %v", err)
+}
+if err := col.Truncate(ctx); err != nil {
+t.Fatalf("clearCollection: truncate: %v", err)
+}
 }
 
 // uniqueID returns a string that is unique within the current test run.
@@ -106,7 +119,7 @@ return fmt.Sprintf(`{"id":%q,"name":%q,"status":"draft"}`, id, name)
 // ── SetDetails -> Get round-trip ─────────────────────────────────────────────
 
 func TestArangoDB_SetDetails_ValidJSON_RoundTrip(t *testing.T) {
-b := openTestBackend(t)
+b, _ := openTestBackend(t)
 ctx := context.Background()
 
 id := uniqueID("rt")
@@ -126,7 +139,7 @@ if created.Name != name {
 t.Errorf("name mismatch: want %q, got %q", name, created.Name)
 }
 
-got, err := b.Get(ctx, id)
+got, err := b.Get(ctx)
 if err != nil {
 t.Fatalf("Get: %v", err)
 }
@@ -141,7 +154,7 @@ t.Errorf("name round-trip: want %q, got %q", name, got.Name)
 // ── SetDetails called twice replaces the document ────────────────────────────
 
 func TestArangoDB_SetDetails_CalledTwice_Replaces(t *testing.T) {
-b := openTestBackend(t)
+b, _ := openTestBackend(t)
 ctx := context.Background()
 
 id := uniqueID("replace")
@@ -156,7 +169,7 @@ if err != nil {
 t.Fatalf("second SetDetails: %v", err)
 }
 
-got, err := b.Get(ctx, id)
+got, err := b.Get(ctx)
 if err != nil {
 t.Fatalf("Get after replace: %v", err)
 }
@@ -168,7 +181,7 @@ t.Errorf("expected replaced name %q, got %q", "ReplacedName", got.Name)
 // ── SetDetails with invalid JSON returns ErrInvalidJSON ──────────────────────
 
 func TestArangoDB_SetDetails_InvalidJSON(t *testing.T) {
-b := openTestBackend(t)
+b, _ := openTestBackend(t)
 ctx := context.Background()
 
 _, err := b.SetDetails(ctx, "not-json{{{")
@@ -180,7 +193,7 @@ t.Fatalf("expected ErrInvalidJSON, got %v", err)
 // ── SetDetails with missing ID returns ErrInvalidJSON ────────────────────────
 
 func TestArangoDB_SetDetails_MissingID_ReturnsInvalidJSON(t *testing.T) {
-b := openTestBackend(t)
+b, _ := openTestBackend(t)
 ctx := context.Background()
 
 _, err := b.SetDetails(ctx, `{"name":"NoID","status":"draft"}`)
@@ -189,13 +202,16 @@ t.Fatalf("expected ErrInvalidJSON for missing ID, got %v", err)
 }
 }
 
-// ── Get non-existent → ErrAgencyNotFound ─────────────────────────────────────
+// ── Get on empty collection → ErrAgencyNotFound ─────────────────────────────
 
 func TestArangoDB_Get_NotFound(t *testing.T) {
-b := openTestBackend(t)
+b, db := openTestBackend(t)
 ctx := context.Background()
 
-_, err := b.Get(ctx, "does-not-exist-"+uniqueID("nf"))
+// Clear the collection so the backend sees no document.
+clearCollection(t, db)
+
+_, err := b.Get(ctx)
 if !errors.Is(err, codevaldagency.ErrAgencyNotFound) {
 t.Fatalf("expected ErrAgencyNotFound, got %v", err)
 }
@@ -204,7 +220,7 @@ t.Fatalf("expected ErrAgencyNotFound, got %v", err)
 // ── InsertSnapshot ────────────────────────────────────────────────────────────
 
 func TestArangoDB_InsertSnapshot(t *testing.T) {
-b := openTestBackend(t)
+b, _ := openTestBackend(t)
 ctx := context.Background()
 
 id := uniqueID("snap")

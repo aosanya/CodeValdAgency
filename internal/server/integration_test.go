@@ -184,7 +184,7 @@ if created.GetStatus() != pb.AgencyLifecycle_AGENCY_LIFECYCLE_DRAFT {
 t.Errorf("expected DRAFT, got %v", created.GetStatus())
 }
 
-got, err := client.GetAgency(ctx, &pb.GetAgencyRequest{AgencyId: id})
+got, err := client.GetAgency(ctx, &pb.GetAgencyRequest{})
 if err != nil {
 t.Fatalf("GetAgency: %v", err)
 }
@@ -218,7 +218,7 @@ if err != nil {
 t.Fatalf("second SetAgencyDetails: %v", err)
 }
 
-got, err := client.GetAgency(ctx, &pb.GetAgencyRequest{AgencyId: id})
+got, err := client.GetAgency(ctx, &pb.GetAgencyRequest{})
 if err != nil {
 t.Fatalf("GetAgency: %v", err)
 }
@@ -253,8 +253,7 @@ t.Fatalf("SetAgencyDetails: %v", err)
 }
 
 updated, err := client.UpdateAgency(ctx, &pb.UpdateAgencyRequest{
-AgencyId: id,
-Status:   pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE,
+	Status: pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE,
 })
 if err != nil {
 t.Fatalf("UpdateAgency draft->active: %v", err)
@@ -281,8 +280,7 @@ t.Fatalf("SetAgencyDetails: %v", err)
 
 // draft -> achieved is not a valid transition.
 _, err = client.UpdateAgency(ctx, &pb.UpdateAgencyRequest{
-AgencyId: id,
-Status:   pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACHIEVED,
+	Status: pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACHIEVED,
 })
 requireCode(t, err, codes.FailedPrecondition)
 }
@@ -304,8 +302,7 @@ t.Fatalf("SetAgencyDetails: %v", err)
 
 // draft -> active
 _, err = client.UpdateAgency(ctx, &pb.UpdateAgencyRequest{
-AgencyId: id,
-Status:   pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE,
+	Status: pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE,
 })
 if err != nil {
 t.Fatalf("draft->active: %v", err)
@@ -313,8 +310,7 @@ t.Fatalf("draft->active: %v", err)
 
 // active -> achieved
 updated, err := client.UpdateAgency(ctx, &pb.UpdateAgencyRequest{
-AgencyId: id,
-Status:   pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACHIEVED,
+	Status: pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACHIEVED,
 })
 if err != nil {
 t.Fatalf("active->achieved: %v", err)
@@ -330,8 +326,7 @@ pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE,
 pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACHIEVED,
 } {
 _, err = client.UpdateAgency(ctx, &pb.UpdateAgencyRequest{
-AgencyId: id,
-Status:   next,
+	Status: next,
 })
 requireCode(t, err, codes.FailedPrecondition)
 }
@@ -355,8 +350,7 @@ t.Fatalf("SetAgencyDetails: %v", err)
 before := snapshotCountForAgency(t, db, id)
 
 _, err = client.UpdateAgency(ctx, &pb.UpdateAgencyRequest{
-AgencyId: id,
-Status:   pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE,
+Status: pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE,
 })
 if err != nil {
 t.Fatalf("UpdateAgency draft->active: %v", err)

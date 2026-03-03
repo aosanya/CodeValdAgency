@@ -28,17 +28,17 @@ type AgencyManager interface {
 	// Publishes "cross.agency.created" after every successful write.
 	SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
 
-	// GetAgency retrieves the single agency by its ID.
+	// GetAgency retrieves the single agency for this database.
 	// Returns [ErrAgencyNotFound] if no agency document exists yet.
-	GetAgency(ctx context.Context, agencyID string) (Agency, error)
+	GetAgency(ctx context.Context) (Agency, error)
 
 	// UpdateAgency applies incremental field edits with lifecycle validation.
 	// Lifecycle transitions are validated — returns [ErrInvalidLifecycleTransition]
 	// if the new status is not reachable from the current status.
 	// When the transition is draft → active, a snapshot is written to the backend
 	// before the update is applied.
-	// Returns [ErrAgencyNotFound] if the agency does not exist.
-	UpdateAgency(ctx context.Context, agencyID string, req UpdateAgencyRequest) (Agency, error)
+	// Returns [ErrAgencyNotFound] if no agency document exists yet.
+	UpdateAgency(ctx context.Context, req UpdateAgencyRequest) (Agency, error)
 }
 
 // Backend is the storage abstraction injected into [AgencyManager].
@@ -51,13 +51,13 @@ type Backend interface {
 	// Returns [ErrInvalidJSON] if the JSON is malformed or the id field is missing.
 	SetDetails(ctx context.Context, jsonStr string) (Agency, error)
 
-	// Get retrieves the agency by its ID.
-	// Returns [ErrAgencyNotFound] if no matching document exists.
-	Get(ctx context.Context, agencyID string) (Agency, error)
+	// Get retrieves the single agency document for this database.
+	// Returns [ErrAgencyNotFound] if no document exists yet.
+	Get(ctx context.Context) (Agency, error)
 
 	// Update applies a partial field merge and returns the updated agency.
-	// Returns [ErrAgencyNotFound] if the agency does not exist.
-	Update(ctx context.Context, agencyID string, req UpdateAgencyRequest) (Agency, error)
+	// Returns [ErrAgencyNotFound] if no agency document exists yet.
+	Update(ctx context.Context, req UpdateAgencyRequest) (Agency, error)
 
 	// InsertSnapshot writes an immutable point-in-time copy of an agency to
 	// the agency_snapshots collection. Called by [AgencyManager.UpdateAgency]
@@ -126,15 +126,15 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 }
 
 // GetAgency delegates to [Backend.Get].
-func (m *agencyManager) GetAgency(ctx context.Context, agencyID string) (Agency, error) {
-	return m.backend.Get(ctx, agencyID)
+func (m *agencyManager) GetAgency(ctx context.Context) (Agency, error) {
+	return m.backend.Get(ctx)
 }
 
 // UpdateAgency validates the lifecycle transition (if Status is changing),
 // writes an activation snapshot on draft → active, and delegates to
 // [Backend.Update].
-func (m *agencyManager) UpdateAgency(ctx context.Context, agencyID string, req UpdateAgencyRequest) (Agency, error) {
-	current, err := m.backend.Get(ctx, agencyID)
+func (m *agencyManager) UpdateAgency(ctx context.Context, req UpdateAgencyRequest) (Agency, error) {
+	current, err := m.backend.Get(ctx)
 	if err != nil {
 		return Agency{}, err
 	}
@@ -173,7 +173,7 @@ func (m *agencyManager) UpdateAgency(ctx context.Context, agencyID string, req U
 		}
 	}
 
-	return m.backend.Update(ctx, agencyID, req)
+	return m.backend.Update(ctx, req)
 }
 
 

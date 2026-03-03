@@ -26,8 +26,8 @@ func New(mgr codevaldagency.AgencyManager) *Server {
 }
 
 // GetAgency implements pb.AgencyServiceServer.
-func (s *Server) GetAgency(ctx context.Context, req *pb.GetAgencyRequest) (*pb.Agency, error) {
-	agency, err := s.mgr.GetAgency(ctx, req.GetAgencyId())
+func (s *Server) GetAgency(ctx context.Context, _ *pb.GetAgencyRequest) (*pb.Agency, error) {
+	agency, err := s.mgr.GetAgency(ctx)
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
@@ -36,7 +36,7 @@ func (s *Server) GetAgency(ctx context.Context, req *pb.GetAgencyRequest) (*pb.A
 
 // UpdateAgency implements pb.AgencyServiceServer.
 func (s *Server) UpdateAgency(ctx context.Context, req *pb.UpdateAgencyRequest) (*pb.Agency, error) {
-	agency, err := s.mgr.UpdateAgency(ctx, req.GetAgencyId(), protoToUpdateRequest(req))
+	agency, err := s.mgr.UpdateAgency(ctx, protoToUpdateRequest(req))
 	if err != nil {
 		return nil, toGRPCError(err)
 	}

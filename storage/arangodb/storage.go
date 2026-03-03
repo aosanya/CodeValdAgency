@@ -368,21 +368,28 @@ func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagenc
 }
 
 // Get implements [codevaldagency.Backend].
-func (b *Backend) Get(ctx context.Context, agencyID string) (codevaldagency.Agency, error) {
-	var doc agencyDoc
-	_, err := b.agencyDetails.ReadDocument(ctx, agencyID, &doc)
+// It retrieves the single agency document in the collection via an AQL query.
+func (b *Backend) Get(ctx context.Context) (codevaldagency.Agency, error) {
+	query := `FOR doc IN agency_details LIMIT 1 RETURN doc`
+	cursor, err := b.db.Query(ctx, query, nil)
 	if err != nil {
-		if driver.IsNotFound(err) {
-			return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound
-		}
-		return codevaldagency.Agency{}, fmt.Errorf("Get: %w", err)
+		return codevaldagency.Agency{}, fmt.Errorf("Get: query: %w", err)
 	}
-	return fromAgencyDoc(agencyID, doc), nil
+	defer cursor.Close()
+	if !cursor.HasMore() {
+		return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound
+	}
+	var doc agencyDoc
+	meta, err := cursor.ReadDocument(ctx, &doc)
+	if err != nil {
+		return codevaldagency.Agency{}, fmt.Errorf("Get: read: %w", err)
+	}
+	return fromAgencyDoc(meta.Key, doc), nil
 }
 
 // Update implements [codevaldagency.Backend].
-func (b *Backend) Update(ctx context.Context, agencyID string, req codevaldagency.UpdateAgencyRequest) (codevaldagency.Agency, error) {
-	current, err := b.Get(ctx, agencyID)
+func (b *Backend) Update(ctx context.Context, req codevaldagency.UpdateAgencyRequest) (codevaldagency.Agency, error) {
+	current, err := b.Get(ctx)
 	if err != nil {
 		return codevaldagency.Agency{}, err
 	}
@@ -412,7 +419,7 @@ func (b *Backend) Update(ctx context.Context, agencyID string, req codevaldagenc
 	current.UpdatedAt = time.Now().UTC()
 
 	doc := toAgencyDoc(current)
-	_, err = b.agencyDetails.ReplaceDocument(ctx, agencyID, doc)
+	_, err = b.agencyDetails.ReplaceDocument(ctx, current.ID, doc)
 	if err != nil {
 		if driver.IsNotFound(err) {
 			return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound

@@ -28,10 +28,10 @@ type mockManager struct {
 func (m *mockManager) SetAgencyDetails(_ context.Context, _ string) (codevaldagency.Agency, error) {
 	return m.setDetailsResult, m.setDetailsErr
 }
-func (m *mockManager) GetAgency(_ context.Context, _ string) (codevaldagency.Agency, error) {
+func (m *mockManager) GetAgency(_ context.Context) (codevaldagency.Agency, error) {
 	return m.getResult, m.getErr
 }
-func (m *mockManager) UpdateAgency(_ context.Context, _ string, _ codevaldagency.UpdateAgencyRequest) (codevaldagency.Agency, error) {
+func (m *mockManager) UpdateAgency(_ context.Context, _ codevaldagency.UpdateAgencyRequest) (codevaldagency.Agency, error) {
 	return m.updateResult, m.updateErr
 }
 
@@ -92,7 +92,7 @@ func TestServer_GetAgency_OK(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{getResult: codevaldagency.Agency{ID: "a2", Name: "Beta"}}
 	srv := server.New(mgr)
-	got, err := srv.GetAgency(context.Background(), &pb.GetAgencyRequest{AgencyId: "a2"})
+	got, err := srv.GetAgency(context.Background(), &pb.GetAgencyRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestServer_GetAgency_NotFound(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{getErr: codevaldagency.ErrAgencyNotFound}
 	srv := server.New(mgr)
-	_, err := srv.GetAgency(context.Background(), &pb.GetAgencyRequest{AgencyId: "nope"})
+	_, err := srv.GetAgency(context.Background(), &pb.GetAgencyRequest{})
 	requireCode(t, err, codes.NotFound)
 }
 
@@ -119,8 +119,7 @@ func TestServer_UpdateAgency_OK(t *testing.T) {
 	}}
 	srv := server.New(mgr)
 	got, err := srv.UpdateAgency(context.Background(), &pb.UpdateAgencyRequest{
-		AgencyId: "a3",
-		Status:   pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE,
+		Status: pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -135,8 +134,7 @@ func TestServer_UpdateAgency_InvalidTransition_ReturnsFailedPrecondition(t *test
 	mgr := &mockManager{updateErr: codevaldagency.ErrInvalidLifecycleTransition}
 	srv := server.New(mgr)
 	_, err := srv.UpdateAgency(context.Background(), &pb.UpdateAgencyRequest{
-		AgencyId: "a3",
-		Status:   pb.AgencyLifecycle_AGENCY_LIFECYCLE_DRAFT,
+		Status: pb.AgencyLifecycle_AGENCY_LIFECYCLE_DRAFT,
 	})
 	requireCode(t, err, codes.FailedPrecondition)
 }
@@ -145,6 +143,6 @@ func TestServer_UpdateAgency_NotFound(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{updateErr: codevaldagency.ErrAgencyNotFound}
 	srv := server.New(mgr)
-	_, err := srv.UpdateAgency(context.Background(), &pb.UpdateAgencyRequest{AgencyId: "nope"})
+	_, err := srv.UpdateAgency(context.Background(), &pb.UpdateAgencyRequest{})
 	requireCode(t, err, codes.NotFound)
 }

@@ -524,9 +524,9 @@ func (x *Agency) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// GetAgencyRequest is intentionally empty — there is exactly one agency per database.
 type GetAgencyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgencyId      string                 `protobuf:"bytes,1,opt,name=agency_id,json=agencyId,proto3" json:"agency_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -559,13 +559,6 @@ func (x *GetAgencyRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use GetAgencyRequest.ProtoReflect.Descriptor instead.
 func (*GetAgencyRequest) Descriptor() ([]byte, []int) {
 	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *GetAgencyRequest) GetAgencyId() string {
-	if x != nil {
-		return x.AgencyId
-	}
-	return ""
 }
 
 type SetAgencyDetailsRequest struct {
@@ -616,14 +609,13 @@ func (x *SetAgencyDetailsRequest) GetJson() string {
 
 type UpdateAgencyRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
-	AgencyId        string                 `protobuf:"bytes,1,opt,name=agency_id,json=agencyId,proto3" json:"agency_id,omitempty"`
-	Name            string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Mission         string                 `protobuf:"bytes,3,opt,name=mission,proto3" json:"mission,omitempty"`
-	Vision          string                 `protobuf:"bytes,4,opt,name=vision,proto3" json:"vision,omitempty"`
-	Status          AgencyLifecycle        `protobuf:"varint,5,opt,name=status,proto3,enum=codevaldagency.v1.AgencyLifecycle" json:"status,omitempty"`
-	Goals           []*Goal                `protobuf:"bytes,6,rep,name=goals,proto3" json:"goals,omitempty"`
-	Workflows       []*Workflow            `protobuf:"bytes,7,rep,name=workflows,proto3" json:"workflows,omitempty"`
-	ConfiguredRoles []string               `protobuf:"bytes,8,rep,name=configured_roles,json=configuredRoles,proto3" json:"configured_roles,omitempty"`
+	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Mission         string                 `protobuf:"bytes,2,opt,name=mission,proto3" json:"mission,omitempty"`
+	Vision          string                 `protobuf:"bytes,3,opt,name=vision,proto3" json:"vision,omitempty"`
+	Status          AgencyLifecycle        `protobuf:"varint,4,opt,name=status,proto3,enum=codevaldagency.v1.AgencyLifecycle" json:"status,omitempty"`
+	Goals           []*Goal                `protobuf:"bytes,5,rep,name=goals,proto3" json:"goals,omitempty"`
+	Workflows       []*Workflow            `protobuf:"bytes,6,rep,name=workflows,proto3" json:"workflows,omitempty"`
+	ConfiguredRoles []string               `protobuf:"bytes,7,rep,name=configured_roles,json=configuredRoles,proto3" json:"configured_roles,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -656,13 +648,6 @@ func (x *UpdateAgencyRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use UpdateAgencyRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAgencyRequest) Descriptor() ([]byte, []int) {
 	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *UpdateAgencyRequest) GetAgencyId() string {
-	if x != nil {
-		return x.AgencyId
-	}
-	return ""
 }
 
 func (x *UpdateAgencyRequest) GetName() string {
@@ -755,20 +740,18 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"/\n" +
-	"\x10GetAgencyRequest\x12\x1b\n" +
-	"\tagency_id\x18\x01 \x01(\tR\bagencyId\"-\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x12\n" +
+	"\x10GetAgencyRequest\"-\n" +
 	"\x17SetAgencyDetailsRequest\x12\x12\n" +
-	"\x04json\x18\x01 \x01(\tR\x04json\"\xc9\x02\n" +
-	"\x13UpdateAgencyRequest\x12\x1b\n" +
-	"\tagency_id\x18\x01 \x01(\tR\bagencyId\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
-	"\amission\x18\x03 \x01(\tR\amission\x12\x16\n" +
-	"\x06vision\x18\x04 \x01(\tR\x06vision\x12:\n" +
-	"\x06status\x18\x05 \x01(\x0e2\".codevaldagency.v1.AgencyLifecycleR\x06status\x12-\n" +
-	"\x05goals\x18\x06 \x03(\v2\x17.codevaldagency.v1.GoalR\x05goals\x129\n" +
-	"\tworkflows\x18\a \x03(\v2\x1b.codevaldagency.v1.WorkflowR\tworkflows\x12)\n" +
-	"\x10configured_roles\x18\b \x03(\tR\x0fconfiguredRoles*\x8b\x01\n" +
+	"\x04json\x18\x01 \x01(\tR\x04json\"\xac\x02\n" +
+	"\x13UpdateAgencyRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
+	"\amission\x18\x02 \x01(\tR\amission\x12\x16\n" +
+	"\x06vision\x18\x03 \x01(\tR\x06vision\x12:\n" +
+	"\x06status\x18\x04 \x01(\x0e2\".codevaldagency.v1.AgencyLifecycleR\x06status\x12-\n" +
+	"\x05goals\x18\x05 \x03(\v2\x17.codevaldagency.v1.GoalR\x05goals\x129\n" +
+	"\tworkflows\x18\x06 \x03(\v2\x1b.codevaldagency.v1.WorkflowR\tworkflows\x12)\n" +
+	"\x10configured_roles\x18\a \x03(\tR\x0fconfiguredRoles*\x8b\x01\n" +
 	"\x0fAgencyLifecycle\x12 \n" +
 	"\x1cAGENCY_LIFECYCLE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16AGENCY_LIFECYCLE_DRAFT\x10\x01\x12\x1b\n" +

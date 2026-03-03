@@ -77,9 +77,8 @@ message Agency {
 
 // ── Filter ───────────────────────────────────────────────────────────────────
 
-message GetAgencyRequest {
-  string agency_id = 1;
-}
+// GetAgencyRequest is intentionally empty — there is exactly one agency per database.
+message GetAgencyRequest {}
 
 message SetAgencyDetailsRequest {
   // json is the full agency document serialised as a JSON string.
@@ -88,14 +87,13 @@ message SetAgencyDetailsRequest {
 }
 
 message UpdateAgencyRequest {
-  string          agency_id        = 1;
-  string          name             = 2;
-  string          mission          = 3;
-  string          vision           = 4;
-  AgencyLifecycle status           = 5;
-  repeated Goal     goals            = 6;
-  repeated Workflow workflows        = 7;
-  repeated string   configured_roles = 8;
+  string          name             = 1;
+  string          mission          = 2;
+  string          vision           = 3;
+  AgencyLifecycle status           = 4;
+  repeated Goal     goals            = 5;
+  repeated Workflow workflows        = 6;
+  repeated string   configured_roles = 7;
 }
 
 
@@ -108,12 +106,12 @@ service AgencyService {
   // Error: INVALID_ARGUMENT if the JSON is malformed or the id field is missing.
   rpc SetAgencyDetails(SetAgencyDetailsRequest) returns (Agency);
 
-  // GetAgency retrieves the single agency by its ID.
-  // Error: NOT_FOUND if no matching agency exists.
+  // GetAgency retrieves the single agency for this database.
+  // Error: NOT_FOUND if no agency document exists yet.
   rpc GetAgency(GetAgencyRequest) returns (Agency);
 
   // UpdateAgency applies incremental field edits with lifecycle validation.
   // Error: FAILED_PRECONDITION on invalid lifecycle transition.
-  // Error: NOT_FOUND if the agency does not exist.
+  // Error: NOT_FOUND if no agency document exists yet.
   rpc UpdateAgency(UpdateAgencyRequest) returns (Agency);
 }

@@ -50,15 +50,15 @@ func (f *fakeBackend) SetDetails(_ context.Context, jsonStr string) (codevaldage
 	return a, nil
 }
 
-func (f *fakeBackend) Get(_ context.Context, agencyID string) (codevaldagency.Agency, error) {
-	if f.agency == nil || f.agency.ID != agencyID {
+func (f *fakeBackend) Get(_ context.Context) (codevaldagency.Agency, error) {
+	if f.agency == nil {
 		return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound
 	}
 	return *f.agency, nil
 }
 
-func (f *fakeBackend) Update(_ context.Context, agencyID string, req codevaldagency.UpdateAgencyRequest) (codevaldagency.Agency, error) {
-	if f.agency == nil || f.agency.ID != agencyID {
+func (f *fakeBackend) Update(_ context.Context, req codevaldagency.UpdateAgencyRequest) (codevaldagency.Agency, error) {
+	if f.agency == nil {
 		return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound
 	}
 	a := *f.agency
@@ -182,7 +182,7 @@ func TestSetAgencyDetails_CalledTwice_ReplacesDocument(t *testing.T) {
 func TestGetAgency_NotFound(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
-	_, err := mgr.GetAgency(context.Background(), "nonexistent")
+	_, err := mgr.GetAgency(context.Background())
 	if !errors.Is(err, codevaldagency.ErrAgencyNotFound) {
 		t.Fatalf("expected ErrAgencyNotFound, got %v", err)
 	}
@@ -192,7 +192,7 @@ func TestGetAgency_RoundTrip(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	set := mustSetupAgency(t, mgr, "agency-001", "Beta")
-	got, err := mgr.GetAgency(context.Background(), set.ID)
+	got, err := mgr.GetAgency(context.Background())
 	if err != nil {
 		t.Fatalf("GetAgency: %v", err)
 	}
@@ -210,7 +210,7 @@ func TestUpdateAgency_DraftToActive_Succeeds_WritesSnapshot(t *testing.T) {
 	t.Parallel()
 	mgr, fb := mustNewManager(t)
 	set := mustSetupAgency(t, mgr, "agency-001", "Gamma")
-	updated, err := mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{
+	updated, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
 		Status: codevaldagency.LifecycleActive,
 	})
 	if err != nil {
@@ -237,14 +237,14 @@ func TestUpdateAgency_DraftToActive_Succeeds_WritesSnapshot(t *testing.T) {
 func TestUpdateAgency_ActiveToDraft_ReturnsErrInvalidLifecycleTransition(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
-	set := mustSetupAgency(t, mgr, "agency-001", "Delta")
-	_, err := mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{
+	mustSetupAgency(t, mgr, "agency-001", "Delta")
+	_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
 		Status: codevaldagency.LifecycleActive,
 	})
 	if err != nil {
 		t.Fatalf("draft→active: %v", err)
 	}
-	_, err = mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{
+	_, err = mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
 		Status: codevaldagency.LifecycleDraft,
 	})
 	if !errors.Is(err, codevaldagency.ErrInvalidLifecycleTransition) {
@@ -255,15 +255,15 @@ func TestUpdateAgency_ActiveToDraft_ReturnsErrInvalidLifecycleTransition(t *test
 func TestUpdateAgency_AchievedToAny_ReturnsErrInvalidLifecycleTransition(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
-	set := mustSetupAgency(t, mgr, "agency-001", "Epsilon")
-	_, _ = mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{Status: codevaldagency.LifecycleActive})
-	_, _ = mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{Status: codevaldagency.LifecycleAchieved})
+	mustSetupAgency(t, mgr, "agency-001", "Epsilon")
+	_, _ = mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{Status: codevaldagency.LifecycleActive})
+	_, _ = mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{Status: codevaldagency.LifecycleAchieved})
 	for _, next := range []codevaldagency.AgencyLifecycle{
 		codevaldagency.LifecycleDraft,
 		codevaldagency.LifecycleActive,
 		codevaldagency.LifecycleAchieved,
 	} {
-		_, err := mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{Status: next})
+		_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{Status: next})
 		if !errors.Is(err, codevaldagency.ErrInvalidLifecycleTransition) {
 			t.Errorf("achieved→%q: expected ErrInvalidLifecycleTransition, got %v", next, err)
 		}
@@ -273,8 +273,8 @@ func TestUpdateAgency_AchievedToAny_ReturnsErrInvalidLifecycleTransition(t *test
 func TestUpdateAgency_NoStatusChange_DoesNotWriteSnapshot(t *testing.T) {
 	t.Parallel()
 	mgr, fb := mustNewManager(t)
-	set := mustSetupAgency(t, mgr, "agency-001", "Zeta")
-	_, err := mgr.UpdateAgency(context.Background(), set.ID, codevaldagency.UpdateAgencyRequest{
+	mustSetupAgency(t, mgr, "agency-001", "Zeta")
+	_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
 		Name: "Zeta Updated",
 	})
 	if err != nil {

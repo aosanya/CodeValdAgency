@@ -34,12 +34,12 @@ type AgencyServiceClient interface {
 	// SetAgencyDetails replaces the full agency document from a JSON string.
 	// Error: INVALID_ARGUMENT if the JSON is malformed or the id field is missing.
 	SetAgencyDetails(ctx context.Context, in *SetAgencyDetailsRequest, opts ...grpc.CallOption) (*Agency, error)
-	// GetAgency retrieves the single agency by its ID.
-	// Error: NOT_FOUND if no matching agency exists.
+	// GetAgency retrieves the single agency for this database.
+	// Error: NOT_FOUND if no agency document exists yet.
 	GetAgency(ctx context.Context, in *GetAgencyRequest, opts ...grpc.CallOption) (*Agency, error)
 	// UpdateAgency applies incremental field edits with lifecycle validation.
 	// Error: FAILED_PRECONDITION on invalid lifecycle transition.
-	// Error: NOT_FOUND if the agency does not exist.
+	// Error: NOT_FOUND if no agency document exists yet.
 	UpdateAgency(ctx context.Context, in *UpdateAgencyRequest, opts ...grpc.CallOption) (*Agency, error)
 }
 
@@ -91,12 +91,12 @@ type AgencyServiceServer interface {
 	// SetAgencyDetails replaces the full agency document from a JSON string.
 	// Error: INVALID_ARGUMENT if the JSON is malformed or the id field is missing.
 	SetAgencyDetails(context.Context, *SetAgencyDetailsRequest) (*Agency, error)
-	// GetAgency retrieves the single agency by its ID.
-	// Error: NOT_FOUND if no matching agency exists.
+	// GetAgency retrieves the single agency for this database.
+	// Error: NOT_FOUND if no agency document exists yet.
 	GetAgency(context.Context, *GetAgencyRequest) (*Agency, error)
 	// UpdateAgency applies incremental field edits with lifecycle validation.
 	// Error: FAILED_PRECONDITION on invalid lifecycle transition.
-	// Error: NOT_FOUND if the agency does not exist.
+	// Error: NOT_FOUND if no agency document exists yet.
 	UpdateAgency(context.Context, *UpdateAgencyRequest) (*Agency, error)
 	mustEmbedUnimplementedAgencyServiceServer()
 }

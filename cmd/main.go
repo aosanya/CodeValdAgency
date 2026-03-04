@@ -2,7 +2,7 @@
 //
 // Configuration is via environment variables:
 //
-//	CODEVALDAGENCY_GRPC_PORT       gRPC listener port (default "50053")
+//	CODEVALDAGENCY_GRPC_PORT       gRPC listener port (required, set in .env)
 //	CROSS_GRPC_ADDR                CodeValdCross gRPC address for service
 //	                               registration heartbeats and event publishing
 //	                               (optional; omit to disable)

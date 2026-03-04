@@ -1,4 +1,4 @@
-.PHONY: build build-server run-server proto test test-arango test-all vet lint clean
+.PHONY: build build-server run-server restart kill proto test test-arango test-all vet lint clean
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
@@ -17,6 +17,21 @@ run-server: build-server
 		set -a && . ./.env && set +a; \
 	fi; \
 	./bin/codevaldagency
+
+## Stop any running instance, rebuild, and run.
+restart: kill build-server
+	@echo "Running codevaldagency..."
+	@if [ -f .env ]; then \
+		set -a && . ./.env && set +a; \
+	fi; \
+	./bin/codevaldagency
+
+## Stop any running instances of codevaldagency.
+kill:
+	@echo "Stopping any running instances..."
+	-@pkill -9 -f "bin/codevaldagency" 2>/dev/null || true
+	-@fuser -k $${CODEVALDAGENCY_GRPC_PORT:-50053}/tcp 2>/dev/null || true
+	@sleep 1
 
 # ── Proto Codegen ─────────────────────────────────────────────────────────────
 

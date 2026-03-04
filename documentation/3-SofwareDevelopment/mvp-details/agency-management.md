@@ -256,3 +256,216 @@ instance. Tests skip when `AGENCY_ARANGO_ENDPOINT` is not set.
   (terminal; subsequent update → `FAILED_PRECONDITION`)
 - `GetAgency` on empty database → `NOT_FOUND`
 - `draft → active` transition via `UpdateAgency` → snapshot exists in `agency_snapshots`
+
+
+---
+
+## MVP-AGENCY-007 — Agency Publishing & Version Tagging
+
+**Status**: 🔲 Not Started  
+**Branch**: `feature/AGENCY-007_agency_publishing`
+
+### Goal
+
+Introduce an explicit **publish** operation that takes a point-in-time snapshot of
+the current agency and tags it with an auto-incrementing version number (`v1`, `v2`, …).
+
+Publishing is **entirely independent of the agency lifecycle**. The agency always
+remains in `draft` and can be freely edited before and after any publish. There is
+no `active` or `achieved` transition involved. The only thing a publish does is
+capture and version the current state.
+
+### Key Design Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Agency status | Always stays `draft` | Lifecycle transitions are not the publish mechanism |
+| Version scheme | Auto-incrementing integer rendered as `"v1"`, `"v2"`, … | Simple, deterministic, human-readable |
+| Immutability | Publications are write-once; no update or delete | Audit integrity — every published version is permanent |
+| Storage | New `agency_publications` collection in ArangoDB | Separate from `agency_snapshots` (which is lifecycle-audit only) |
+| Event | Publishes `cross.agency.published` after every successful publish | Allows downstream services to react to a new version |
+| Version resolution | Backend reads MAX(version) for the agency and increments atomically | Prevents version gaps or duplicates under concurrent calls |
+
+### New Model
+
+```go
+// AgencyPublication is an immutable, versioned snapshot of an [Agency]
+// created by an explicit publish action. The agency status is not changed.
+// Publications are written once and never updated or deleted.
+type AgencyPublication struct {
+    // ID is the unique identifier for this publication (UUID).
+    ID string
+
+    // AgencyID is the ID of the agency this publication belongs to.
+    AgencyID string
+
+    // Version is the auto-incrementing publication number (1, 2, 3, …).
+    Version int
+
+    // Tag is the human-readable version label, e.g. "v1", "v2".
+    Tag string
+
+    Name            string
+    Mission         string
+    Vision          string
+    Goals           []Goal
+    Workflows       []Workflow
+    ConfiguredRoles []ConfiguredRole
+
+    // PublishedAt is the exact time this publication was created.
+    PublishedAt time.Time
+}
+```
+
+### AgencyManager Interface Addition
+
+```go
+type AgencyManager interface {
+    // ... existing methods ...
+
+    // PublishAgency creates an immutable versioned publication of the current
+    // agency state. The agency status is NOT changed — it always remains draft.
+    // Version is auto-incremented from the last publication for this agency
+    // (or starts at 1 if no prior publication exists).
+    // Publishes "cross.agency.published" after every successful write.
+    PublishAgency(ctx context.Context) (AgencyPublication, error)
+
+    // GetPublication retrieves a single publication by its version number.
+    // Returns ErrPublicationNotFound if no publication with that version exists.
+    GetPublication(ctx context.Context, version int) (AgencyPublication, error)
+
+    // ListPublications returns all publications for this agency in ascending
+    // version order.
+    ListPublications(ctx context.Context) ([]AgencyPublication, error)
+}
+```
+
+### New Error
+
+```go
+// ErrPublicationNotFound is returned when the requested agency publication
+// does not exist.
+var ErrPublicationNotFound = errors.New("agency publication not found")
+```
+
+### Backend Interface Addition
+
+```go
+type Backend interface {
+    // ... existing methods ...
+
+    // InsertPublication writes a new AgencyPublication to the
+    // agency_publications collection.
+    InsertPublication(ctx context.Context, pub AgencyPublication) error
+
+    // GetPublication retrieves a publication by its version number.
+    // Returns ErrPublicationNotFound if no match exists.
+    GetPublication(ctx context.Context, version int) (AgencyPublication, error)
+
+    // ListPublications returns all publications in ascending version order.
+    ListPublications(ctx context.Context) ([]AgencyPublication, error)
+
+    // NextPublicationVersion returns the next auto-increment version number
+    // (MAX(version) + 1, or 1 if no publications exist).
+    NextPublicationVersion(ctx context.Context) (int, error)
+}
+```
+
+### ArangoDB Collection
+
+| Collection | Key Pattern | Purpose |
+|---|---|---|
+| `agency_publications` | `{agencyID}_v{version}` | Immutable versioned snapshots |
+
+**Indexes**: persistent index on `(agency_id, version)` with `unique: true`.
+
+### Proto Additions
+
+```protobuf
+// PublishAgency creates an immutable versioned publication of the current
+// agency state. The agency status is NOT changed.
+rpc PublishAgency(PublishAgencyRequest) returns (AgencyPublication);
+
+// GetPublication retrieves a single publication by version number.
+// Error: NOT_FOUND if no publication with that version exists.
+rpc GetPublication(GetPublicationRequest) returns (AgencyPublication);
+
+// ListPublications returns all publications in ascending version order.
+rpc ListPublications(ListPublicationsRequest) returns (ListPublicationsResponse);
+
+message PublishAgencyRequest {}
+
+message GetPublicationRequest {
+  int32 version = 1;
+}
+
+message ListPublicationsRequest {}
+
+message ListPublicationsResponse {
+  repeated AgencyPublication publications = 1;
+}
+
+message AgencyPublication {
+  string id          = 1;
+  string agency_id   = 2;
+  int32  version     = 3;
+  string tag         = 4; // e.g. "v1", "v2"
+  string name        = 5;
+  string mission     = 6;
+  string vision      = 7;
+  repeated Goal              goals            = 8;
+  repeated Workflow          workflows        = 9;
+  repeated ConfiguredRole    configured_roles = 10;
+  google.protobuf.Timestamp  published_at     = 11;
+}
+```
+
+### Cross Route Declarations
+
+Declared in `internal/registrar/registrar.go` alongside the existing agency routes:
+
+| Method | Pattern | Capability | gRPC Method |
+|---|---|---|---|
+| `POST` | `/agency/publish` | `publish_agency` | `AgencyService/PublishAgency` |
+| `GET` | `/agency/publications` | `list_publications` | `AgencyService/ListPublications` |
+| `GET` | `/agency/publications/{version}` | `get_publication` | `AgencyService/GetPublication` |
+
+**PathBindings**: `{version}` → gRPC field `version`.
+
+### Cross Pub/Sub
+
+| Direction | Topic | Trigger |
+|---|---|---|
+| Produces | `cross.agency.published` | After every successful `PublishAgency` |
+
+### Files to Create/Modify
+
+| File | Change |
+|---|---|
+| `models.go` | Add `AgencyPublication` struct |
+| `errors.go` | Add `ErrPublicationNotFound` |
+| `agency.go` | Add `PublishAgency`, `GetPublication`, `ListPublications` to `AgencyManager`; add `InsertPublication`, `GetPublication`, `ListPublications`, `NextPublicationVersion` to `Backend` |
+| `proto/codevaldagency/v1/agency.proto` | Add three new RPCs and `AgencyPublication` message |
+| `internal/server/server.go` | Implement the three new RPC handlers |
+| `storage/arangodb/storage.go` | Implement the four new Backend methods; create `agency_publications` collection |
+| `internal/registrar/registrar.go` | Add three new route declarations |
+
+### Error Mapping
+
+| Domain Error | gRPC Code | Trigger |
+|---|---|---|
+| `ErrPublicationNotFound` | `NOT_FOUND` | `GetPublication` |
+| `ErrAgencyNotFound` | `NOT_FOUND` | `PublishAgency` (agency must exist first) |
+
+### Acceptance Tests
+
+- `PublishAgency` on a non-existent agency → `ErrAgencyNotFound`
+- `PublishAgency` called once → returns `AgencyPublication` with `Version=1`, `Tag="v1"`
+- `PublishAgency` called twice → second publication has `Version=2`, `Tag="v2"`
+- `PublishAgency` does NOT change the agency `Status` field — it remains `draft`
+- Agency can be edited (`SetAgencyDetails` / `UpdateAgency`) after a publish — the old publication is unchanged
+- `GetPublication(version=1)` after two publishes → returns the first (older) snapshot, not the current state
+- `GetPublication` for non-existent version → `ErrPublicationNotFound`
+- `ListPublications` → returns publications in ascending version order
+- `cross.agency.published` is published once per successful `PublishAgency` call
+- `POST /agency/publish` proxied through CodeValdCross → 200 with `AgencyPublication` JSON

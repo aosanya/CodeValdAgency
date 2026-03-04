@@ -25,12 +25,30 @@ enum RACILabel {
   RACI_LABEL_INFORMED     = 4;  // I
 }
 
+// ActorType mirrors the Go ActorType type.
+// It declares who is expected to fill a configured role —
+// a human actor, an AI agent, or either.
+enum ActorType {
+  ACTOR_TYPE_UNSPECIFIED = 0;
+  ACTOR_TYPE_HUMAN       = 1;
+  ACTOR_TYPE_AI          = 2;
+  ACTOR_TYPE_EITHER      = 3;
+}
+
 // ── Sub-document messages ─────────────────────────────────────────────────────
 
 // RoleAssignment binds a role name to a RACI label for a specific Work Item.
 message RoleAssignment {
   string    role  = 1;
   RACILabel raci  = 2;
+}
+
+// ConfiguredRole is a named role defined by an agency beyond the built-in
+// super_admin and admin roles. The actor_type field declares whether the role
+// is intended for a human actor, an AI agent, or either.
+message ConfiguredRole {
+  string    role       = 1;
+  ActorType actor_type = 2;
 }
 
 // WorkItem is a single unit of work within a Workflow.
@@ -70,83 +88,48 @@ message Agency {
   AgencyLifecycle           status           = 5;
   repeated Goal             goals            = 6;
   repeated Workflow         workflows        = 7;
-  repeated string           configured_roles = 8;
+  repeated ConfiguredRole   configured_roles = 8;
   google.protobuf.Timestamp created_at       = 9;
   google.protobuf.Timestamp updated_at       = 10;
 }
 
 // ── Filter ───────────────────────────────────────────────────────────────────
 
-// AgencyFilter constrains ListAgencies results. Unset fields match all.
-message AgencyFilter {
-  AgencyLifecycle status = 1;
-  string          name   = 2;
-}
+// GetAgencyRequest is intentionally empty — there is exactly one agency per database.
+message GetAgencyRequest {}
 
-// ── Request / Response messages ───────────────────────────────────────────────
-
-message CreateAgencyRequest {
-  string            name             = 1;
-  string            mission          = 2;
-  string            vision           = 3;
-  repeated Goal     goals            = 4;
-  repeated Workflow workflows        = 5;
-  repeated string   configured_roles = 6;
-}
-
-message GetAgencyRequest {
-  string agency_id = 1;
+message SetAgencyDetailsRequest {
+  // json is the full agency document serialised as a JSON string.
+  // Must include a non-empty "id" field.
+  string json = 1;
 }
 
 message UpdateAgencyRequest {
-  string          agency_id        = 1;
-  string          name             = 2;
-  string          mission          = 3;
-  string          vision           = 4;
-  AgencyLifecycle status           = 5;
-  repeated Goal     goals            = 6;
-  repeated Workflow workflows        = 7;
-  repeated string   configured_roles = 8;
+  string          name             = 1;
+  string          mission          = 2;
+  string          vision           = 3;
+  AgencyLifecycle status           = 4;
+  repeated Goal     goals            = 5;
+  repeated Workflow workflows        = 6;
+  repeated ConfiguredRole configured_roles = 7;
 }
 
-message DeleteAgencyRequest {
-  string agency_id = 1;
-}
-
-message DeleteAgencyResponse {}
-
-message ListAgenciesRequest {
-  AgencyFilter filter = 1;
-}
-
-message ListAgenciesResponse {
-  repeated Agency agencies = 1;
-}
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
-// AgencyService exposes all agency lifecycle management operations via gRPC.
+// AgencyService exposes agency lifecycle management operations via gRPC.
 // All mutations are validated and lifecycle-guarded by the AgencyManager.
 service AgencyService {
-  // CreateAgency creates a new agency in draft status.
-  // Error: INVALID_ARGUMENT if name is empty.
-  // Error: ALREADY_EXISTS if an agency with the same ID already exists.
-  rpc CreateAgency(CreateAgencyRequest) returns (Agency);
+  // SetAgencyDetails replaces the full agency document from a JSON string.
+  // Error: INVALID_ARGUMENT if the JSON is malformed or the id field is missing.
+  rpc SetAgencyDetails(SetAgencyDetailsRequest) returns (Agency);
 
-  // GetAgency retrieves a single agency by its ID.
-  // Error: NOT_FOUND if no matching agency exists.
+  // GetAgency retrieves the single agency for this database.
+  // Error: NOT_FOUND if no agency document exists yet.
   rpc GetAgency(GetAgencyRequest) returns (Agency);
 
-  // UpdateAgency replaces the mutable fields of an existing agency.
+  // UpdateAgency applies incremental field edits with lifecycle validation.
   // Error: FAILED_PRECONDITION on invalid lifecycle transition.
-  // Error: NOT_FOUND if the agency does not exist.
+  // Error: NOT_FOUND if no agency document exists yet.
   rpc UpdateAgency(UpdateAgencyRequest) returns (Agency);
-
-  // DeleteAgency permanently removes an agency.
-  // Error: NOT_FOUND if the agency does not exist.
-  rpc DeleteAgency(DeleteAgencyRequest) returns (DeleteAgencyResponse);
-
-  // ListAgencies returns all agencies matching the filter.
-  // Returns an empty list (not an error) when no agencies match.
-  rpc ListAgencies(ListAgenciesRequest) returns (ListAgenciesResponse);
 }

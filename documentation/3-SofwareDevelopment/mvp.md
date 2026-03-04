@@ -28,6 +28,7 @@ The MVP delivers:
 | MVP-AGENCY-004 | CodeValdCross Registration | ✅ Done | MVP-AGENCY-003 |
 | MVP-AGENCY-005 | Unit & Integration Tests | 🔲 Not Started | MVP-AGENCY-001, MVP-AGENCY-002 |
 | MVP-AGENCY-006 | Service-Driven Route Registration | 🔲 Not Started | MVP-AGENCY-003, CROSS-007 |
+| MVP-AGENCY-007 | Agency Publishing & Version Tagging | 🔲 Not Started | MVP-AGENCY-003, MVP-AGENCY-006 |
 
 ---
 
@@ -42,6 +43,9 @@ The MVP delivers:
 - [ ] Invalid lifecycle transitions return `FAILED_PRECONDITION` from gRPC
 - [ ] `cross.agency.created` is published after every successful `CreateAgency`
 - [ ] Routes declared in `RegisterRequest` and proxied via CodeValdCross dynamic proxy
+- [ ] `PublishAgency` creates an immutable versioned publication (`v1`, `v2`, …) without touching agency status
+- [ ] `cross.agency.published` is fired after every successful publish
+- [ ] `POST /agency/publish` is proxied through CodeValdCross
 
 ---
 
@@ -54,4 +58,5 @@ feature/AGENCY-003_grpc_service
 feature/AGENCY-004_cross_registration
 feature/AGENCY-005_integration_tests
 feature/AGENCY-006_service_driven_route_registration
+feature/AGENCY-007_agency_publishing
 ```

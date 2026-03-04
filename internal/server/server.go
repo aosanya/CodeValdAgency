@@ -25,18 +25,9 @@ func New(mgr codevaldagency.AgencyManager) *Server {
 	return &Server{mgr: mgr}
 }
 
-// CreateAgency implements pb.AgencyServiceServer.
-func (s *Server) CreateAgency(ctx context.Context, req *pb.CreateAgencyRequest) (*pb.Agency, error) {
-	agency, err := s.mgr.CreateAgency(ctx, protoToCreateRequest(req))
-	if err != nil {
-		return nil, toGRPCError(err)
-	}
-	return agencyToProto(agency), nil
-}
-
 // GetAgency implements pb.AgencyServiceServer.
-func (s *Server) GetAgency(ctx context.Context, req *pb.GetAgencyRequest) (*pb.Agency, error) {
-	agency, err := s.mgr.GetAgency(ctx, req.GetAgencyId())
+func (s *Server) GetAgency(ctx context.Context, _ *pb.GetAgencyRequest) (*pb.Agency, error) {
+	agency, err := s.mgr.GetAgency(ctx)
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
@@ -45,43 +36,23 @@ func (s *Server) GetAgency(ctx context.Context, req *pb.GetAgencyRequest) (*pb.A
 
 // UpdateAgency implements pb.AgencyServiceServer.
 func (s *Server) UpdateAgency(ctx context.Context, req *pb.UpdateAgencyRequest) (*pb.Agency, error) {
-	agency, err := s.mgr.UpdateAgency(ctx, req.GetAgencyId(), protoToUpdateRequest(req))
+	agency, err := s.mgr.UpdateAgency(ctx, protoToUpdateRequest(req))
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
 	return agencyToProto(agency), nil
 }
 
-// DeleteAgency implements pb.AgencyServiceServer.
-func (s *Server) DeleteAgency(ctx context.Context, req *pb.DeleteAgencyRequest) (*pb.DeleteAgencyResponse, error) {
-	if err := s.mgr.DeleteAgency(ctx, req.GetAgencyId()); err != nil {
-		return nil, toGRPCError(err)
-	}
-	return &pb.DeleteAgencyResponse{}, nil
-}
-
-// ListAgencies implements pb.AgencyServiceServer.
-func (s *Server) ListAgencies(ctx context.Context, req *pb.ListAgenciesRequest) (*pb.ListAgenciesResponse, error) {
-	agencies, err := s.mgr.ListAgencies(ctx, protoToFilter(req.GetFilter()))
+// SetAgencyDetails implements pb.AgencyServiceServer.
+func (s *Server) SetAgencyDetails(ctx context.Context, req *pb.SetAgencyDetailsRequest) (*pb.Agency, error) {
+	agency, err := s.mgr.SetAgencyDetails(ctx, req.GetJson())
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	pbAgencies := make([]*pb.Agency, 0, len(agencies))
-	for _, a := range agencies {
-		pbAgencies = append(pbAgencies, agencyToProto(a))
-	}
-	return &pb.ListAgenciesResponse{Agencies: pbAgencies}, nil
+	return agencyToProto(agency), nil
 }
 
 // ── Proto → Domain converters ─────────────────────────────────────────────────
-
-func protoToCreateRequest(req *pb.CreateAgencyRequest) codevaldagency.CreateAgencyRequest {
-	return codevaldagency.CreateAgencyRequest{
-		Name:    req.GetName(),
-		Mission: req.GetMission(),
-		Vision:  req.GetVision(),
-	}
-}
 
 func protoToUpdateRequest(req *pb.UpdateAgencyRequest) codevaldagency.UpdateAgencyRequest {
 	return codevaldagency.UpdateAgencyRequest{
@@ -91,16 +62,7 @@ func protoToUpdateRequest(req *pb.UpdateAgencyRequest) codevaldagency.UpdateAgen
 		Status:          protoToLifecycle(req.GetStatus()),
 		Goals:           protoToGoals(req.GetGoals()),
 		Workflows:       protoToWorkflows(req.GetWorkflows()),
-		ConfiguredRoles: req.GetConfiguredRoles(),
-	}
-}
-
-func protoToFilter(f *pb.AgencyFilter) codevaldagency.AgencyFilter {
-	if f == nil {
-		return codevaldagency.AgencyFilter{}
-	}
-	return codevaldagency.AgencyFilter{
-		Status: protoToLifecycle(f.GetStatus()),
+		ConfiguredRoles: protoToConfiguredRoles(req.GetConfiguredRoles()),
 	}
 }
 
@@ -207,7 +169,7 @@ func agencyToProto(a codevaldagency.Agency) *pb.Agency {
 		Status:          lifecycleToProto(a.Status),
 		Goals:           goalsToProto(a.Goals),
 		Workflows:       workflowsToProto(a.Workflows),
-		ConfiguredRoles: a.ConfiguredRoles,
+		ConfiguredRoles: configuredRolesToProto(a.ConfiguredRoles),
 		CreatedAt:       timeToProto(a.CreatedAt),
 		UpdatedAt:       timeToProto(a.UpdatedAt),
 	}
@@ -303,6 +265,60 @@ func raciLabelToProto(r codevaldagency.RACILabel) pb.RACILabel {
 	default:
 		return pb.RACILabel_RACI_LABEL_UNSPECIFIED
 	}
+}
+
+func protoToActorType(a pb.ActorType) codevaldagency.ActorType {
+	switch a {
+	case pb.ActorType_ACTOR_TYPE_HUMAN:
+		return codevaldagency.ActorTypeHuman
+	case pb.ActorType_ACTOR_TYPE_AI:
+		return codevaldagency.ActorTypeAI
+	case pb.ActorType_ACTOR_TYPE_EITHER:
+		return codevaldagency.ActorTypeEither
+	default:
+		return ""
+	}
+}
+
+func actorTypeToProto(a codevaldagency.ActorType) pb.ActorType {
+	switch a {
+	case codevaldagency.ActorTypeHuman:
+		return pb.ActorType_ACTOR_TYPE_HUMAN
+	case codevaldagency.ActorTypeAI:
+		return pb.ActorType_ACTOR_TYPE_AI
+	case codevaldagency.ActorTypeEither:
+		return pb.ActorType_ACTOR_TYPE_EITHER
+	default:
+		return pb.ActorType_ACTOR_TYPE_UNSPECIFIED
+	}
+}
+
+func protoToConfiguredRoles(prs []*pb.ConfiguredRole) []codevaldagency.ConfiguredRole {
+	if len(prs) == 0 {
+		return nil
+	}
+	out := make([]codevaldagency.ConfiguredRole, len(prs))
+	for i, pr := range prs {
+		out[i] = codevaldagency.ConfiguredRole{
+			Role:      codevaldagency.AgencyRole(pr.GetRole()),
+			ActorType: protoToActorType(pr.GetActorType()),
+		}
+	}
+	return out
+}
+
+func configuredRolesToProto(roles []codevaldagency.ConfiguredRole) []*pb.ConfiguredRole {
+	if len(roles) == 0 {
+		return nil
+	}
+	out := make([]*pb.ConfiguredRole, len(roles))
+	for i, r := range roles {
+		out[i] = &pb.ConfiguredRole{
+			Role:      string(r.Role),
+			ActorType: actorTypeToProto(r.ActorType),
+		}
+	}
+	return out
 }
 
 func timeToProto(t time.Time) *timestamppb.Timestamp {

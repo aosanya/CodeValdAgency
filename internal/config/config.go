@@ -9,7 +9,7 @@ import (
 
 // Config holds all runtime configuration for the CodeValdAgency service.
 type Config struct {
-	// GRPCPort is the port the gRPC server listens on (default "50053").
+	// GRPCPort is the port the gRPC server listens on (required, set in .env).
 	GRPCPort string
 
 	// ArangoEndpoint is the ArangoDB HTTP endpoint (default "http://localhost:8529").
@@ -41,7 +41,7 @@ type Config struct {
 // Load reads configuration from environment variables, falling back to defaults
 // for any variable that is unset or empty.
 func Load() Config {
-	port := serverutil.EnvOrDefault("CODEVALDAGENCY_GRPC_PORT", "50053")
+	port := serverutil.MustGetEnv("CODEVALDAGENCY_GRPC_PORT")
 	return Config{
 		GRPCPort:       port,
 		ArangoEndpoint: serverutil.EnvOrDefault("AGENCY_ARANGO_ENDPOINT", "http://localhost:8529"),

@@ -1,12 +1,12 @@
 // Package codevaldagency provides agency lifecycle management for the CodeVald
-// platform. It exposes [AgencyManager] — the single interface for creating,
-// reading, updating, deleting, and listing agencies.
+// platform. It exposes [AgencyManager] — the single interface for writing,
+// reading, and updating the one agency that lives in this database.
 //
 // Usage:
 //
 //	b, err := arangodb.NewBackend(arangodb.Config{...})
 //	mgr, err := codevaldagency.NewAgencyManager(b)
-//	agency, err := mgr.CreateAgency(ctx, codevaldagency.CreateAgencyRequest{Name: "Alpha"})
+//	agency, err := mgr.SetAgencyDetails(ctx, `{"id":"agency-001","name":"Alpha"}`)
 package codevaldagency
 
 import (
@@ -21,31 +21,24 @@ import (
 //
 // Implementations must be safe for concurrent use.
 type AgencyManager interface {
-	// CreateAgency creates a new agency in [LifecycleDraft] with the supplied
-	// fields. Returns [ErrInvalidAgency] if Name is empty.
-	// Returns [ErrAgencyAlreadyExists] if an agency with the same ID already
-	// exists.
-	CreateAgency(ctx context.Context, req CreateAgencyRequest) (Agency, error)
+	// SetAgencyDetails replaces the full agency document from a raw JSON string.
+	// The JSON must include a non-empty "id" field; all other fields are optional.
+	// Returns [ErrInvalidJSON] if the payload cannot be parsed or id is missing.
+	// Lifecycle validation is NOT applied — any status value is written as-is.
+	// Publishes "cross.agency.created" after every successful write.
+	SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
 
-	// GetAgency retrieves a single agency by its ID.
-	// Returns [ErrAgencyNotFound] if no matching agency exists.
-	GetAgency(ctx context.Context, agencyID string) (Agency, error)
+	// GetAgency retrieves the single agency for this database.
+	// Returns [ErrAgencyNotFound] if no agency document exists yet.
+	GetAgency(ctx context.Context) (Agency, error)
 
-	// UpdateAgency replaces the mutable fields of an existing agency.
-	// Lifecycle transitions are validated — returns
-	// [ErrInvalidLifecycleTransition] if the new status is not reachable from
-	// the current status. When the transition is draft → active, a snapshot
-	// is written to the backend before the update is applied.
-	// Returns [ErrAgencyNotFound] if the agency does not exist.
-	UpdateAgency(ctx context.Context, agencyID string, req UpdateAgencyRequest) (Agency, error)
-
-	// DeleteAgency permanently removes an agency.
-	// Returns [ErrAgencyNotFound] if the agency does not exist.
-	DeleteAgency(ctx context.Context, agencyID string) error
-
-	// ListAgencies returns all agencies that match the filter.
-	// Returns an empty slice (not an error) when no agencies match.
-	ListAgencies(ctx context.Context, filter AgencyFilter) ([]Agency, error)
+	// UpdateAgency applies incremental field edits with lifecycle validation.
+	// Lifecycle transitions are validated — returns [ErrInvalidLifecycleTransition]
+	// if the new status is not reachable from the current status.
+	// When the transition is draft → active, a snapshot is written to the backend
+	// before the update is applied.
+	// Returns [ErrAgencyNotFound] if no agency document exists yet.
+	UpdateAgency(ctx context.Context, req UpdateAgencyRequest) (Agency, error)
 }
 
 // Backend is the storage abstraction injected into [AgencyManager].
@@ -53,25 +46,18 @@ type AgencyManager interface {
 // and passes it to [NewAgencyManager]. The root package never imports any
 // storage driver directly.
 type Backend interface {
-	// Insert persists a new agency document and returns it with any
-	// server-assigned fields (ID, CreatedAt, Status) populated.
-	// Returns [ErrAgencyAlreadyExists] on key conflict.
-	Insert(ctx context.Context, req CreateAgencyRequest) (Agency, error)
+	// SetDetails parses the raw JSON and upserts the agency document at
+	// _key = agency.id in the agency_details collection.
+	// Returns [ErrInvalidJSON] if the JSON is malformed or the id field is missing.
+	SetDetails(ctx context.Context, jsonStr string) (Agency, error)
 
-	// Get retrieves an agency by its ID.
-	// Returns [ErrAgencyNotFound] if no matching document exists.
-	Get(ctx context.Context, agencyID string) (Agency, error)
+	// Get retrieves the single agency document for this database.
+	// Returns [ErrAgencyNotFound] if no document exists yet.
+	Get(ctx context.Context) (Agency, error)
 
-	// Update replaces the stored agency document and returns the updated
-	// agency. Returns [ErrAgencyNotFound] if the agency does not exist.
-	Update(ctx context.Context, agencyID string, req UpdateAgencyRequest) (Agency, error)
-
-	// Delete removes the agency document.
-	// Returns [ErrAgencyNotFound] if the agency does not exist.
-	Delete(ctx context.Context, agencyID string) error
-
-	// List returns agencies matching the filter.
-	List(ctx context.Context, filter AgencyFilter) ([]Agency, error)
+	// Update applies a partial field merge and returns the updated agency.
+	// Returns [ErrAgencyNotFound] if no agency document exists yet.
+	Update(ctx context.Context, req UpdateAgencyRequest) (Agency, error)
 
 	// InsertSnapshot writes an immutable point-in-time copy of an agency to
 	// the agency_snapshots collection. Called by [AgencyManager.UpdateAgency]
@@ -93,8 +79,8 @@ type CrossPublisher interface {
 type AgencyManagerOption func(*agencyManager)
 
 // WithPublisher attaches a [CrossPublisher] to the [AgencyManager].
-// When provided, [AgencyManager.CreateAgency] calls Publish with
-// "cross.agency.created" after every successful insert.
+// When provided, [AgencyManager.SetAgencyDetails] calls Publish with
+// "cross.agency.created" after every successful write.
 func WithPublisher(p CrossPublisher) AgencyManagerOption {
 	return func(m *agencyManager) {
 		m.publisher = p
@@ -123,23 +109,16 @@ func NewAgencyManager(b Backend, opts ...AgencyManagerOption) (AgencyManager, er
 	return m, nil
 }
 
-// CreateAgency validates the request and delegates to [Backend.Insert].
-// On success it publishes a "cross.agency.created" event via the injected
-// [CrossPublisher] (if one was provided via [WithPublisher]).
-func (m *agencyManager) CreateAgency(ctx context.Context, req CreateAgencyRequest) (Agency, error) {
-	if req.Name == "" {
-		return Agency{}, ErrInvalidAgency
-	}
-	agency, err := m.backend.Insert(ctx, req)
+// SetAgencyDetails delegates to [Backend.SetDetails] and publishes
+// "cross.agency.created" on every successful write.
+func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error) {
+	agency, err := m.backend.SetDetails(ctx, jsonStr)
 	if err != nil {
 		return Agency{}, err
 	}
-	// MANDATORY: publish so Cross can trigger git init + work setup.
-	// Best-effort: a publish error does not roll back the created agency.
+	// Best-effort publish — a publish error does not roll back the write.
 	if m.publisher != nil {
 		if pErr := m.publisher.Publish(ctx, "cross.agency.created", agency.ID); pErr != nil {
-			// Log at the manager level is not possible without importing log;
-			// the publisher implementation is responsible for logging its own errors.
 			_ = pErr
 		}
 	}
@@ -147,15 +126,15 @@ func (m *agencyManager) CreateAgency(ctx context.Context, req CreateAgencyReques
 }
 
 // GetAgency delegates to [Backend.Get].
-func (m *agencyManager) GetAgency(ctx context.Context, agencyID string) (Agency, error) {
-	return m.backend.Get(ctx, agencyID)
+func (m *agencyManager) GetAgency(ctx context.Context) (Agency, error) {
+	return m.backend.Get(ctx)
 }
 
 // UpdateAgency validates the lifecycle transition (if Status is changing),
 // writes an activation snapshot on draft → active, and delegates to
 // [Backend.Update].
-func (m *agencyManager) UpdateAgency(ctx context.Context, agencyID string, req UpdateAgencyRequest) (Agency, error) {
-	current, err := m.backend.Get(ctx, agencyID)
+func (m *agencyManager) UpdateAgency(ctx context.Context, req UpdateAgencyRequest) (Agency, error) {
+	current, err := m.backend.Get(ctx)
 	if err != nil {
 		return Agency{}, err
 	}
@@ -194,18 +173,9 @@ func (m *agencyManager) UpdateAgency(ctx context.Context, agencyID string, req U
 		}
 	}
 
-	return m.backend.Update(ctx, agencyID, req)
+	return m.backend.Update(ctx, req)
 }
 
-// DeleteAgency delegates to [Backend.Delete].
-func (m *agencyManager) DeleteAgency(ctx context.Context, agencyID string) error {
-	return m.backend.Delete(ctx, agencyID)
-}
-
-// ListAgencies delegates to [Backend.List].
-func (m *agencyManager) ListAgencies(ctx context.Context, filter AgencyFilter) ([]Agency, error) {
-	return m.backend.List(ctx, filter)
-}
 
 // newID returns a random UUID v4 string using crypto/rand.
 // Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx

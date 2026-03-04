@@ -30,6 +30,34 @@ const (
 	RoleAdmin AgencyRole = "admin"
 )
 
+// ActorType describes who is expected to fill a configured role —
+// a human actor, an AI agent, or either. This is recorded on every
+// [ConfiguredRole] to make role expectations explicit at design time.
+type ActorType string
+
+const (
+	// ActorTypeHuman indicates the role must be filled by a human actor.
+	ActorTypeHuman ActorType = "human"
+
+	// ActorTypeAI indicates the role is intended for an AI agent.
+	ActorTypeAI ActorType = "ai"
+
+	// ActorTypeEither indicates the role may be filled by either a human or an AI agent.
+	ActorTypeEither ActorType = "either"
+)
+
+// ConfiguredRole is a named role defined by an agency beyond the built-in
+// [RoleSuperAdmin] and [RoleAdmin] roles. The [ActorType] field makes
+// explicit whether the role is intended for a human, an AI agent, or either.
+type ConfiguredRole struct {
+	// Role is the string identifier for this role (e.g. "domain_expert").
+	Role AgencyRole
+
+	// ActorType describes whether this role should be filled by a human,
+	// an AI agent, or either.
+	ActorType ActorType
+}
+
 // AgencyLifecycle is the progression state of an [Agency].
 // Transitions are strictly forward-only; see [AgencyLifecycle.CanTransitionTo].
 type AgencyLifecycle string
@@ -152,9 +180,10 @@ type Agency struct {
 	// Workflows is the list of ordered work containers for this agency.
 	Workflows []Workflow
 
-	// ConfiguredRoles lists additional role names beyond [RoleSuperAdmin] and
-	// [RoleAdmin]; these are free-form strings defined by the agency.
-	ConfiguredRoles []string
+	// ConfiguredRoles lists additional roles beyond [RoleSuperAdmin] and
+	// [RoleAdmin]. Each entry carries both a role name and an [AutonomyLevel]
+	// that declares whether the role is for a human, an AI, or either.
+	ConfiguredRoles []ConfiguredRole
 
 	// CreatedAt is the time at which the agency was first persisted.
 	CreatedAt time.Time
@@ -178,19 +207,10 @@ type AgencySnapshot struct {
 	Vision          string
 	Goals           []Goal
 	Workflows       []Workflow
-	ConfiguredRoles []string
+	ConfiguredRoles []ConfiguredRole
 
 	// SnapshotAt is the exact time the draft → active transition occurred.
 	SnapshotAt time.Time
-}
-
-// CreateAgencyRequest carries the fields required to create a new agency.
-// The agency starts in [LifecycleDraft] with the supplied Name, Mission, and
-// Vision.
-type CreateAgencyRequest struct {
-	Name    string
-	Mission string
-	Vision  string
 }
 
 // UpdateAgencyRequest carries the mutable fields of an existing agency.
@@ -203,19 +223,5 @@ type UpdateAgencyRequest struct {
 	Status          AgencyLifecycle
 	Goals           []Goal
 	Workflows       []Workflow
-	ConfiguredRoles []string
-}
-
-// AgencyFilter constrains the result set returned by [AgencyManager.ListAgencies].
-type AgencyFilter struct {
-	// Offset is the zero-based index of the first result to return.
-	Offset int
-
-	// Limit is the maximum number of results to return.
-	// A value of 0 means no limit.
-	Limit int
-
-	// Status optionally restricts results to agencies in the given lifecycle
-	// state. An empty string means no filter is applied.
-	Status AgencyLifecycle
+	ConfiguredRoles []ConfiguredRole
 }

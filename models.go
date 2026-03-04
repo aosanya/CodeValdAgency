@@ -225,3 +225,27 @@ type UpdateAgencyRequest struct {
 	Workflows       []Workflow
 	ConfiguredRoles []ConfiguredRole
 }
+
+// AgencyPublication is an immutable, versioned snapshot of an [Agency]
+// created by an explicit publish action. The agency [Status] is never changed
+// by publishing — the agency always remains in [LifecycleDraft].
+// Publications are written once and never updated or deleted.
+type AgencyPublication struct {
+	// ID is the unique identifier for this publication (UUID).
+	ID string
+
+	// Agency is the full point-in-time copy of the agency at the moment of publish.
+	// It is captured once and never mutated; subsequent edits to the live agency
+	// do not affect this record.
+	Agency Agency
+
+	// Version is the auto-incrementing publication number (1, 2, 3, …).
+	// The first publish produces Version 1; each subsequent call increments by one.
+	Version int
+
+	// Tag is the human-readable version label derived from Version, e.g. "v1", "v2".
+	Tag string
+
+	// PublishedAt is the exact time this publication was created.
+	PublishedAt time.Time
+}

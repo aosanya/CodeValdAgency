@@ -22,6 +22,9 @@ const (
 	AgencyService_SetAgencyDetails_FullMethodName = "/codevaldagency.v1.AgencyService/SetAgencyDetails"
 	AgencyService_GetAgency_FullMethodName        = "/codevaldagency.v1.AgencyService/GetAgency"
 	AgencyService_UpdateAgency_FullMethodName     = "/codevaldagency.v1.AgencyService/UpdateAgency"
+	AgencyService_PublishAgency_FullMethodName    = "/codevaldagency.v1.AgencyService/PublishAgency"
+	AgencyService_GetPublication_FullMethodName   = "/codevaldagency.v1.AgencyService/GetPublication"
+	AgencyService_ListPublications_FullMethodName = "/codevaldagency.v1.AgencyService/ListPublications"
 )
 
 // AgencyServiceClient is the client API for AgencyService service.
@@ -41,6 +44,15 @@ type AgencyServiceClient interface {
 	// Error: FAILED_PRECONDITION on invalid lifecycle transition.
 	// Error: NOT_FOUND if no agency document exists yet.
 	UpdateAgency(ctx context.Context, in *UpdateAgencyRequest, opts ...grpc.CallOption) (*Agency, error)
+	// PublishAgency creates an immutable versioned publication of the current
+	// agency state. The agency status is NOT changed.
+	// Error: NOT_FOUND if no agency document exists yet.
+	PublishAgency(ctx context.Context, in *PublishAgencyRequest, opts ...grpc.CallOption) (*AgencyPublication, error)
+	// GetPublication retrieves a single publication by version number.
+	// Error: NOT_FOUND if no publication with that version exists.
+	GetPublication(ctx context.Context, in *GetPublicationRequest, opts ...grpc.CallOption) (*AgencyPublication, error)
+	// ListPublications returns all publications in ascending version order.
+	ListPublications(ctx context.Context, in *ListPublicationsRequest, opts ...grpc.CallOption) (*ListPublicationsResponse, error)
 }
 
 type agencyServiceClient struct {
@@ -81,6 +93,36 @@ func (c *agencyServiceClient) UpdateAgency(ctx context.Context, in *UpdateAgency
 	return out, nil
 }
 
+func (c *agencyServiceClient) PublishAgency(ctx context.Context, in *PublishAgencyRequest, opts ...grpc.CallOption) (*AgencyPublication, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AgencyPublication)
+	err := c.cc.Invoke(ctx, AgencyService_PublishAgency_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) GetPublication(ctx context.Context, in *GetPublicationRequest, opts ...grpc.CallOption) (*AgencyPublication, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AgencyPublication)
+	err := c.cc.Invoke(ctx, AgencyService_GetPublication_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) ListPublications(ctx context.Context, in *ListPublicationsRequest, opts ...grpc.CallOption) (*ListPublicationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPublicationsResponse)
+	err := c.cc.Invoke(ctx, AgencyService_ListPublications_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgencyServiceServer is the server API for AgencyService service.
 // All implementations must embed UnimplementedAgencyServiceServer
 // for forward compatibility.
@@ -98,6 +140,15 @@ type AgencyServiceServer interface {
 	// Error: FAILED_PRECONDITION on invalid lifecycle transition.
 	// Error: NOT_FOUND if no agency document exists yet.
 	UpdateAgency(context.Context, *UpdateAgencyRequest) (*Agency, error)
+	// PublishAgency creates an immutable versioned publication of the current
+	// agency state. The agency status is NOT changed.
+	// Error: NOT_FOUND if no agency document exists yet.
+	PublishAgency(context.Context, *PublishAgencyRequest) (*AgencyPublication, error)
+	// GetPublication retrieves a single publication by version number.
+	// Error: NOT_FOUND if no publication with that version exists.
+	GetPublication(context.Context, *GetPublicationRequest) (*AgencyPublication, error)
+	// ListPublications returns all publications in ascending version order.
+	ListPublications(context.Context, *ListPublicationsRequest) (*ListPublicationsResponse, error)
 	mustEmbedUnimplementedAgencyServiceServer()
 }
 
@@ -116,6 +167,15 @@ func (UnimplementedAgencyServiceServer) GetAgency(context.Context, *GetAgencyReq
 }
 func (UnimplementedAgencyServiceServer) UpdateAgency(context.Context, *UpdateAgencyRequest) (*Agency, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAgency not implemented")
+}
+func (UnimplementedAgencyServiceServer) PublishAgency(context.Context, *PublishAgencyRequest) (*AgencyPublication, error) {
+	return nil, status.Error(codes.Unimplemented, "method PublishAgency not implemented")
+}
+func (UnimplementedAgencyServiceServer) GetPublication(context.Context, *GetPublicationRequest) (*AgencyPublication, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPublication not implemented")
+}
+func (UnimplementedAgencyServiceServer) ListPublications(context.Context, *ListPublicationsRequest) (*ListPublicationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPublications not implemented")
 }
 func (UnimplementedAgencyServiceServer) mustEmbedUnimplementedAgencyServiceServer() {}
 func (UnimplementedAgencyServiceServer) testEmbeddedByValue()                       {}
@@ -192,6 +252,60 @@ func _AgencyService_UpdateAgency_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgencyService_PublishAgency_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublishAgencyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).PublishAgency(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_PublishAgency_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).PublishAgency(ctx, req.(*PublishAgencyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_GetPublication_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPublicationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).GetPublication(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_GetPublication_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).GetPublication(ctx, req.(*GetPublicationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_ListPublications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPublicationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).ListPublications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_ListPublications_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).ListPublications(ctx, req.(*ListPublicationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgencyService_ServiceDesc is the grpc.ServiceDesc for AgencyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -210,6 +324,18 @@ var AgencyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateAgency",
 			Handler:    _AgencyService_UpdateAgency_Handler,
+		},
+		{
+			MethodName: "PublishAgency",
+			Handler:    _AgencyService_PublishAgency_Handler,
+		},
+		{
+			MethodName: "GetPublication",
+			Handler:    _AgencyService_GetPublication_Handler,
+		},
+		{
+			MethodName: "ListPublications",
+			Handler:    _AgencyService_ListPublications_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

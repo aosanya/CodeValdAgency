@@ -52,6 +52,37 @@ func (s *Server) SetAgencyDetails(ctx context.Context, req *pb.SetAgencyDetailsR
 	return agencyToProto(agency), nil
 }
 
+// PublishAgency implements pb.AgencyServiceServer.
+func (s *Server) PublishAgency(ctx context.Context, _ *pb.PublishAgencyRequest) (*pb.AgencyPublication, error) {
+	pub, err := s.mgr.PublishAgency(ctx)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return publicationToProto(pub), nil
+}
+
+// GetPublication implements pb.AgencyServiceServer.
+func (s *Server) GetPublication(ctx context.Context, req *pb.GetPublicationRequest) (*pb.AgencyPublication, error) {
+	pub, err := s.mgr.GetPublication(ctx, int(req.GetVersion()))
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return publicationToProto(pub), nil
+}
+
+// ListPublications implements pb.AgencyServiceServer.
+func (s *Server) ListPublications(ctx context.Context, _ *pb.ListPublicationsRequest) (*pb.ListPublicationsResponse, error) {
+	pubs, err := s.mgr.ListPublications(ctx)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	out := make([]*pb.AgencyPublication, len(pubs))
+	for i, p := range pubs {
+		out[i] = publicationToProto(p)
+	}
+	return &pb.ListPublicationsResponse{Publications: out}, nil
+}
+
 // ── Proto → Domain converters ─────────────────────────────────────────────────
 
 func protoToUpdateRequest(req *pb.UpdateAgencyRequest) codevaldagency.UpdateAgencyRequest {
@@ -326,4 +357,14 @@ func timeToProto(t time.Time) *timestamppb.Timestamp {
 		return nil
 	}
 	return timestamppb.New(t)
+}
+
+func publicationToProto(p codevaldagency.AgencyPublication) *pb.AgencyPublication {
+	return &pb.AgencyPublication{
+		Id:          p.ID,
+		Agency:      agencyToProto(p.Agency),
+		Version:     int32(p.Version),
+		Tag:         p.Tag,
+		PublishedAt: timeToProto(p.PublishedAt),
+	}
 }

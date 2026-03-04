@@ -46,7 +46,7 @@ func New(
 		advertiseAddr,
 		"", // CodeValdAgency is not scoped to a single agency
 		"codevaldagency",
-		[]string{"cross.agency.created"},
+		[]string{"cross.agency.created", "cross.agency.published"},
 		[]string{},
 		routes,
 		pingInterval,
@@ -107,6 +107,30 @@ func agencyRoutes() []*crossv1.RouteDeclaration {
 			Pattern:    "/agency",
 			Capability: "update_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/UpdateAgency",
+		},
+		// POST /agency/publish — create an immutable versioned publication of the current agency.
+		{
+			Method:     "POST",
+			Pattern:    "/agency/publish",
+			Capability: "publish_agency",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/PublishAgency",
+		},
+		// GET /agency/publications — list all publications in ascending version order.
+		{
+			Method:     "GET",
+			Pattern:    "/agency/publications",
+			Capability: "list_publications",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/ListPublications",
+		},
+		// GET /agency/publications/{version} — retrieve a specific publication by version.
+		{
+			Method:     "GET",
+			Pattern:    "/agency/publications/{version}",
+			Capability: "get_publication",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/GetPublication",
+			PathBindings: []*crossv1.PathBinding{
+				{UrlParam: "version", Field: "version"},
+			},
 		},
 	}
 }

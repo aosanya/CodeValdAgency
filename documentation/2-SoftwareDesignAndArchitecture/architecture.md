@@ -23,12 +23,33 @@
 ```go
 // AgencyManager is the sole business-logic entry point for agency operations.
 // gRPC handlers hold this interface — never the concrete type.
+// There is exactly one agency per database; no agencyID parameter is needed.
 type AgencyManager interface {
-    CreateAgency(ctx context.Context, req CreateAgencyRequest) (Agency, error)
-    GetAgency(ctx context.Context, agencyID string) (Agency, error)
-    UpdateAgency(ctx context.Context, agencyID string, req UpdateAgencyRequest) (Agency, error)
-    DeleteAgency(ctx context.Context, agencyID string) error
-    ListAgencies(ctx context.Context, filter AgencyFilter) ([]Agency, error)
+    // SetAgencyDetails replaces the full agency document from a raw JSON string.
+    // The JSON must include a non-empty "id" field.
+    // Publishes "cross.agency.created" after every successful write.
+    SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
+
+    // GetAgency retrieves the single agency for this database.
+    // Returns ErrAgencyNotFound if no agency document exists yet.
+    GetAgency(ctx context.Context) (Agency, error)
+
+    // UpdateAgency applies incremental field edits with lifecycle validation.
+    // Returns ErrInvalidLifecycleTransition on invalid transitions.
+    // Writes a snapshot to the backend on draft → active transition.
+    UpdateAgency(ctx context.Context, req UpdateAgencyRequest) (Agency, error)
+
+    // PublishAgency creates an immutable versioned publication of the current
+    // agency state. Agency status is NOT changed.
+    // Publishes "cross.agency.published" after every successful write.
+    PublishAgency(ctx context.Context) (AgencyPublication, error)
+
+    // GetPublication retrieves a single publication by version number.
+    // Returns ErrPublicationNotFound if no match exists.
+    GetPublication(ctx context.Context, version int) (AgencyPublication, error)
+
+    // ListPublications returns all publications in ascending version order.
+    ListPublications(ctx context.Context) ([]AgencyPublication, error)
 }
 ```
 
@@ -38,15 +59,30 @@ type AgencyManager interface {
 // Backend is the storage contract injected into AgencyManager.
 // cmd/main.go constructs the chosen implementation (e.g. arangodb.NewBackend).
 type Backend interface {
-    Insert(ctx context.Context, req CreateAgencyRequest) (Agency, error)
-    Get(ctx context.Context, agencyID string) (Agency, error)
-    Update(ctx context.Context, agencyID string, req UpdateAgencyRequest) (Agency, error)
-    Delete(ctx context.Context, agencyID string) error
-    List(ctx context.Context, filter AgencyFilter) ([]Agency, error)
+    // SetDetails parses the raw JSON and upserts the single agency document.
+    SetDetails(ctx context.Context, jsonStr string) (Agency, error)
 
-    // InsertSnapshot writes a point-in-time copy of an Agency to agency_snapshots.
-    // Called by AgencyManager.UpdateAgency immediately after a draft → active transition.
+    // Get retrieves the single agency document for this database.
+    Get(ctx context.Context) (Agency, error)
+
+    // Update applies a partial field merge and returns the updated agency.
+    Update(ctx context.Context, req UpdateAgencyRequest) (Agency, error)
+
+    // InsertSnapshot writes an immutable point-in-time copy of an agency.
+    // Called by AgencyManager.UpdateAgency before a draft → active transition.
     InsertSnapshot(ctx context.Context, snapshot AgencySnapshot) error
+
+    // InsertPublication writes a new AgencyPublication.
+    InsertPublication(ctx context.Context, pub AgencyPublication) error
+
+    // GetPublication retrieves a publication by its version number.
+    GetPublication(ctx context.Context, version int) (AgencyPublication, error)
+
+    // ListPublications returns all publications in ascending version order.
+    ListPublications(ctx context.Context) ([]AgencyPublication, error)
+
+    // NextPublicationVersion returns the next auto-increment version number.
+    NextPublicationVersion(ctx context.Context) (int, error)
 }
 ```
 
@@ -147,12 +183,6 @@ type AgencySnapshot struct {
     SnapshotAt      time.Time       // Exact time the draft → active transition occurred
 }
 
-type CreateAgencyRequest struct {
-    Name    string
-    Mission string
-    Vision  string
-}
-
 type UpdateAgencyRequest struct {
     Name            string
     Mission         string
@@ -160,13 +190,7 @@ type UpdateAgencyRequest struct {
     Status          AgencyLifecycle
     Goals           []Goal
     Workflows       []Workflow
-    ConfiguredRoles []string // Additional role names beyond the two defaults; free-form
-}
-
-type AgencyFilter struct {
-    Offset int
-    Limit  int
-    Status AgencyLifecycle // Optional: filter by lifecycle state
+    ConfiguredRoles []ConfiguredRole // Additional roles beyond the two defaults
 }
 ```
 
@@ -209,12 +233,16 @@ CodeValdAgency/
 syntax = "proto3";
 package codevaldagency.v1;
 
+// GetAgencyRequest is intentionally empty — there is exactly one agency per database.
+message GetAgencyRequest {}
+
 service AgencyService {
-    rpc CreateAgency (CreateAgencyRequest) returns (Agency);
-    rpc GetAgency    (GetAgencyRequest)    returns (Agency);
-    rpc UpdateAgency (UpdateAgencyRequest) returns (Agency);
-    rpc DeleteAgency (DeleteAgencyRequest) returns (DeleteAgencyResponse);
-    rpc ListAgencies (ListAgenciesRequest) returns (ListAgenciesResponse);
+    rpc SetAgencyDetails (SetAgencyDetailsRequest) returns (Agency);
+    rpc GetAgency        (GetAgencyRequest)         returns (Agency);
+    rpc UpdateAgency     (UpdateAgencyRequest)      returns (Agency);
+    rpc PublishAgency    (PublishAgencyRequest)     returns (AgencyPublication);
+    rpc GetPublication   (GetPublicationRequest)    returns (AgencyPublication);
+    rpc ListPublications (ListPublicationsRequest)  returns (ListPublicationsResponse);
 }
 ```
 
@@ -231,14 +259,17 @@ On startup, `cmd/main.go` starts a registration heartbeat. The loop calls
 RegisterRequest{
     ServiceName: "codevaldagency",
     Addr:        ":50053",          // gRPC address Cross dials back on
-    Produces:    []string{"cross.agency.created"},
+    Produces:    []string{"cross.agency.created", "cross.agency.published"},
     Consumes:    []string{},
     Routes: []Route{
-        {Method: "POST",   Pattern: "/agencies"},
-        {Method: "GET",    Pattern: "/agencies"},
-        {Method: "GET",    Pattern: "/agencies/{agencyID}"},
-        {Method: "PUT",    Pattern: "/agencies/{agencyID}"},
-        {Method: "DELETE", Pattern: "/agencies/{agencyID}"},
+        // All routes are prefixed with /{agencyId} so Cross can extract the agency ID
+        // and resolve the correct service instance via ConnForAgency.
+        {Method: "POST", Pattern: "/{agencyId}/agency"},
+        {Method: "GET",  Pattern: "/{agencyId}/agency"},
+        {Method: "PUT",  Pattern: "/{agencyId}/agency"},
+        {Method: "POST", Pattern: "/{agencyId}/agency/publish"},
+        {Method: "GET",  Pattern: "/{agencyId}/agency/publications"},
+        {Method: "GET",  Pattern: "/{agencyId}/agency/publications/{version}"},
     },
 }
 ```
@@ -252,18 +283,19 @@ registering. If Cross is not yet up, the loop retries silently.
 
 | Collection | Document key | Key fields |
 |---|---|---|
-| `agencies` | `agency.ID` (UUID) | `name`, `mission`, `vision`, `status`, `goals[]`, `workflows[]`, `created_at`, `updated_at` |
-| `agency_snapshots` | `snapshot.ID` (UUID) | `agency_id`, `name`, `mission`, `vision`, `goals[]`, `workflows[]`, `configured_roles[]`, `snapshot_at` |
+| `agency_details` | `agency.id` (from JSON payload) | `name`, `mission`, `vision`, `status`, `goals[]`, `workflows[]`, `configured_roles[]`, `created_at`, `updated_at` |
+| `agency_snapshots` | auto UUID | `agency_id`, `name`, `mission`, `vision`, `goals[]`, `workflows[]`, `configured_roles[]`, `snapshot_at` |
+| `agency_publications` | auto UUID | `id`, `agency`, `version`, `tag`, `published_at` |
 
-**Embedded sub-documents** (stored inline in the agency document):
+**Embedded sub-documents** (stored inline in the `agency_details` document):
 
 ```
-agencies/{id}
+agency_details/{id}
 ├── name             string
 ├── mission          string
 ├── vision           string
 ├── status           string  ("draft" | "active" | "achieved")
-├── configured_roles []string  // Roles beyond the two defaults
+├── configured_roles []object  // [{role, actor_type}] — roles beyond the two defaults
 ├── goals[]
 │   └── { id, title, description, ordinality }
 ├── workflows[]
@@ -308,8 +340,11 @@ Defined in `errors.go`:
 
 ```go
 var (
-    ErrAgencyNotFound      = errors.New("agency not found")
-    ErrAgencyAlreadyExists = errors.New("agency already exists")
+    ErrAgencyNotFound           = errors.New("agency not found")
+    ErrInvalidLifecycleTransition = errors.New("invalid agency lifecycle transition")
+    ErrInvalidAgency            = errors.New("invalid agency: missing required fields")
+    ErrInvalidJSON              = errors.New("invalid agency: malformed JSON payload")
+    ErrPublicationNotFound      = errors.New("agency publication not found")
 )
 ```
 
@@ -318,23 +353,29 @@ Map to gRPC status codes in `internal/server/server.go`:
 | Error | gRPC code |
 |---|---|
 | `ErrAgencyNotFound` | `codes.NotFound` |
-| `ErrAgencyAlreadyExists` | `codes.AlreadyExists` |
+| `ErrPublicationNotFound` | `codes.NotFound` |
+| `ErrInvalidJSON` | `codes.InvalidArgument` |
+| `ErrInvalidAgency` | `codes.InvalidArgument` |
+| `ErrInvalidLifecycleTransition` | `codes.FailedPrecondition` |
 | all others | `codes.Internal` |
 
 ---
 
-## 9. CreateAgency Flow (Critical Path)
+## 9. SetAgencyDetails Flow (Critical Path)
 
 ```
 gRPC handler
     │
     ▼
-AgencyManager.CreateAgency(ctx, req)
+AgencyManager.SetAgencyDetails(ctx, jsonStr)
     │
-    ├── backend.Insert(ctx, req)   → ArangoDB write
-    │       returns Agency{ID, Name, ...}
+    ├── parse JSON → Agency{ID, Name, ...}
+    │       returns ErrInvalidJSON if malformed or id missing
     │
-    └── crossClient.Publish(ctx, "cross.agency.created", agencyID)
+    ├── backend.SetDetails(ctx, jsonStr)   → ArangoDB upsert (agency_details collection)
+    │       returns Agency
+    │
+    └── crossPublisher.Publish(ctx, "cross.agency.created", agency.ID)
             │
             ▼
         CodeValdCross receives event
@@ -343,8 +384,8 @@ AgencyManager.CreateAgency(ctx, req)
 ```
 
 **`cross.agency.created` MUST be published** — it is the trigger for all
-downstream onboarding. Never return successfully from `CreateAgency` without
-publishing this event.
+downstream onboarding. Errors from `Publish` are logged but never returned to
+the caller; the agency has already been persisted.
 
 ---
 
@@ -370,14 +411,7 @@ Draft ──► Active ──► Achieved
 |---|---|---|---|---|
 | `draft` | `active` | `UpdateAgency(Status: active)` | Agency must have at least one Goal and at least one Workflow containing at least one Work Item | Snapshot written to `agency_snapshots` |
 | `active` | `achieved` | `UpdateAgency(Status: achieved)` | Caller must hold `super_admin` or `admin` role | — |
-| any | any (backward) | — | **Rejected** with `codes.InvalidArgument` — lifecycle never moves backward | — |
-
-### Delete Rules
-
-| State | Delete Permitted |
-|---|---|
-| `draft` | ✅ Yes |
-| `active` | ❌ No — must first transition to `achieved` or be force-deleted by Super Admin |
+| any | any (backward) | — | **Rejected** with `ErrInvalidLifecycleTransition` — lifecycle never moves backward | — |
 | `achieved` | ❌ No — terminal record; preserved for audit |
 
 ### Error Mapping for Invalid Transitions

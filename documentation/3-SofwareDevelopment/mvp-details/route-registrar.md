@@ -29,11 +29,12 @@ each service owns its route declarations and CodeValdCross acts purely as a prox
 
 | Method | Pattern | gRPC Method | Description |
 |--------|---------|-------------|-------------|
-| `POST` | `/agencies` | `CreateAgency` | Create a new agency |
-| `GET` | `/agencies` | `ListAgencies` | List agencies with optional filters |
-| `GET` | `/agencies/{agencyId}` | `GetAgency` | Retrieve a single agency |
-| `PUT` | `/agencies/{agencyId}` | `UpdateAgency` | Update / lifecycle-advance an agency |
-| `DELETE` | `/agencies/{agencyId}` | `DeleteAgency` | Delete an agency |
+| `POST` | `/{agencyId}/agency` | `SetAgencyDetails` | Replace (or create) the full agency document from a JSON body |
+| `GET`  | `/{agencyId}/agency` | `GetAgency` | Retrieve the single agency for this database |
+| `PUT`  | `/{agencyId}/agency` | `UpdateAgency` | Apply incremental field edits with lifecycle validation |
+| `POST` | `/{agencyId}/agency/publish` | `PublishAgency` | Create an immutable versioned publication of the current agency |
+| `GET`  | `/{agencyId}/agency/publications` | `ListPublications` | List all publications in ascending version order |
+| `GET`  | `/{agencyId}/agency/publications/{version}` | `GetPublication` | Retrieve a specific publication by version number |
 
 ---
 
@@ -41,13 +42,14 @@ each service owns its route declarations and CodeValdCross acts purely as a prox
 
 #### `internal/registrar/registrar.go` (updated)
 
-- [ ] `RegisterRequest` includes a `DeclaredRoutes` (or equivalent) field listing all
-  five routes above, each with `Method`, `Pattern`, `GrpcMethod`, and `PathBindings`
-- [ ] `PathBindings` maps `{agencyId}` → gRPC field `agency_id` where applicable
+- [x] `RegisterRequest` includes a `DeclaredRoutes` field listing all six routes
+  above, each with `Method`, `Pattern`, `GrpcMethod`, and `PathBindings`
+- [x] `PathBindings` maps `{version}` → gRPC field `version` for the
+  `GetPublication` route
 
 #### CodeValdCross (no changes to CodeValdAgency repo)
 
-- [ ] The dynamic proxy in CodeValdCross forwards the five route patterns to the
+- [ ] The dynamic proxy in CodeValdCross forwards the six route patterns to the
   registered `codevaldagency` service without any hardcoded handler
 
 ---

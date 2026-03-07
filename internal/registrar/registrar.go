@@ -83,49 +83,52 @@ func (r *Registrar) Publish(ctx context.Context, topic string, agencyID string) 
 }
 
 // agencyRoutes returns the HTTP routes that CodeValdAgency exposes via Cross.
-// There is exactly one agency per database so no agency ID appears in any path.
+// All routes are prefixed with /{agencyId} so that the Cross dynamic proxy can
+// extract the agency ID from the path and resolve the correct service instance
+// via ConnForAgency (which falls back to the unscoped/empty-AgencyID instance
+// that CodeValdAgency registers with).
 func agencyRoutes() []*crossv1.RouteDeclaration {
 	return []*crossv1.RouteDeclaration{
-		// POST /agency — replace (or create) the full agency document from a JSON body.
+		// POST /{agencyId}/agency — replace (or create) the full agency document from a JSON body.
 		// Body: {"json": "<agency-document-as-JSON-string>"}
 		{
 			Method:     "POST",
-			Pattern:    "/agency",
+			Pattern:    "/{agencyId}/agency",
 			Capability: "set_agency_details",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/SetAgencyDetails",
 		},
-		// GET /agency — retrieve the single agency for this database.
+		// GET /{agencyId}/agency — retrieve the single agency for this database.
 		{
 			Method:     "GET",
-			Pattern:    "/agency",
+			Pattern:    "/{agencyId}/agency",
 			Capability: "get_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/GetAgency",
 		},
-		// PUT /agency — apply incremental field edits with lifecycle validation.
+		// PUT /{agencyId}/agency — apply incremental field edits with lifecycle validation.
 		{
 			Method:     "PUT",
-			Pattern:    "/agency",
+			Pattern:    "/{agencyId}/agency",
 			Capability: "update_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/UpdateAgency",
 		},
-		// POST /agency/publish — create an immutable versioned publication of the current agency.
+		// POST /{agencyId}/agency/publish — create an immutable versioned publication of the current agency.
 		{
 			Method:     "POST",
-			Pattern:    "/agency/publish",
+√
 			Capability: "publish_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/PublishAgency",
 		},
-		// GET /agency/publications — list all publications in ascending version order.
+		// GET /{agencyId}/agency/publications — list all publications in ascending version order.
 		{
 			Method:     "GET",
-			Pattern:    "/agency/publications",
+			Pattern:    "/{agencyId}/agency/publications",
 			Capability: "list_publications",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/ListPublications",
 		},
-		// GET /agency/publications/{version} — retrieve a specific publication by version.
+		// GET /{agencyId}/agency/publications/{version} — retrieve a specific publication by version.
 		{
 			Method:     "GET",
-			Pattern:    "/agency/publications/{version}",
+			Pattern:    "/{agencyId}/agency/publications/{version}",
 			Capability: "get_publication",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/GetPublication",
 			PathBindings: []*crossv1.PathBinding{

@@ -33,6 +33,8 @@ import (
 	"github.com/aosanya/CodeValdAgency/internal/registrar"
 	"github.com/aosanya/CodeValdAgency/internal/server"
 	"github.com/aosanya/CodeValdAgency/storage/arangodb"
+	"github.com/aosanya/CodeValdSharedLib/health"
+	healthpb "github.com/aosanya/CodeValdSharedLib/gen/go/codevaldhealth/v1"
 	"github.com/aosanya/CodeValdSharedLib/serverutil"
 )
 
@@ -80,6 +82,7 @@ func main() {
 
 	grpcServer, _ := serverutil.NewGRPCServer()
 	pb.RegisterAgencyServiceServer(grpcServer, server.New(mgr))
+	healthpb.RegisterHealthServiceServer(grpcServer, health.New("codevaldagency"))
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)

@@ -91,14 +91,12 @@ func agencyRoutes() []*crossv1.RouteDeclaration {
 	return []*crossv1.RouteDeclaration{
 		// POST /agency/{agencyId} — replace (or create) the full agency document from a JSON body.
 		// Body: {"json": "<agency-document-as-JSON-string>"}
+		// agencyId is used by Cross for routing only — SetAgencyDetailsRequest has no agency_id field.
 		{
 			Method:     "POST",
 			Pattern:    "/agency/{agencyId}",
 			Capability: "set_agency_details",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/SetAgencyDetails",
-			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "agencyId", Field: "agency_id"},
-			},
 		},
 		// GET /agency/{agencyId} — retrieve the single agency for this database.
 		{
@@ -106,9 +104,6 @@ func agencyRoutes() []*crossv1.RouteDeclaration {
 			Pattern:    "/agency/{agencyId}",
 			Capability: "get_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/GetAgency",
-			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "agencyId", Field: "agency_id"},
-			},
 		},
 		// PUT /agency/{agencyId} — apply incremental field edits with lifecycle validation.
 		{
@@ -116,9 +111,6 @@ func agencyRoutes() []*crossv1.RouteDeclaration {
 			Pattern:    "/agency/{agencyId}",
 			Capability: "update_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/UpdateAgency",
-			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "agencyId", Field: "agency_id"},
-			},
 		},
 		// POST /agency/{agencyId}/publish — create an immutable versioned publication of the current agency.
 		{
@@ -126,9 +118,6 @@ func agencyRoutes() []*crossv1.RouteDeclaration {
 			Pattern:    "/agency/{agencyId}/publish",
 			Capability: "publish_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/PublishAgency",
-			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "agencyId", Field: "agency_id"},
-			},
 		},
 		// GET /agency/{agencyId}/publications — list all publications in ascending version order.
 		{
@@ -136,9 +125,6 @@ func agencyRoutes() []*crossv1.RouteDeclaration {
 			Pattern:    "/agency/{agencyId}/publications",
 			Capability: "list_publications",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/ListPublications",
-			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "agencyId", Field: "agency_id"},
-			},
 		},
 		// GET /agency/{agencyId}/publications/{version} — retrieve a specific publication by version.
 		{
@@ -147,7 +133,6 @@ func agencyRoutes() []*crossv1.RouteDeclaration {
 			Capability: "get_publication",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/GetPublication",
 			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "agencyId", Field: "agency_id"},
 				{UrlParam: "version", Field: "version"},
 			},
 		},

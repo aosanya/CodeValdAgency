@@ -37,14 +37,14 @@ var _ codevaldagency.CrossPublisher = (*Registrar)(nil)
 //   - pingInterval — heartbeat cadence; ≤ 0 means only the initial ping
 //   - pingTimeout  — per-RPC timeout for each Register call
 func New(
-	crossAddr, advertiseAddr string,
+	crossAddr, advertiseAddr, agencyID string,
 	pingInterval, pingTimeout time.Duration,
 ) (*Registrar, error) {
 	routes := agencyRoutes()
 	hb, err := sharedregistrar.New(
 		crossAddr,
 		advertiseAddr,
-		"", // CodeValdAgency is not scoped to a single agency
+		agencyID,
 		"codevaldagency",
 		[]string{"cross.agency.created", "cross.agency.published"},
 		[]string{},

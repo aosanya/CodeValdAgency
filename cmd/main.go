@@ -56,6 +56,7 @@ func main() {
 		reg, err := registrar.New(
 			cfg.CrossGRPCAddr,
 			cfg.AdvertiseAddr,
+			cfg.AgencyID,
 			cfg.PingInterval,
 			cfg.PingTimeout,
 		)

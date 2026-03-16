@@ -24,6 +24,10 @@ type Config struct {
 	// ArangoDatabase is the ArangoDB database name (default "codevaldagency").
 	ArangoDatabase string
 
+	// AgencyID is the agency this service instance is scoped to.
+	// Must be set when CROSS_GRPC_ADDR is configured.
+	AgencyID string
+
 	// CrossGRPCAddr is the CodeValdCross gRPC address for registration heartbeats.
 	// Empty string disables registration.
 	CrossGRPCAddr string
@@ -48,6 +52,7 @@ func Load() Config {
 		ArangoUser:     serverutil.EnvOrDefault("AGENCY_ARANGO_USER", "root"),
 		ArangoPassword: serverutil.EnvOrDefault("AGENCY_ARANGO_PASSWORD", ""),
 		ArangoDatabase: serverutil.EnvOrDefault("AGENCY_ARANGO_DATABASE", "codevaldagency"),
+		AgencyID:       serverutil.EnvOrDefault("CODEVALDAGENCY_AGENCY_ID", ""),
 		CrossGRPCAddr:  serverutil.EnvOrDefault("CROSS_GRPC_ADDR", ""),
 		AdvertiseAddr:  serverutil.EnvOrDefault("AGENCY_GRPC_ADVERTISE_ADDR", ":"+port),
 		PingInterval:   serverutil.ParseDurationString("CROSS_PING_INTERVAL", 20*time.Second),

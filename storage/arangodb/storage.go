@@ -361,8 +361,15 @@ func fromAgencyDoc(key string, doc agencyDoc) codevaldagency.Agency {
 // ── Backend interface implementation ─────────────────────────────────────────
 
 // SetDetails implements [codevaldagency.Backend].
-// It parses the raw JSON, builds an agencyDoc keyed by agency.id, then
-// upserts (replace-or-create) the single document in the agency_details collection.
+// It parses the raw JSON, then writes it as the single agency document in the
+// agency_details collection. The incoming "id" field is only used when no
+// document exists yet; on subsequent calls the existing document's _key is
+// reused so that the same record is always updated, regardless of the id value
+// in the payload.
+//
+// If the collection somehow holds more than one document (shouldn't happen in
+// normal operation), all duplicates are deleted before the surviving record is
+// replaced.
 func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagency.Agency, error) {
 	var raw struct {
 		ID              string              `json:"id"`
@@ -384,7 +391,6 @@ func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagenc
 	}
 
 	doc := agencyDoc{
-		Key:             raw.ID,
 		Name:            raw.Name,
 		Mission:         raw.Mission,
 		Vision:          raw.Vision,
@@ -396,19 +402,60 @@ func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagenc
 		UpdatedAt:       raw.UpdatedAt,
 	}
 
-	// Upsert: try replace first; fall back to create on first write.
-	_, err := b.agencyDetails.ReplaceDocument(ctx, doc.Key, doc)
+	// Discover every existing key so we always update the one record that is
+	// already there rather than inserting a second document keyed by raw.ID.
+	allKeys, err := b.allAgencyKeys(ctx)
 	if err != nil {
-		if driver.IsNotFound(err) {
-			if _, err = b.agencyDetails.CreateDocument(ctx, doc); err != nil {
-				return codevaldagency.Agency{}, fmt.Errorf("SetDetails: create: %w", err)
-			}
-		} else {
+		return codevaldagency.Agency{}, fmt.Errorf("SetDetails: list keys: %w", err)
+	}
+
+	switch len(allKeys) {
+	case 0:
+		// No record yet — create one keyed by the incoming id.
+		doc.Key = raw.ID
+		if _, err = b.agencyDetails.CreateDocument(ctx, doc); err != nil {
+			return codevaldagency.Agency{}, fmt.Errorf("SetDetails: create: %w", err)
+		}
+	case 1:
+		// Exactly one record — replace it, preserving its original _key.
+		doc.Key = allKeys[0]
+		if _, err = b.agencyDetails.ReplaceDocument(ctx, allKeys[0], doc); err != nil {
 			return codevaldagency.Agency{}, fmt.Errorf("SetDetails: replace: %w", err)
+		}
+	default:
+		// Multiple records — delete every extra, then replace the first.
+		for _, k := range allKeys[1:] {
+			if _, rmErr := b.agencyDetails.RemoveDocument(ctx, k); rmErr != nil && !driver.IsNotFound(rmErr) {
+				return codevaldagency.Agency{}, fmt.Errorf("SetDetails: remove duplicate %q: %w", k, rmErr)
+			}
+		}
+		doc.Key = allKeys[0]
+		if _, err = b.agencyDetails.ReplaceDocument(ctx, allKeys[0], doc); err != nil {
+			return codevaldagency.Agency{}, fmt.Errorf("SetDetails: replace after cleanup: %w", err)
 		}
 	}
 
 	return fromAgencyDoc(doc.Key, doc), nil
+}
+
+// allAgencyKeys returns the _key of every document currently in the
+// agency_details collection. Used by SetDetails to decide whether to insert
+// or replace, and to clean up unexpected duplicates.
+func (b *Backend) allAgencyKeys(ctx context.Context) ([]string, error) {
+	cursor, err := b.db.Query(ctx, `FOR doc IN agency_details RETURN doc._key`, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close()
+	var keys []string
+	for cursor.HasMore() {
+		var k string
+		if _, err := cursor.ReadDocument(ctx, &k); err != nil {
+			return nil, err
+		}
+		keys = append(keys, k)
+	}
+	return keys, nil
 }
 
 // Get implements [codevaldagency.Backend].

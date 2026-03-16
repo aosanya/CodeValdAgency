@@ -114,7 +114,7 @@ func agencyRoutes() []*crossv1.RouteDeclaration {
 		// POST /{agencyId}/agency/publish — create an immutable versioned publication of the current agency.
 		{
 			Method:     "POST",
-√
+			Pattern:    "/{agencyId}/agency/publish",
 			Capability: "publish_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/PublishAgency",
 		},

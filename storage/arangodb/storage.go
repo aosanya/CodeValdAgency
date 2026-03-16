@@ -377,10 +377,10 @@ func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagenc
 		UpdatedAt       time.Time           `json:"updated_at"`
 	}
 	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
-		return codevaldagency.Agency{}, codevaldagency.ErrInvalidJSON
+		return codevaldagency.Agency{}, fmt.Errorf("%w: %v", codevaldagency.ErrInvalidJSON, err)
 	}
 	if raw.ID == "" {
-		return codevaldagency.Agency{}, codevaldagency.ErrInvalidJSON
+		return codevaldagency.Agency{}, fmt.Errorf("%w: \"id\" field is required", codevaldagency.ErrInvalidJSON)
 	}
 
 	doc := agencyDoc{

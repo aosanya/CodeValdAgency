@@ -6,8 +6,7 @@
 //	CROSS_GRPC_ADDR                CodeValdCross gRPC address for service
 //	                               registration heartbeats and event publishing
 //	                               (optional; omit to disable)
-//	AGENCY_GRPC_ADVERTISE_ADDR     address CodeValdCross dials back (default ":PORT")
-//	CROSS_PING_INTERVAL            heartbeat cadence (default "20s")
+//	AGENCY_GRPC_ADVERTISE_ADDR     address CodeValdCross dials back (default ":PORT")//	 CODEVALDAGENCY_AGENCY_ID       agency ID sent in every Register heartbeat (optional)//	CROSS_PING_INTERVAL            heartbeat cadence (default "20s")
 //	CROSS_PING_TIMEOUT             per-RPC timeout for each Register call (default "5s")
 //
 // ArangoDB backend:
@@ -54,6 +53,7 @@ func main() {
 		reg, err := registrar.New(
 			cfg.CrossGRPCAddr,
 			cfg.AdvertiseAddr,
+			cfg.AgencyID,
 			cfg.PingInterval,
 			cfg.PingTimeout,
 		)

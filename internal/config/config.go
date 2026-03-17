@@ -31,6 +31,9 @@ type Config struct {
 	// AdvertiseAddr is the address CodeValdCross dials back on (default ":GRPCPort").
 	AdvertiseAddr string
 
+	// AgencyID is the agency ID sent in every Register heartbeat to CodeValdCross.
+	AgencyID string
+
 	// PingInterval is the heartbeat cadence sent to CodeValdCross (default 20s).
 	PingInterval time.Duration
 
@@ -50,6 +53,7 @@ func Load() Config {
 		ArangoDatabase: serverutil.EnvOrDefault("AGENCY_ARANGO_DATABASE", "codevaldagency"),
 		CrossGRPCAddr:  serverutil.EnvOrDefault("CROSS_GRPC_ADDR", ""),
 		AdvertiseAddr:  serverutil.EnvOrDefault("AGENCY_GRPC_ADVERTISE_ADDR", ":"+port),
+		AgencyID:       serverutil.EnvOrDefault("CODEVALDAGENCY_AGENCY_ID", ""),
 		PingInterval:   serverutil.ParseDurationString("CROSS_PING_INTERVAL", 20*time.Second),
 		PingTimeout:    serverutil.ParseDurationString("CROSS_PING_TIMEOUT", 5*time.Second),
 	}

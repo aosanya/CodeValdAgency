@@ -202,11 +202,11 @@ type AgencySnapshot struct {
 	// AgencyID is the foreign key identifying the agency this snapshot belongs to.
 	AgencyID string
 
-	Name            string
-	Mission         string
-	Vision          string
-	Goals           []Goal
-	Workflows       []Workflow
+	Name                  string
+	Mission               string
+	Vision                string
+	Goals                 []Goal
+	Workflows             []Workflow
 	ConfiguredRoles []ConfiguredRole
 
 	// SnapshotAt is the exact time the draft → active transition occurred.
@@ -217,12 +217,12 @@ type AgencySnapshot struct {
 // Set only the fields you want to change; the manager validates lifecycle
 // transitions before delegating to the storage backend.
 type UpdateAgencyRequest struct {
-	Name            string
-	Mission         string
-	Vision          string
-	Status          AgencyLifecycle
-	Goals           []Goal
-	Workflows       []Workflow
+	Name                  string
+	Mission               string
+	Vision                string
+	Status                AgencyLifecycle
+	Goals                 []Goal
+	Workflows             []Workflow
 	ConfiguredRoles []ConfiguredRole
 }
 

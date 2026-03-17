@@ -1,5 +1,7 @@
 .PHONY: build build-server run-server restart kill proto test test-arango test-all vet lint clean
 
+export PATH := /usr/local/go/bin:$(PATH)
+
 # ── Build ─────────────────────────────────────────────────────────────────────
 
 ## Verify the module compiles cleanly.

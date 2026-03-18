@@ -241,3 +241,33 @@ func (b *Backend) NextPublicationVersion(ctx context.Context) (int, error) {
 	}
 	return *maxVersion + 1, nil
 }
+
+// GetGoals implements [codevaldagency.Backend].
+// Returns the Goals embedded in the agency document.
+func (b *Backend) GetGoals(ctx context.Context) ([]codevaldagency.Goal, error) {
+	agency, err := b.Get(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("GetGoals: %w", err)
+	}
+	return agency.Goals, nil
+}
+
+// GetWorkflows implements [codevaldagency.Backend].
+// Returns the Workflows (with their WorkItems) embedded in the agency document.
+func (b *Backend) GetWorkflows(ctx context.Context) ([]codevaldagency.Workflow, error) {
+	agency, err := b.Get(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("GetWorkflows: %w", err)
+	}
+	return agency.Workflows, nil
+}
+
+// GetConfiguredRoles implements [codevaldagency.Backend].
+// Returns the ConfiguredRoles embedded in the agency document.
+func (b *Backend) GetConfiguredRoles(ctx context.Context) ([]codevaldagency.ConfiguredRole, error) {
+	agency, err := b.Get(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("GetConfiguredRoles: %w", err)
+	}
+	return agency.ConfiguredRoles, nil
+}

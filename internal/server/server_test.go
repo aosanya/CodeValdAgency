@@ -17,18 +17,24 @@ import (
 
 // mockManager is a configurable stub of codevaldagency.AgencyManager.
 type mockManager struct {
-	setDetailsResult   codevaldagency.Agency
-	setDetailsErr      error
-	getResult          codevaldagency.Agency
-	getErr             error
-	updateResult       codevaldagency.Agency
-	updateErr          error
-	publishResult      codevaldagency.AgencyPublication
-	publishErr         error
-	getPubResult       codevaldagency.AgencyPublication
-	getPubErr          error
-	listPubResult      []codevaldagency.AgencyPublication
-	listPubErr         error
+	setDetailsResult codevaldagency.Agency
+	setDetailsErr    error
+	getResult        codevaldagency.Agency
+	getErr           error
+	updateResult     codevaldagency.Agency
+	updateErr        error
+	publishResult    codevaldagency.AgencyPublication
+	publishErr       error
+	getPubResult     codevaldagency.AgencyPublication
+	getPubErr        error
+	listPubResult    []codevaldagency.AgencyPublication
+	listPubErr       error
+	goalsResult      []codevaldagency.Goal
+	goalsErr         error
+	workflowsResult  []codevaldagency.Workflow
+	workflowsErr     error
+	rolesResult      []codevaldagency.ConfiguredRole
+	rolesErr         error
 }
 
 func (m *mockManager) SetAgencyDetails(_ context.Context, _ string) (codevaldagency.Agency, error) {
@@ -47,9 +53,18 @@ func (m *mockManager) GetPublication(_ context.Context, _ int) (codevaldagency.A
 	return m.getPublicationResult(), m.getPublicationErr()
 }
 func (m *mockManager) getPublicationResult() codevaldagency.AgencyPublication { return m.getPubResult }
-func (m *mockManager) getPublicationErr() error                                { return m.getPubErr }
+func (m *mockManager) getPublicationErr() error                               { return m.getPubErr }
 func (m *mockManager) ListPublications(_ context.Context) ([]codevaldagency.AgencyPublication, error) {
 	return m.listPubResult, m.listPubErr
+}
+func (m *mockManager) GetGoals(_ context.Context) ([]codevaldagency.Goal, error) {
+	return m.goalsResult, m.goalsErr
+}
+func (m *mockManager) GetWorkflows(_ context.Context) ([]codevaldagency.Workflow, error) {
+	return m.workflowsResult, m.workflowsErr
+}
+func (m *mockManager) GetConfiguredRoles(_ context.Context) ([]codevaldagency.ConfiguredRole, error) {
+	return m.rolesResult, m.rolesErr
 }
 
 // requireCode asserts that err is a gRPC status error with the expected code.

@@ -10,3 +10,4 @@ Completed tasks are removed from `mvp.md` and recorded here with their completio
 | MVP-AGENCY-004 | CodeValdCross Registration | 2026-03-18 | feature/AGENCY-004_cross_registration | internal/registrar: SharedLib heartbeat registrar; cross.agency.created publisher |
 | MVP-AGENCY-005 | Unit & Integration Tests | 2026-03-18 | feature/AGENCY-005_integration_tests | agency_test.go, storage/arangodb/storage_test.go, internal/server/integration_test.go |
 | MVP-AGENCY-006 | Service-Driven Route Registration | 2026-03-18 | feature/AGENCY-007_agency_publishing | Routes declared in registrar.agencyRoutes(); registered with Cross on every heartbeat |
+| MVP-AGENCY-008-A | Models refactor — standalone entity types | 2026-03-18 | main (direct commits) | Goal, Workflow, WorkItem, ConfiguredRole, AgencySnapshot, AgencyPublication as standalone entity types in models.go |

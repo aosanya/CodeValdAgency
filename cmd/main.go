@@ -6,7 +6,10 @@
 //	CROSS_GRPC_ADDR                CodeValdCross gRPC address for service
 //	                               registration heartbeats and event publishing
 //	                               (optional; omit to disable)
-//	AGENCY_GRPC_ADVERTISE_ADDR     address CodeValdCross dials back (default ":PORT")//	 CODEVALDAGENCY_AGENCY_ID       agency ID sent in every Register heartbeat (optional)//	CROSS_PING_INTERVAL            heartbeat cadence (default "20s")
+//	AGENCY_GRPC_ADVERTISE_ADDR     address CodeValdCross dials back (default ":PORT")
+//	CODEVALDAGENCY_AGENCY_ID       agency ID sent in every Register heartbeat
+//	                               (required when CROSS_GRPC_ADDR is set)
+//	CROSS_PING_INTERVAL            heartbeat cadence (default "20s")
 //	CROSS_PING_TIMEOUT             per-RPC timeout for each Register call (default "5s")
 //
 // ArangoDB backend:
@@ -32,6 +35,8 @@ import (
 	"github.com/aosanya/CodeValdAgency/internal/registrar"
 	"github.com/aosanya/CodeValdAgency/internal/server"
 	"github.com/aosanya/CodeValdAgency/storage/arangodb"
+	healthpb "github.com/aosanya/CodeValdSharedLib/gen/go/codevaldhealth/v1"
+	"github.com/aosanya/CodeValdSharedLib/health"
 	"github.com/aosanya/CodeValdSharedLib/serverutil"
 )
 
@@ -80,6 +85,7 @@ func main() {
 
 	grpcServer, _ := serverutil.NewGRPCServer()
 	pb.RegisterAgencyServiceServer(grpcServer, server.New(mgr))
+	healthpb.RegisterHealthServiceServer(grpcServer, health.New("codevaldagency"))
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)

@@ -18,6 +18,10 @@ import (
 // is reused so the same record is always updated, regardless of the id value
 // in the payload.
 func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagency.Agency, error) {
+	// CreatedAt and UpdatedAt are intentionally excluded from the raw parse
+	// struct. They are server-controlled timestamps: the client must not be
+	// able to inject or corrupt them by sending empty strings or arbitrary
+	// values (which would cause time.Time JSON parsing failures).
 	var raw struct {
 		ID              string              `json:"id"`
 		Name            string              `json:"name"`
@@ -27,8 +31,6 @@ func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagenc
 		Goals           []goalDoc           `json:"goals"`
 		Workflows       []workflowDoc       `json:"workflows"`
 		ConfiguredRoles []configuredRoleDoc `json:"configured_roles"`
-		CreatedAt       time.Time           `json:"created_at"`
-		UpdatedAt       time.Time           `json:"updated_at"`
 	}
 	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
 		return codevaldagency.Agency{}, fmt.Errorf("%w: %v", codevaldagency.ErrInvalidJSON, err)
@@ -37,6 +39,7 @@ func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagenc
 		return codevaldagency.Agency{}, fmt.Errorf("%w: \"id\" field is required", codevaldagency.ErrInvalidJSON)
 	}
 
+	now := time.Now().UTC()
 	doc := agencyDoc{
 		Name:            raw.Name,
 		Mission:         raw.Mission,
@@ -45,13 +48,24 @@ func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagenc
 		Goals:           raw.Goals,
 		Workflows:       raw.Workflows,
 		ConfiguredRoles: raw.ConfiguredRoles,
-		CreatedAt:       raw.CreatedAt,
-		UpdatedAt:       raw.UpdatedAt,
+		UpdatedAt:       now,
 	}
 
 	allKeys, err := b.allAgencyKeys(ctx)
 	if err != nil {
 		return codevaldagency.Agency{}, fmt.Errorf("SetDetails: list keys: %w", err)
+	}
+
+	// For replace operations, preserve the original CreatedAt so that the
+	// creation timestamp is not reset on every SetAgencyDetails call.
+	if len(allKeys) > 0 {
+		if existing, getErr := b.Get(ctx); getErr == nil && !existing.CreatedAt.IsZero() {
+			doc.CreatedAt = existing.CreatedAt
+		} else {
+			doc.CreatedAt = now
+		}
+	} else {
+		doc.CreatedAt = now
 	}
 
 	switch len(allKeys) {

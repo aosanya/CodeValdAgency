@@ -1,20 +1,24 @@
 // Package arangodb implements the codevaldagency.Backend interface backed by
-// ArangoDB. Agency documents are stored in the `agencies` collection and
-// activation snapshots in the `agency_snapshots` collection.
+// ArangoDB. Agency documents are stored in the `agency_details` collection,
+// activation snapshots in `agency_snapshots`, and publications in
+// `agency_publications`.
 //
 // Use [NewBackend] to construct; pass the result to
 // codevaldagency.NewAgencyManager.
+//
+// File layout:
+//   - storage.go â Config, Backend struct, constructors, collection setup
+//   - docs.go    â ArangoDB document types and domainâdocument conversions
+//   - ops.go     â Backend interface method implementations
 package arangodb
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
 	driver "github.com/arangodb/go-driver"
 
-	codevaldagency "github.com/aosanya/CodeValdAgency"
 	"github.com/aosanya/CodeValdSharedLib/arangoutil"
 )
 
@@ -41,13 +45,13 @@ type Config struct {
 
 // Backend is the ArangoDB implementation of [codevaldagency.Backend].
 type Backend struct {
-	db           driver.Database
+	db            driver.Database
 	agencyDetails driver.Collection
-	snapshots    driver.Collection
-	publications driver.Collection
+	snapshots     driver.Collection
+	publications  driver.Collection
 }
 
-// NewBackend connects to ArangoDB, ensures both collections exist, and returns
+// NewBackend connects to ArangoDB, ensures all collections exist, and returns
 // a ready-to-use [Backend].
 func NewBackend(cfg Config) (*Backend, error) {
 	if cfg.Endpoint == "" {
@@ -76,10 +80,8 @@ func NewBackend(cfg Config) (*Backend, error) {
 	return newBackendFromDB(ctx, db)
 }
 
-// NewBackendFromDB constructs a [Backend] from an already-open
-// [driver.Database]. It ensures both collections exist and returns a
-// ready-to-use backend. This constructor is intended for tests that manage
-// their own database lifecycle.
+// NewBackendFromDB constructs a [Backend] from an already-open [driver.Database].
+// Intended for tests that manage their own database lifecycle.
 func NewBackendFromDB(db driver.Database) (*Backend, error) {
 	if db == nil {
 		return nil, fmt.Errorf("arangodb: NewBackendFromDB: database must not be nil")
@@ -103,7 +105,12 @@ func newBackendFromDB(ctx context.Context, db driver.Database) (*Backend, error)
 		return nil, fmt.Errorf("arangodb: ensure %q: %w", colPublications, err)
 	}
 
-	return &Backend{db: db, agencyDetails: agencyDetails, snapshots: snapshots, publications: publications}, nil
+	return &Backend{
+		db:            db,
+		agencyDetails: agencyDetails,
+		snapshots:     snapshots,
+		publications:  publications,
+	}, nil
 }
 
 func ensureCollection(ctx context.Context, db driver.Database, name string) (driver.Collection, error) {
@@ -116,511 +123,10 @@ func ensureCollection(ctx context.Context, db driver.Database, name string) (dri
 	}
 	col, err := db.CreateCollection(ctx, name, nil)
 	if err != nil {
-		// Another goroutine may have created it concurrently (TOCTOU).
-		// Fall back to opening the existing collection.
 		if driver.IsConflict(err) {
 			return db.Collection(ctx, name)
 		}
 		return nil, err
 	}
 	return col, nil
-}
-
-// ── Document types ────────────────────────────────────────────────────────────
-
-// roleAssignmentDoc is the JSON representation of a [codevaldagency.RoleAssignment].
-type roleAssignmentDoc struct {
-	Role string `json:"role"`
-	RACI string `json:"raci"`
-}
-
-// configuredRoleDoc is the JSON representation of a [codevaldagency.ConfiguredRole].
-type configuredRoleDoc struct {
-	Role      string `json:"role"`
-	ActorType string `json:"actor_type"`
-}
-
-// workItemDoc is the JSON representation of a [codevaldagency.WorkItem].
-type workItemDoc struct {
-	ID          string              `json:"id"`
-	Title       string              `json:"title"`
-	Description string              `json:"description"`
-	Order       int                 `json:"order"`
-	Parallel    bool                `json:"parallel"`
-	GoalIDs     []string            `json:"goal_ids"`
-	Assignments []roleAssignmentDoc `json:"assignments"`
-}
-
-// workflowDoc is the JSON representation of a [codevaldagency.Workflow].
-type workflowDoc struct {
-	ID        string        `json:"id"`
-	Name      string        `json:"name"`
-	WorkItems []workItemDoc `json:"work_items"`
-}
-
-// goalDoc is the JSON representation of a [codevaldagency.Goal].
-type goalDoc struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Ordinality  int    `json:"ordinality"`
-}
-
-// agencyDoc is the ArangoDB document representation of a [codevaldagency.Agency].
-type agencyDoc struct {
-	Key             string              `json:"_key,omitempty"`
-	Name            string              `json:"name"`
-	Mission         string              `json:"mission"`
-	Vision          string              `json:"vision"`
-	Status          string              `json:"status"`
-	Goals           []goalDoc           `json:"goals"`
-	Workflows       []workflowDoc       `json:"workflows"`
-	ConfiguredRoles []configuredRoleDoc `json:"configured_roles"`
-	CreatedAt       time.Time           `json:"created_at"`
-	UpdatedAt       time.Time           `json:"updated_at"`
-}
-
-// snapshotDoc is the ArangoDB document representation of a
-// [codevaldagency.AgencySnapshot].
-type snapshotDoc struct {
-	Key             string              `json:"_key,omitempty"`
-	AgencyID        string              `json:"agency_id"`
-	Name            string              `json:"name"`
-	Mission         string              `json:"mission"`
-	Vision          string              `json:"vision"`
-	Goals           []goalDoc           `json:"goals"`
-	Workflows       []workflowDoc       `json:"workflows"`
-	ConfiguredRoles []configuredRoleDoc `json:"configured_roles"`
-	SnapshotAt      time.Time           `json:"snapshot_at"`
-}
-
-// publicationDoc is the ArangoDB document representation of a
-// [codevaldagency.AgencyPublication]. The _key is "v{version}" for clean
-// single-agency lookups.
-type publicationDoc struct {
-	Key         string    `json:"_key,omitempty"`
-	ID          string    `json:"id"`
-	Version     int       `json:"version"`
-	Tag         string    `json:"tag"`
-	Agency      agencyDoc `json:"agency"`
-	PublishedAt time.Time `json:"published_at"`
-}
-
-// ── Conversion helpers ────────────────────────────────────────────────────────
-
-func toRoleAssignmentDocs(in []codevaldagency.RoleAssignment) []roleAssignmentDoc {
-	out := make([]roleAssignmentDoc, len(in))
-	for i, r := range in {
-		out[i] = roleAssignmentDoc{Role: string(r.Role), RACI: string(r.RACI)}
-	}
-	return out
-}
-
-func fromRoleAssignmentDocs(in []roleAssignmentDoc) []codevaldagency.RoleAssignment {
-	out := make([]codevaldagency.RoleAssignment, len(in))
-	for i, r := range in {
-		out[i] = codevaldagency.RoleAssignment{
-			Role: codevaldagency.AgencyRole(r.Role),
-			RACI: codevaldagency.RACILabel(r.RACI),
-		}
-	}
-	return out
-}
-
-func toWorkItemDocs(in []codevaldagency.WorkItem) []workItemDoc {
-	out := make([]workItemDoc, len(in))
-	for i, w := range in {
-		out[i] = workItemDoc{
-			ID:          w.ID,
-			Title:       w.Title,
-			Description: w.Description,
-			Order:       w.Order,
-			Parallel:    w.Parallel,
-			GoalIDs:     w.GoalIDs,
-			Assignments: toRoleAssignmentDocs(w.Assignments),
-		}
-	}
-	return out
-}
-
-func fromWorkItemDocs(in []workItemDoc) []codevaldagency.WorkItem {
-	out := make([]codevaldagency.WorkItem, len(in))
-	for i, w := range in {
-		out[i] = codevaldagency.WorkItem{
-			ID:          w.ID,
-			Title:       w.Title,
-			Description: w.Description,
-			Order:       w.Order,
-			Parallel:    w.Parallel,
-			GoalIDs:     w.GoalIDs,
-			Assignments: fromRoleAssignmentDocs(w.Assignments),
-		}
-	}
-	return out
-}
-
-func toWorkflowDocs(in []codevaldagency.Workflow) []workflowDoc {
-	out := make([]workflowDoc, len(in))
-	for i, wf := range in {
-		out[i] = workflowDoc{
-			ID:        wf.ID,
-			Name:      wf.Name,
-			WorkItems: toWorkItemDocs(wf.WorkItems),
-		}
-	}
-	return out
-}
-
-func fromWorkflowDocs(in []workflowDoc) []codevaldagency.Workflow {
-	out := make([]codevaldagency.Workflow, len(in))
-	for i, wf := range in {
-		out[i] = codevaldagency.Workflow{
-			ID:        wf.ID,
-			Name:      wf.Name,
-			WorkItems: fromWorkItemDocs(wf.WorkItems),
-		}
-	}
-	return out
-}
-
-func toGoalDocs(in []codevaldagency.Goal) []goalDoc {
-	out := make([]goalDoc, len(in))
-	for i, g := range in {
-		out[i] = goalDoc{
-			ID:          g.ID,
-			Title:       g.Title,
-			Description: g.Description,
-			Ordinality:  g.Ordinality,
-		}
-	}
-	return out
-}
-
-func fromGoalDocs(in []goalDoc) []codevaldagency.Goal {
-	out := make([]codevaldagency.Goal, len(in))
-	for i, g := range in {
-		out[i] = codevaldagency.Goal{
-			ID:          g.ID,
-			Title:       g.Title,
-			Description: g.Description,
-			Ordinality:  g.Ordinality,
-		}
-	}
-	return out
-}
-
-func toConfiguredRoleDocs(in []codevaldagency.ConfiguredRole) []configuredRoleDoc {
-	out := make([]configuredRoleDoc, len(in))
-	for i, r := range in {
-		out[i] = configuredRoleDoc{Role: string(r.Role), ActorType: string(r.ActorType)}
-	}
-	return out
-}
-
-func fromConfiguredRoleDocs(in []configuredRoleDoc) []codevaldagency.ConfiguredRole {
-	out := make([]codevaldagency.ConfiguredRole, len(in))
-	for i, r := range in {
-		out[i] = codevaldagency.ConfiguredRole{
-			Role:      codevaldagency.AgencyRole(r.Role),
-			ActorType: codevaldagency.ActorType(r.ActorType),
-		}
-	}
-	return out
-}
-
-func toAgencyDoc(a codevaldagency.Agency) agencyDoc {
-	return agencyDoc{
-		Key:             a.ID,
-		Name:            a.Name,
-		Mission:         a.Mission,
-		Vision:          a.Vision,
-		Status:          string(a.Status),
-		Goals:           toGoalDocs(a.Goals),
-		Workflows:       toWorkflowDocs(a.Workflows),
-		ConfiguredRoles: toConfiguredRoleDocs(a.ConfiguredRoles),
-		CreatedAt:       a.CreatedAt,
-		UpdatedAt:       a.UpdatedAt,
-	}
-}
-
-func fromAgencyDoc(key string, doc agencyDoc) codevaldagency.Agency {
-	return codevaldagency.Agency{
-		ID:              key,
-		Name:            doc.Name,
-		Mission:         doc.Mission,
-		Vision:          doc.Vision,
-		Status:          codevaldagency.AgencyLifecycle(doc.Status),
-		Goals:           fromGoalDocs(doc.Goals),
-		Workflows:       fromWorkflowDocs(doc.Workflows),
-		ConfiguredRoles: fromConfiguredRoleDocs(doc.ConfiguredRoles),
-		CreatedAt:       doc.CreatedAt,
-		UpdatedAt:       doc.UpdatedAt,
-	}
-}
-
-// ── Backend interface implementation ─────────────────────────────────────────
-
-// SetDetails implements [codevaldagency.Backend].
-// It parses the raw JSON, then writes it as the single agency document in the
-// agency_details collection. The incoming "id" field is only used when no
-// document exists yet; on subsequent calls the existing document's _key is
-// reused so that the same record is always updated, regardless of the id value
-// in the payload.
-//
-// If the collection somehow holds more than one document (shouldn't happen in
-// normal operation), all duplicates are deleted before the surviving record is
-// replaced.
-func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagency.Agency, error) {
-	var raw struct {
-		ID              string              `json:"id"`
-		Name            string              `json:"name"`
-		Mission         string              `json:"mission"`
-		Vision          string              `json:"vision"`
-		Status          string              `json:"status"`
-		Goals           []goalDoc           `json:"goals"`
-		Workflows       []workflowDoc       `json:"workflows"`
-		ConfiguredRoles []configuredRoleDoc `json:"configured_roles"`
-		CreatedAt       time.Time           `json:"created_at"`
-		UpdatedAt       time.Time           `json:"updated_at"`
-	}
-	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
-		return codevaldagency.Agency{}, fmt.Errorf("%w: %v", codevaldagency.ErrInvalidJSON, err)
-	}
-	if raw.ID == "" {
-		return codevaldagency.Agency{}, fmt.Errorf("%w: \"id\" field is required", codevaldagency.ErrInvalidJSON)
-	}
-
-	doc := agencyDoc{
-		Name:            raw.Name,
-		Mission:         raw.Mission,
-		Vision:          raw.Vision,
-		Status:          raw.Status,
-		Goals:           raw.Goals,
-		Workflows:       raw.Workflows,
-		ConfiguredRoles: raw.ConfiguredRoles,
-		CreatedAt:       raw.CreatedAt,
-		UpdatedAt:       raw.UpdatedAt,
-	}
-
-	// Discover every existing key so we always update the one record that is
-	// already there rather than inserting a second document keyed by raw.ID.
-	allKeys, err := b.allAgencyKeys(ctx)
-	if err != nil {
-		return codevaldagency.Agency{}, fmt.Errorf("SetDetails: list keys: %w", err)
-	}
-
-	switch len(allKeys) {
-	case 0:
-		// No record yet — create one keyed by the incoming id.
-		doc.Key = raw.ID
-		if _, err = b.agencyDetails.CreateDocument(ctx, doc); err != nil {
-			return codevaldagency.Agency{}, fmt.Errorf("SetDetails: create: %w", err)
-		}
-	case 1:
-		// Exactly one record — replace it, preserving its original _key.
-		doc.Key = allKeys[0]
-		if _, err = b.agencyDetails.ReplaceDocument(ctx, allKeys[0], doc); err != nil {
-			return codevaldagency.Agency{}, fmt.Errorf("SetDetails: replace: %w", err)
-		}
-	default:
-		// Multiple records — delete every extra, then replace the first.
-		for _, k := range allKeys[1:] {
-			if _, rmErr := b.agencyDetails.RemoveDocument(ctx, k); rmErr != nil && !driver.IsNotFound(rmErr) {
-				return codevaldagency.Agency{}, fmt.Errorf("SetDetails: remove duplicate %q: %w", k, rmErr)
-			}
-		}
-		doc.Key = allKeys[0]
-		if _, err = b.agencyDetails.ReplaceDocument(ctx, allKeys[0], doc); err != nil {
-			return codevaldagency.Agency{}, fmt.Errorf("SetDetails: replace after cleanup: %w", err)
-		}
-	}
-
-	return fromAgencyDoc(doc.Key, doc), nil
-}
-
-// allAgencyKeys returns the _key of every document currently in the
-// agency_details collection. Used by SetDetails to decide whether to insert
-// or replace, and to clean up unexpected duplicates.
-func (b *Backend) allAgencyKeys(ctx context.Context) ([]string, error) {
-	cursor, err := b.db.Query(ctx, `FOR doc IN agency_details RETURN doc._key`, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close()
-	var keys []string
-	for cursor.HasMore() {
-		var k string
-		if _, err := cursor.ReadDocument(ctx, &k); err != nil {
-			return nil, err
-		}
-		keys = append(keys, k)
-	}
-	return keys, nil
-}
-
-// Get implements [codevaldagency.Backend].
-// It retrieves the single agency document in the collection via an AQL query.
-func (b *Backend) Get(ctx context.Context) (codevaldagency.Agency, error) {
-	query := `FOR doc IN agency_details LIMIT 1 RETURN doc`
-	cursor, err := b.db.Query(ctx, query, nil)
-	if err != nil {
-		return codevaldagency.Agency{}, fmt.Errorf("Get: query: %w", err)
-	}
-	defer cursor.Close()
-	if !cursor.HasMore() {
-		return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound
-	}
-	var doc agencyDoc
-	meta, err := cursor.ReadDocument(ctx, &doc)
-	if err != nil {
-		return codevaldagency.Agency{}, fmt.Errorf("Get: read: %w", err)
-	}
-	return fromAgencyDoc(meta.Key, doc), nil
-}
-
-// Update implements [codevaldagency.Backend].
-func (b *Backend) Update(ctx context.Context, req codevaldagency.UpdateAgencyRequest) (codevaldagency.Agency, error) {
-	current, err := b.Get(ctx)
-	if err != nil {
-		return codevaldagency.Agency{}, err
-	}
-
-	// Apply mutable fields from the request.
-	if req.Name != "" {
-		current.Name = req.Name
-	}
-	if req.Mission != "" {
-		current.Mission = req.Mission
-	}
-	if req.Vision != "" {
-		current.Vision = req.Vision
-	}
-	if req.Status != "" {
-		current.Status = req.Status
-	}
-	if req.Goals != nil {
-		current.Goals = req.Goals
-	}
-	if req.Workflows != nil {
-		current.Workflows = req.Workflows
-	}
-	if req.ConfiguredRoles != nil {
-		current.ConfiguredRoles = req.ConfiguredRoles
-	}
-	current.UpdatedAt = time.Now().UTC()
-
-	doc := toAgencyDoc(current)
-	_, err = b.agencyDetails.ReplaceDocument(ctx, current.ID, doc)
-	if err != nil {
-		if driver.IsNotFound(err) {
-			return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound
-		}
-		return codevaldagency.Agency{}, fmt.Errorf("Update: %w", err)
-	}
-	return current, nil
-}
-
-
-// InsertSnapshot implements [codevaldagency.Backend].
-func (b *Backend) InsertSnapshot(ctx context.Context, snap codevaldagency.AgencySnapshot) error {
-	doc := snapshotDoc{
-		Key:             snap.ID,
-		AgencyID:        snap.AgencyID,
-		Name:            snap.Name,
-		Mission:         snap.Mission,
-		Vision:          snap.Vision,
-		Goals:           toGoalDocs(snap.Goals),
-		Workflows:       toWorkflowDocs(snap.Workflows),
-		ConfiguredRoles: toConfiguredRoleDocs(snap.ConfiguredRoles),
-		SnapshotAt:      snap.SnapshotAt,
-	}
-	_, err := b.snapshots.CreateDocument(ctx, doc)
-	if err != nil {
-		return fmt.Errorf("InsertSnapshot: %w", err)
-	}
-	return nil
-}
-
-// InsertPublication implements [codevaldagency.Backend].
-// The document _key is set to "v{version}" for deterministic retrieval.
-func (b *Backend) InsertPublication(ctx context.Context, pub codevaldagency.AgencyPublication) error {
-	doc := publicationDoc{
-		Key:         fmt.Sprintf("v%d", pub.Version),
-		ID:          pub.ID,
-		Version:     pub.Version,
-		Tag:         pub.Tag,
-		Agency:      toAgencyDoc(pub.Agency),
-		PublishedAt: pub.PublishedAt,
-	}
-	_, err := b.publications.CreateDocument(ctx, doc)
-	if err != nil {
-		return fmt.Errorf("InsertPublication: %w", err)
-	}
-	return nil
-}
-
-// GetPublication implements [codevaldagency.Backend].
-func (b *Backend) GetPublication(ctx context.Context, version int) (codevaldagency.AgencyPublication, error) {
-	var doc publicationDoc
-	_, err := b.publications.ReadDocument(ctx, fmt.Sprintf("v%d", version), &doc)
-	if err != nil {
-		if driver.IsNotFound(err) {
-			return codevaldagency.AgencyPublication{}, codevaldagency.ErrPublicationNotFound
-		}
-		return codevaldagency.AgencyPublication{}, fmt.Errorf("GetPublication: %w", err)
-	}
-	return fromPublicationDoc(doc), nil
-}
-
-// ListPublications implements [codevaldagency.Backend].
-// Returns all publications in ascending version order.
-func (b *Backend) ListPublications(ctx context.Context) ([]codevaldagency.AgencyPublication, error) {
-	query := `FOR doc IN agency_publications SORT doc.version ASC RETURN doc`
-	cursor, err := b.db.Query(ctx, query, nil)
-	if err != nil {
-		return nil, fmt.Errorf("ListPublications: query: %w", err)
-	}
-	defer cursor.Close()
-	var results []codevaldagency.AgencyPublication
-	for cursor.HasMore() {
-		var doc publicationDoc
-		if _, err := cursor.ReadDocument(ctx, &doc); err != nil {
-			return nil, fmt.Errorf("ListPublications: read: %w", err)
-		}
-		results = append(results, fromPublicationDoc(doc))
-	}
-	return results, nil
-}
-
-// NextPublicationVersion implements [codevaldagency.Backend].
-// Returns MAX(version)+1, or 1 if no publications exist yet.
-func (b *Backend) NextPublicationVersion(ctx context.Context) (int, error) {
-	query := `RETURN MAX(FOR doc IN agency_publications RETURN doc.version)`
-	cursor, err := b.db.Query(ctx, query, nil)
-	if err != nil {
-		return 0, fmt.Errorf("NextPublicationVersion: query: %w", err)
-	}
-	defer cursor.Close()
-	var maxVersion *int
-	if cursor.HasMore() {
-		if _, err := cursor.ReadDocument(ctx, &maxVersion); err != nil {
-			return 0, fmt.Errorf("NextPublicationVersion: read: %w", err)
-		}
-	}
-	if maxVersion == nil {
-		return 1, nil
-	}
-	return *maxVersion + 1, nil
-}
-
-// fromPublicationDoc converts a [publicationDoc] to a [codevaldagency.AgencyPublication].
-func fromPublicationDoc(doc publicationDoc) codevaldagency.AgencyPublication {
-	agency := fromAgencyDoc(doc.Agency.Key, doc.Agency)
-	return codevaldagency.AgencyPublication{
-		ID:          doc.ID,
-		Agency:      agency,
-		Version:     doc.Version,
-		Tag:         doc.Tag,
-		PublishedAt: doc.PublishedAt,
-	}
 }

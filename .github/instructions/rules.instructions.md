@@ -46,7 +46,9 @@ models.go                            → Agency, CreateAgencyRequest, UpdateAgen
 internal/manager/manager.go          → Concrete AgencyManager implementation
 internal/server/server.go            → Inbound gRPC server (AgencyService handlers)
 internal/config/config.go            → Configuration struct + loader
-storage/arangodb/storage.go          → ArangoDB Backend implementation
+storage/arangodb/storage.go          → Config, Backend struct, constructors, collection setup
+storage/arangodb/docs.go             → ArangoDB document types and domain↔document conversions
+storage/arangodb/ops.go              → Backend interface method implementations
 cmd/main.go                          → Dependency wiring only
 ```
 

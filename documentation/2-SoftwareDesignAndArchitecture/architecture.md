@@ -47,10 +47,10 @@ CodeValdAgency/
 │       └── server.go            # Inbound gRPC server — AgencyService handlers
 ├── storage/
 │   └── arangodb/
-│       ├── storage.go           # newBackendFromDB; ensureCollections; AgencyDataManager impl
-│       ├── entities.go          # CreateEntity, GetEntity, UpdateEntity, DeleteEntity, ListEntities
-│       ├── relationships.go     # CreateRelationship, GetRelationship, DeleteRelationship, ListRelationships, TraverseGraph
-│       └── schemaops.go         # AgencySchemaManager: SetSchema, GetSchema, ListSchemaVersions
+│       ├── storage.go   # Config, Backend struct, constructors, ensureCollection
+│       ├── docs.go      # ArangoDB document types and domain↔document conversions
+│       └── ops.go       # Backend interface method implementations
+│       (008-D will split further into entities.go, relationships.go, schemaops.go)
 ├── proto/
 │   └── codevaldagency/
 │       └── agency.proto         # AgencyService gRPC definition

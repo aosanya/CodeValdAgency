@@ -31,7 +31,7 @@ The MVP delivers:
 | ~~MVP-AGENCY-006~~ ✅ | Service-Driven Route Registration | ✅ Done | MVP-AGENCY-003, CROSS-007 |
 | MVP-AGENCY-007 | Agency Publishing & Version Tagging | 🚀 In Progress | MVP-AGENCY-003, ~~MVP-AGENCY-006~~ ✅ |
 | **MVP-AGENCY-008 — EntityGraph Refactor** | | | |
-| MVP-AGENCY-008-A | Models refactor — standalone entity types | 🔲 Not Started | ~~SHAREDLIB-010~~ ✅ |
+| MVP-AGENCY-008-A | Models refactor — standalone entity types | � In Progress | ~~SHAREDLIB-010~~ ✅ |
 | MVP-AGENCY-008-B | Pre-delivered schema (`schema.go`) | 🔲 Not Started | MVP-AGENCY-008-A |
 | MVP-AGENCY-008-C | `AgencyManager` refactor — entitygraph wrapper | 🔲 Not Started | MVP-AGENCY-008-A |
 | MVP-AGENCY-008-D | ArangoDB storage split (`entities.go`, `relationships.go`, `schemaops.go`) | 🔲 Not Started | MVP-AGENCY-008-C |

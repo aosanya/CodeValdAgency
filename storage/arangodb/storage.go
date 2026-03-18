@@ -19,8 +19,9 @@ import (
 )
 
 const (
-	colAgencies  = "agency_details"
-	colSnapshots = "agency_snapshots"
+	colAgencies     = "agency_details"
+	colSnapshots    = "agency_snapshots"
+	colPublications = "agency_publications"
 )
 
 // Config holds the connection parameters for the ArangoDB backend.
@@ -40,9 +41,10 @@ type Config struct {
 
 // Backend is the ArangoDB implementation of [codevaldagency.Backend].
 type Backend struct {
-	db            driver.Database
+	db           driver.Database
 	agencyDetails driver.Collection
-	snapshots     driver.Collection
+	snapshots    driver.Collection
+	publications driver.Collection
 }
 
 // NewBackend connects to ArangoDB, ensures both collections exist, and returns
@@ -96,7 +98,12 @@ func newBackendFromDB(ctx context.Context, db driver.Database) (*Backend, error)
 		return nil, fmt.Errorf("arangodb: ensure %q: %w", colSnapshots, err)
 	}
 
-	return &Backend{db: db, agencyDetails: agencyDetails, snapshots: snapshots}, nil
+	publications, err := ensureCollection(ctx, db, colPublications)
+	if err != nil {
+		return nil, fmt.Errorf("arangodb: ensure %q: %w", colPublications, err)
+	}
+
+	return &Backend{db: db, agencyDetails: agencyDetails, snapshots: snapshots, publications: publications}, nil
 }
 
 func ensureCollection(ctx context.Context, db driver.Database, name string) (driver.Collection, error) {
@@ -185,6 +192,18 @@ type snapshotDoc struct {
 	Workflows       []workflowDoc       `json:"workflows"`
 	ConfiguredRoles []configuredRoleDoc `json:"configured_roles"`
 	SnapshotAt      time.Time           `json:"snapshot_at"`
+}
+
+// publicationDoc is the ArangoDB document representation of a
+// [codevaldagency.AgencyPublication]. The _key is "v{version}" for clean
+// single-agency lookups.
+type publicationDoc struct {
+	Key         string    `json:"_key,omitempty"`
+	ID          string    `json:"id"`
+	Version     int       `json:"version"`
+	Tag         string    `json:"tag"`
+	Agency      agencyDoc `json:"agency"`
+	PublishedAt time.Time `json:"published_at"`
 }
 
 // ── Conversion helpers ────────────────────────────────────────────────────────
@@ -342,8 +361,15 @@ func fromAgencyDoc(key string, doc agencyDoc) codevaldagency.Agency {
 // ── Backend interface implementation ─────────────────────────────────────────
 
 // SetDetails implements [codevaldagency.Backend].
-// It parses the raw JSON, builds an agencyDoc keyed by agency.id, then
-// upserts (replace-or-create) the single document in the agency_details collection.
+// It parses the raw JSON, then writes it as the single agency document in the
+// agency_details collection. The incoming "id" field is only used when no
+// document exists yet; on subsequent calls the existing document's _key is
+// reused so that the same record is always updated, regardless of the id value
+// in the payload.
+//
+// If the collection somehow holds more than one document (shouldn't happen in
+// normal operation), all duplicates are deleted before the surviving record is
+// replaced.
 func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagency.Agency, error) {
 	var raw struct {
 		ID              string              `json:"id"`
@@ -358,14 +384,13 @@ func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagenc
 		UpdatedAt       time.Time           `json:"updated_at"`
 	}
 	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
-		return codevaldagency.Agency{}, codevaldagency.ErrInvalidJSON
+		return codevaldagency.Agency{}, fmt.Errorf("%w: %v", codevaldagency.ErrInvalidJSON, err)
 	}
 	if raw.ID == "" {
-		return codevaldagency.Agency{}, codevaldagency.ErrInvalidJSON
+		return codevaldagency.Agency{}, fmt.Errorf("%w: \"id\" field is required", codevaldagency.ErrInvalidJSON)
 	}
 
 	doc := agencyDoc{
-		Key:             raw.ID,
 		Name:            raw.Name,
 		Mission:         raw.Mission,
 		Vision:          raw.Vision,
@@ -377,19 +402,60 @@ func (b *Backend) SetDetails(ctx context.Context, jsonStr string) (codevaldagenc
 		UpdatedAt:       raw.UpdatedAt,
 	}
 
-	// Upsert: try replace first; fall back to create on first write.
-	_, err := b.agencyDetails.ReplaceDocument(ctx, doc.Key, doc)
+	// Discover every existing key so we always update the one record that is
+	// already there rather than inserting a second document keyed by raw.ID.
+	allKeys, err := b.allAgencyKeys(ctx)
 	if err != nil {
-		if driver.IsNotFound(err) {
-			if _, err = b.agencyDetails.CreateDocument(ctx, doc); err != nil {
-				return codevaldagency.Agency{}, fmt.Errorf("SetDetails: create: %w", err)
-			}
-		} else {
+		return codevaldagency.Agency{}, fmt.Errorf("SetDetails: list keys: %w", err)
+	}
+
+	switch len(allKeys) {
+	case 0:
+		// No record yet — create one keyed by the incoming id.
+		doc.Key = raw.ID
+		if _, err = b.agencyDetails.CreateDocument(ctx, doc); err != nil {
+			return codevaldagency.Agency{}, fmt.Errorf("SetDetails: create: %w", err)
+		}
+	case 1:
+		// Exactly one record — replace it, preserving its original _key.
+		doc.Key = allKeys[0]
+		if _, err = b.agencyDetails.ReplaceDocument(ctx, allKeys[0], doc); err != nil {
 			return codevaldagency.Agency{}, fmt.Errorf("SetDetails: replace: %w", err)
+		}
+	default:
+		// Multiple records — delete every extra, then replace the first.
+		for _, k := range allKeys[1:] {
+			if _, rmErr := b.agencyDetails.RemoveDocument(ctx, k); rmErr != nil && !driver.IsNotFound(rmErr) {
+				return codevaldagency.Agency{}, fmt.Errorf("SetDetails: remove duplicate %q: %w", k, rmErr)
+			}
+		}
+		doc.Key = allKeys[0]
+		if _, err = b.agencyDetails.ReplaceDocument(ctx, allKeys[0], doc); err != nil {
+			return codevaldagency.Agency{}, fmt.Errorf("SetDetails: replace after cleanup: %w", err)
 		}
 	}
 
 	return fromAgencyDoc(doc.Key, doc), nil
+}
+
+// allAgencyKeys returns the _key of every document currently in the
+// agency_details collection. Used by SetDetails to decide whether to insert
+// or replace, and to clean up unexpected duplicates.
+func (b *Backend) allAgencyKeys(ctx context.Context) ([]string, error) {
+	cursor, err := b.db.Query(ctx, `FOR doc IN agency_details RETURN doc._key`, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close()
+	var keys []string
+	for cursor.HasMore() {
+		var k string
+		if _, err := cursor.ReadDocument(ctx, &k); err != nil {
+			return nil, err
+		}
+		keys = append(keys, k)
+	}
+	return keys, nil
 }
 
 // Get implements [codevaldagency.Backend].
@@ -475,3 +541,86 @@ func (b *Backend) InsertSnapshot(ctx context.Context, snap codevaldagency.Agency
 	return nil
 }
 
+// InsertPublication implements [codevaldagency.Backend].
+// The document _key is set to "v{version}" for deterministic retrieval.
+func (b *Backend) InsertPublication(ctx context.Context, pub codevaldagency.AgencyPublication) error {
+	doc := publicationDoc{
+		Key:         fmt.Sprintf("v%d", pub.Version),
+		ID:          pub.ID,
+		Version:     pub.Version,
+		Tag:         pub.Tag,
+		Agency:      toAgencyDoc(pub.Agency),
+		PublishedAt: pub.PublishedAt,
+	}
+	_, err := b.publications.CreateDocument(ctx, doc)
+	if err != nil {
+		return fmt.Errorf("InsertPublication: %w", err)
+	}
+	return nil
+}
+
+// GetPublication implements [codevaldagency.Backend].
+func (b *Backend) GetPublication(ctx context.Context, version int) (codevaldagency.AgencyPublication, error) {
+	var doc publicationDoc
+	_, err := b.publications.ReadDocument(ctx, fmt.Sprintf("v%d", version), &doc)
+	if err != nil {
+		if driver.IsNotFound(err) {
+			return codevaldagency.AgencyPublication{}, codevaldagency.ErrPublicationNotFound
+		}
+		return codevaldagency.AgencyPublication{}, fmt.Errorf("GetPublication: %w", err)
+	}
+	return fromPublicationDoc(doc), nil
+}
+
+// ListPublications implements [codevaldagency.Backend].
+// Returns all publications in ascending version order.
+func (b *Backend) ListPublications(ctx context.Context) ([]codevaldagency.AgencyPublication, error) {
+	query := `FOR doc IN agency_publications SORT doc.version ASC RETURN doc`
+	cursor, err := b.db.Query(ctx, query, nil)
+	if err != nil {
+		return nil, fmt.Errorf("ListPublications: query: %w", err)
+	}
+	defer cursor.Close()
+	var results []codevaldagency.AgencyPublication
+	for cursor.HasMore() {
+		var doc publicationDoc
+		if _, err := cursor.ReadDocument(ctx, &doc); err != nil {
+			return nil, fmt.Errorf("ListPublications: read: %w", err)
+		}
+		results = append(results, fromPublicationDoc(doc))
+	}
+	return results, nil
+}
+
+// NextPublicationVersion implements [codevaldagency.Backend].
+// Returns MAX(version)+1, or 1 if no publications exist yet.
+func (b *Backend) NextPublicationVersion(ctx context.Context) (int, error) {
+	query := `RETURN MAX(FOR doc IN agency_publications RETURN doc.version)`
+	cursor, err := b.db.Query(ctx, query, nil)
+	if err != nil {
+		return 0, fmt.Errorf("NextPublicationVersion: query: %w", err)
+	}
+	defer cursor.Close()
+	var maxVersion *int
+	if cursor.HasMore() {
+		if _, err := cursor.ReadDocument(ctx, &maxVersion); err != nil {
+			return 0, fmt.Errorf("NextPublicationVersion: read: %w", err)
+		}
+	}
+	if maxVersion == nil {
+		return 1, nil
+	}
+	return *maxVersion + 1, nil
+}
+
+// fromPublicationDoc converts a [publicationDoc] to a [codevaldagency.AgencyPublication].
+func fromPublicationDoc(doc publicationDoc) codevaldagency.AgencyPublication {
+	agency := fromAgencyDoc(doc.Agency.Key, doc.Agency)
+	return codevaldagency.AgencyPublication{
+		ID:          doc.ID,
+		Agency:      agency,
+		Version:     doc.Version,
+		Tag:         doc.Tag,
+		PublishedAt: doc.PublishedAt,
+	}
+}

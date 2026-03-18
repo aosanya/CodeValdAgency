@@ -28,21 +28,23 @@ record of every Agency. Every other service scopes its data by `agencyID`.
 
 | Service | Method | Description |
 |---|---|---|
-| `AgencyService` | `CreateAgency` | Creates a new agency; publishes `cross.agency.created` |
-| `AgencyService` | `GetAgency` | Returns an agency by ID |
-| `AgencyService` | `UpdateAgency` | Updates agency metadata |
-| `AgencyService` | `DeleteAgency` | Soft-deletes an agency |
-| `AgencyService` | `ListAgencies` | Paginated agency list |
+| `AgencyService` | `SetAgencyDetails` | Replaces the full agency document from a JSON string; publishes `cross.agency.created` |
+| `AgencyService` | `GetAgency` | Returns the single agency for this database |
+| `AgencyService` | `UpdateAgency` | Applies incremental field edits with lifecycle validation |
+| `AgencyService` | `PublishAgency` | Creates an immutable versioned publication; publishes `cross.agency.published` |
+| `AgencyService` | `GetPublication` | Retrieves a single publication by version number |
+| `AgencyService` | `ListPublications` | Returns all publications in ascending version order |
 
 ### HTTP Routes (proxied via CodeValdCross)
 
 | Method | Pattern |
 |---|---|
-| `POST`   | `/agencies` |
-| `GET`    | `/agencies` |
-| `GET`    | `/agencies/{agencyID}` |
-| `PUT`    | `/agencies/{agencyID}` |
-| `DELETE` | `/agencies/{agencyID}` |
+| `POST` | `/{agencyId}/agency` |
+| `GET`  | `/{agencyId}/agency` |
+| `PUT`  | `/{agencyId}/agency` |
+| `POST` | `/{agencyId}/agency/publish` |
+| `GET`  | `/{agencyId}/agency/publications` |
+| `GET`  | `/{agencyId}/agency/publications/{version}` |
 
 ### Pub/Sub
 

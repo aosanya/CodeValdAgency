@@ -39,6 +39,21 @@ type AgencyManager interface {
 	// before the update is applied.
 	// Returns [ErrAgencyNotFound] if no agency document exists yet.
 	UpdateAgency(ctx context.Context, req UpdateAgencyRequest) (Agency, error)
+
+	// PublishAgency creates an immutable versioned publication of the current
+	// agency state. The agency [Status] is NOT changed by this operation.
+	// Version is auto-incremented from the last publication (starts at 1).
+	// Publishes "cross.agency.published" after every successful write.
+	// Returns [ErrAgencyNotFound] if no agency document exists yet.
+	PublishAgency(ctx context.Context) (AgencyPublication, error)
+
+	// GetPublication retrieves a single publication by its version number.
+	// Returns [ErrPublicationNotFound] if no publication with that version exists.
+	GetPublication(ctx context.Context, version int) (AgencyPublication, error)
+
+	// ListPublications returns all publications for this agency in ascending
+	// version order.
+	ListPublications(ctx context.Context) ([]AgencyPublication, error)
 }
 
 // Backend is the storage abstraction injected into [AgencyManager].
@@ -63,6 +78,21 @@ type Backend interface {
 	// the agency_snapshots collection. Called by [AgencyManager.UpdateAgency]
 	// immediately before a draft → active transition is committed.
 	InsertSnapshot(ctx context.Context, snapshot AgencySnapshot) error
+
+	// InsertPublication writes a new [AgencyPublication] to the
+	// agency_publications collection.
+	InsertPublication(ctx context.Context, pub AgencyPublication) error
+
+	// GetPublication retrieves a publication by its version number.
+	// Returns [ErrPublicationNotFound] if no match exists.
+	GetPublication(ctx context.Context, version int) (AgencyPublication, error)
+
+	// ListPublications returns all publications in ascending version order.
+	ListPublications(ctx context.Context) ([]AgencyPublication, error)
+
+	// NextPublicationVersion returns the next auto-increment version number
+	// (MAX(version) + 1, or 1 if no publications exist yet).
+	NextPublicationVersion(ctx context.Context) (int, error)
 }
 
 // CrossPublisher publishes agency lifecycle events to CodeValdCross.
@@ -186,4 +216,48 @@ func newID() string {
 	b[8] = (b[8] & 0x3f) | 0x80 // variant bits
 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
 		b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
+// PublishAgency captures the current agency state as an immutable versioned
+// publication. The agency [Status] is never changed. The version is
+// auto-incremented from the last publication for this agency (or starts at 1).
+func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, error) {
+	agency, err := m.backend.Get(ctx)
+	if err != nil {
+		return AgencyPublication{}, err
+	}
+
+	version, err := m.backend.NextPublicationVersion(ctx)
+	if err != nil {
+		return AgencyPublication{}, fmt.Errorf("PublishAgency: next version: %w", err)
+	}
+
+	pub := AgencyPublication{
+		ID:          newID(),
+		Agency:      agency,
+		Version:     version,
+		Tag:         fmt.Sprintf("v%d", version),
+		PublishedAt: time.Now().UTC(),
+	}
+	if err := m.backend.InsertPublication(ctx, pub); err != nil {
+		return AgencyPublication{}, fmt.Errorf("PublishAgency: insert: %w", err)
+	}
+
+	// Best-effort publish — a publish error does not roll back the write.
+	if m.publisher != nil {
+		if pErr := m.publisher.Publish(ctx, "cross.agency.published", agency.ID); pErr != nil {
+			_ = pErr
+		}
+	}
+	return pub, nil
+}
+
+// GetPublication delegates to [Backend.GetPublication].
+func (m *agencyManager) GetPublication(ctx context.Context, version int) (AgencyPublication, error) {
+	return m.backend.GetPublication(ctx, version)
+}
+
+// ListPublications delegates to [Backend.ListPublications].
+func (m *agencyManager) ListPublications(ctx context.Context) ([]AgencyPublication, error) {
+	return m.backend.ListPublications(ctx)
 }

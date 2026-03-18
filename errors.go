@@ -18,3 +18,7 @@ var ErrInvalidAgency = errors.New("invalid agency: missing required fields")
 // supplied JSON payload cannot be parsed into a valid Agency document,
 // or when the required "id" field is absent.
 var ErrInvalidJSON = errors.New("invalid agency: malformed JSON payload")
+
+// ErrPublicationNotFound is returned by [AgencyManager.GetPublication] when
+// no publication with the requested version number exists for this agency.
+var ErrPublicationNotFound = errors.New("agency publication not found")

@@ -15,6 +15,8 @@ func toGRPCError(err error) error {
 	switch {
 	case errors.Is(err, codevaldagency.ErrAgencyNotFound):
 		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, codevaldagency.ErrPublicationNotFound):
+		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, codevaldagency.ErrInvalidJSON):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, codevaldagency.ErrInvalidLifecycleTransition):

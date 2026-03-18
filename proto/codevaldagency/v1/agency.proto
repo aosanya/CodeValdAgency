@@ -114,6 +114,35 @@ message UpdateAgencyRequest {
   repeated ConfiguredRole configured_roles = 7;
 }
 
+// ── Publication messages ──────────────────────────────────────────────────────
+
+// AgencyPublication is an immutable, versioned snapshot of an Agency
+// created by an explicit publish action. The agency status is NOT changed.
+message AgencyPublication {
+  string                    id           = 1;
+  Agency                    agency       = 2;
+  int32                     version      = 3;
+  string                    tag          = 4;
+  google.protobuf.Timestamp published_at = 5;
+}
+
+// PublishAgencyRequest is intentionally empty — the agency to publish is
+// determined by the database this service owns.
+message PublishAgencyRequest {}
+
+// GetPublicationRequest selects a publication by its version number.
+message GetPublicationRequest {
+  int32 version = 1;
+}
+
+// ListPublicationsRequest is intentionally empty.
+message ListPublicationsRequest {}
+
+// ListPublicationsResponse wraps the ordered list of publications.
+message ListPublicationsResponse {
+  repeated AgencyPublication publications = 1;
+}
+
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
@@ -132,4 +161,16 @@ service AgencyService {
   // Error: FAILED_PRECONDITION on invalid lifecycle transition.
   // Error: NOT_FOUND if no agency document exists yet.
   rpc UpdateAgency(UpdateAgencyRequest) returns (Agency);
+
+  // PublishAgency creates an immutable versioned publication of the current
+  // agency state. The agency status is NOT changed.
+  // Error: NOT_FOUND if no agency document exists yet.
+  rpc PublishAgency(PublishAgencyRequest) returns (AgencyPublication);
+
+  // GetPublication retrieves a single publication by version number.
+  // Error: NOT_FOUND if no publication with that version exists.
+  rpc GetPublication(GetPublicationRequest) returns (AgencyPublication);
+
+  // ListPublications returns all publications in ascending version order.
+  rpc ListPublications(ListPublicationsRequest) returns (ListPublicationsResponse);
 }

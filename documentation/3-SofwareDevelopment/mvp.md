@@ -30,7 +30,14 @@ The MVP delivers:
 | MVP-AGENCY-005 | Unit & Integration Tests | ✅ Done | MVP-AGENCY-001, MVP-AGENCY-002 |
 | ~~MVP-AGENCY-006~~ ✅ | Service-Driven Route Registration | ✅ Done | MVP-AGENCY-003, CROSS-007 |
 | MVP-AGENCY-007 | Agency Publishing & Version Tagging | 🚀 In Progress | MVP-AGENCY-003, ~~MVP-AGENCY-006~~ ✅ |
-| MVP-AGENCY-008 | EntityGraph Refactor | 🚀 In Progress | ~~SHAREDLIB-010~~ (SharedLib branch) |
+| **MVP-AGENCY-008 — EntityGraph Refactor** | | | |
+| MVP-AGENCY-008-A | Models refactor — standalone entity types | 🔲 Not Started | ~~SHAREDLIB-010~~ ✅ |
+| MVP-AGENCY-008-B | Pre-delivered schema (`schema.go`) | 🔲 Not Started | MVP-AGENCY-008-A |
+| MVP-AGENCY-008-C | `AgencyManager` refactor — entitygraph wrapper | 🔲 Not Started | MVP-AGENCY-008-A |
+| MVP-AGENCY-008-D | ArangoDB storage split (`entities.go`, `relationships.go`, `schemaops.go`) | 🔲 Not Started | MVP-AGENCY-008-C |
+| MVP-AGENCY-008-E | Proto + gRPC handlers (`GetGoals`, `GetWorkflows`, `GetConfiguredRoles`) | 🔲 Not Started | MVP-AGENCY-008-C |
+| MVP-AGENCY-008-F | `cmd/main.go` wiring — inject DataManager, seed schema on startup | 🔲 Not Started | MVP-AGENCY-008-D, MVP-AGENCY-008-E |
+| MVP-AGENCY-008-G | Test rewrite — `fakeDataManager` replacing `fakeBackend` | 🔲 Not Started | MVP-AGENCY-008-D |
 
 ---
 
@@ -65,5 +72,11 @@ feature/AGENCY-004_cross_registration
 feature/AGENCY-005_integration_tests
 feature/AGENCY-006_service_driven_route_registration
 feature/AGENCY-007_agency_publishing
-feature/AGENCY-008_entitygraph_refactor
+feature/AGENCY-008-A_models_refactor
+feature/AGENCY-008-B_pre_delivered_schema
+feature/AGENCY-008-C_agencymanager_entitygraph_wrapper
+feature/AGENCY-008-D_arangodb_storage_split
+feature/AGENCY-008-E_grpc_goals_workflows_roles
+feature/AGENCY-008-F_cmd_wiring_schema_seed
+feature/AGENCY-008-G_test_rewrite
 ```

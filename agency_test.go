@@ -2,25 +2,160 @@ package codevaldagency_test
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	codevaldagency "github.com/aosanya/CodeValdAgency"
+	"github.com/aosanya/CodeValdSharedLib/entitygraph"
 )
 
-// ── Fake Backend ────────────────────────────────────────────────────────────────────────
+// fakeDataManager is an in-memory entitygraph.DataManager used for unit tests.
+type fakeDataManager struct {
+	entities      map[string]entitygraph.Entity
+	relationships map[string]entitygraph.Relationship
+	idCounter     int
+}
 
-// fakeBackend is an in-memory codevaldagency.Backend used for unit tests.
-// It holds a single agency document, mirroring the single-agency-per-database model.
-type fakeBackend struct {
-	agency          *codevaldagency.Agency
-	goals           []codevaldagency.Goal
-	workflows       []codevaldagency.Workflow
-	configuredRoles []codevaldagency.ConfiguredRole
-	snapshots       []codevaldagency.AgencySnapshot
-	publications    []codevaldagency.AgencyPublication
+func newFakeDataManager() *fakeDataManager {
+	return &fakeDataManager{
+		entities:      make(map[string]entitygraph.Entity),
+		relationships: make(map[string]entitygraph.Relationship),
+	}
+}
+
+func (f *fakeDataManager) nextID() string {
+	f.idCounter++
+	return fmt.Sprintf("fake-%04d", f.idCounter)
+}
+
+func (f *fakeDataManager) addEntity(e entitygraph.Entity)             { f.entities[e.ID] = e }
+func (f *fakeDataManager) addRelationship(r entitygraph.Relationship) { f.relationships[r.ID] = r }
+
+func (f *fakeDataManager) entitiesByType(typeID string) []entitygraph.Entity {
+	var out []entitygraph.Entity
+	for _, e := range f.entities {
+		if !e.Deleted && e.TypeID == typeID {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+func (f *fakeDataManager) CreateEntity(_ context.Context, req entitygraph.CreateEntityRequest) (entitygraph.Entity, error) {
+	now := time.Now().UTC()
+	e := entitygraph.Entity{
+		ID: f.nextID(), AgencyID: req.AgencyID, TypeID: req.TypeID,
+		Properties: req.Properties, CreatedAt: now, UpdatedAt: now,
+	}
+	f.entities[e.ID] = e
+	return e, nil
+}
+
+func (f *fakeDataManager) GetEntity(_ context.Context, agencyID, entityID string) (entitygraph.Entity, error) {
+	e, ok := f.entities[entityID]
+	if !ok || e.AgencyID != agencyID {
+		return entitygraph.Entity{}, errors.New("entity not found")
+	}
+	return e, nil
+}
+
+func (f *fakeDataManager) UpdateEntity(_ context.Context, agencyID, entityID string, req entitygraph.UpdateEntityRequest) (entitygraph.Entity, error) {
+	e, ok := f.entities[entityID]
+	if !ok || e.AgencyID != agencyID {
+		return entitygraph.Entity{}, errors.New("entity not found")
+	}
+	if e.Properties == nil {
+		e.Properties = make(map[string]any)
+	}
+	for k, v := range req.Properties {
+		e.Properties[k] = v
+	}
+	e.UpdatedAt = time.Now().UTC()
+	f.entities[entityID] = e
+	return e, nil
+}
+
+func (f *fakeDataManager) DeleteEntity(_ context.Context, agencyID, entityID string) error {
+	e, ok := f.entities[entityID]
+	if !ok || e.AgencyID != agencyID {
+		return errors.New("entity not found")
+	}
+	now := time.Now().UTC()
+	e.Deleted = true
+	e.DeletedAt = &now
+	f.entities[entityID] = e
+	return nil
+}
+
+func (f *fakeDataManager) ListEntities(_ context.Context, filter entitygraph.EntityFilter) ([]entitygraph.Entity, error) {
+	var out []entitygraph.Entity
+	for _, e := range f.entities {
+		if e.Deleted {
+			continue
+		}
+		if filter.AgencyID != "" && e.AgencyID != filter.AgencyID {
+			continue
+		}
+		if filter.TypeID != "" && e.TypeID != filter.TypeID {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out, nil
+}
+
+func (f *fakeDataManager) CreateRelationship(_ context.Context, req entitygraph.CreateRelationshipRequest) (entitygraph.Relationship, error) {
+	r := entitygraph.Relationship{
+		ID: f.nextID(), AgencyID: req.AgencyID, Name: req.Name,
+		FromID: req.FromID, ToID: req.ToID, Properties: req.Properties,
+		CreatedAt: time.Now().UTC(),
+	}
+	f.relationships[r.ID] = r
+	return r, nil
+}
+
+func (f *fakeDataManager) GetRelationship(_ context.Context, agencyID, relID string) (entitygraph.Relationship, error) {
+	r, ok := f.relationships[relID]
+	if !ok || r.AgencyID != agencyID {
+		return entitygraph.Relationship{}, errors.New("relationship not found")
+	}
+	return r, nil
+}
+
+func (f *fakeDataManager) DeleteRelationship(_ context.Context, agencyID, relID string) error {
+	r, ok := f.relationships[relID]
+	if !ok || r.AgencyID != agencyID {
+		return errors.New("relationship not found")
+	}
+	delete(f.relationships, r.ID)
+	return nil
+}
+
+func (f *fakeDataManager) ListRelationships(_ context.Context, filter entitygraph.RelationshipFilter) ([]entitygraph.Relationship, error) {
+	var out []entitygraph.Relationship
+	for _, r := range f.relationships {
+		if filter.AgencyID != "" && r.AgencyID != filter.AgencyID {
+			continue
+		}
+		if filter.FromID != "" && r.FromID != filter.FromID {
+			continue
+		}
+		if filter.ToID != "" && r.ToID != filter.ToID {
+			continue
+		}
+		if filter.Name != "" && r.Name != filter.Name {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out, nil
+}
+
+// TraverseGraph is not exercised by current unit tests.
+func (f *fakeDataManager) TraverseGraph(_ context.Context, _ entitygraph.TraverseGraphRequest) (entitygraph.TraverseGraphResult, error) {
+	return entitygraph.TraverseGraphResult{}, nil
 }
 
 // fakePublisher records every Publish call so tests can assert events.
@@ -33,156 +168,65 @@ func (fp *fakePublisher) Publish(_ context.Context, topic, agencyID string) erro
 	return nil
 }
 
-func newFakeBackend() *fakeBackend {
-	return &fakeBackend{}
-}
+const testAgencyID = "test-agency"
 
-func (f *fakeBackend) SetDetails(_ context.Context, jsonStr string) (codevaldagency.Agency, error) {
-	var raw struct {
-		ID      string `json:"id"`
-		Name    string `json:"name"`
-		Mission string `json:"mission"`
-		Vision  string `json:"vision"`
-		Status  string `json:"status"`
-	}
-	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
-		return codevaldagency.Agency{}, codevaldagency.ErrInvalidJSON
-	}
-	if raw.ID == "" {
-		return codevaldagency.Agency{}, codevaldagency.ErrInvalidJSON
-	}
-	a := codevaldagency.Agency{
-		ID:      raw.ID,
-		Name:    raw.Name,
-		Mission: raw.Mission,
-		Vision:  raw.Vision,
-		Status:  codevaldagency.AgencyLifecycle(raw.Status),
-	}
-	f.agency = &a
-	return a, nil
-}
-
-func (f *fakeBackend) Get(_ context.Context) (codevaldagency.Agency, error) {
-	if f.agency == nil {
-		return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound
-	}
-	return *f.agency, nil
-}
-
-func (f *fakeBackend) Update(_ context.Context, req codevaldagency.UpdateAgencyRequest) (codevaldagency.Agency, error) {
-	if f.agency == nil {
-		return codevaldagency.Agency{}, codevaldagency.ErrAgencyNotFound
-	}
-	a := *f.agency
-	if req.Name != "" {
-		a.Name = req.Name
-	}
-	if req.Mission != "" {
-		a.Mission = req.Mission
-	}
-	if req.Vision != "" {
-		a.Vision = req.Vision
-	}
-	if req.Status != "" {
-		a.Status = req.Status
-	}
-	f.agency = &a
-	return a, nil
-}
-
-func (f *fakeBackend) InsertSnapshot(_ context.Context, snap codevaldagency.AgencySnapshot) error {
-	f.snapshots = append(f.snapshots, snap)
-	return nil
-}
-
-func (f *fakeBackend) InsertPublication(_ context.Context, pub codevaldagency.AgencyPublication) error {
-	f.publications = append(f.publications, pub)
-	return nil
-}
-
-func (f *fakeBackend) GetPublication(_ context.Context, version int) (codevaldagency.AgencyPublication, error) {
-	for _, p := range f.publications {
-		if p.Version == version {
-			return p, nil
-		}
-	}
-	return codevaldagency.AgencyPublication{}, codevaldagency.ErrPublicationNotFound
-}
-
-func (f *fakeBackend) ListPublications(_ context.Context) ([]codevaldagency.AgencyPublication, error) {
-	out := make([]codevaldagency.AgencyPublication, len(f.publications))
-	copy(out, f.publications)
-	return out, nil
-}
-
-func (f *fakeBackend) NextPublicationVersion(_ context.Context) (int, error) {
-	return len(f.publications) + 1, nil
-}
-
-func (f *fakeBackend) GetGoals(_ context.Context) ([]codevaldagency.Goal, error) {
-	return append([]codevaldagency.Goal(nil), f.goals...), nil
-}
-
-func (f *fakeBackend) GetWorkflows(_ context.Context) ([]codevaldagency.Workflow, error) {
-	return append([]codevaldagency.Workflow(nil), f.workflows...), nil
-}
-
-func (f *fakeBackend) GetConfiguredRoles(_ context.Context) ([]codevaldagency.ConfiguredRole, error) {
-	return append([]codevaldagency.ConfiguredRole(nil), f.configuredRoles...), nil
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────────────────
-
-func mustNewManager(t *testing.T) (codevaldagency.AgencyManager, *fakeBackend) {
+func mustNewManager(t *testing.T) (codevaldagency.AgencyManager, *fakeDataManager) {
 	t.Helper()
-	fb := newFakeBackend()
-	mgr, err := codevaldagency.NewAgencyManager(fb)
-	if err != nil {
-		t.Fatalf("NewAgencyManager: unexpected error: %v", err)
-	}
-	return mgr, fb
+	fdm := newFakeDataManager()
+	return codevaldagency.NewAgencyManager(fdm, nil, nil, testAgencyID), fdm
 }
 
-// mustSetupAgency calls SetAgencyDetails with a minimal valid JSON payload.
+func mustNewManagerWithPublisher(t *testing.T) (codevaldagency.AgencyManager, *fakeDataManager, *fakePublisher) {
+	t.Helper()
+	fdm := newFakeDataManager()
+	fp := &fakePublisher{}
+	return codevaldagency.NewAgencyManager(fdm, nil, fp, testAgencyID), fdm, fp
+}
+
+// mustSetupAgency creates an agency entity via SetAgencyDetails.
+// The "id" field in JSON is validated non-empty; the returned Agency.ID is
+// DataManager-assigned (not the JSON id value).
 func mustSetupAgency(t *testing.T, mgr codevaldagency.AgencyManager, id, name string) codevaldagency.Agency {
 	t.Helper()
-	jsonStr := fmt.Sprintf(`{"id":%q,"name":%q,"status":"draft"}`, id, name)
-	agency, err := mgr.SetAgencyDetails(context.Background(), jsonStr)
+	agency, err := mgr.SetAgencyDetails(context.Background(),
+		fmt.Sprintf(`{"id":%q,"name":%q,"status":"draft"}`, id, name))
 	if err != nil {
 		t.Fatalf("SetAgencyDetails: %v", err)
 	}
 	return agency
 }
 
-// mustNewManagerWithPublisher constructs a manager that records publish events.
-func mustNewManagerWithPublisher(t *testing.T) (codevaldagency.AgencyManager, *fakeBackend, *fakePublisher) {
-	t.Helper()
-	fb := newFakeBackend()
-	fp := &fakePublisher{}
-	mgr, err := codevaldagency.NewAgencyManager(fb, codevaldagency.WithPublisher(fp))
-	if err != nil {
-		t.Fatalf("NewAgencyManager: %v", err)
-	}
-	return mgr, fb, fp
+// mustSeedActivationData inserts the minimum Goal + Workflow + WorkItem
+// required to pass the draft -> active activation guard.
+func mustSeedActivationData(fdm *fakeDataManager) {
+	fdm.addEntity(entitygraph.Entity{
+		ID: "seed-goal-001", AgencyID: testAgencyID, TypeID: "Goal",
+		Properties: map[string]any{"title": "Seed Goal", "ordinality": 1},
+	})
+	fdm.addEntity(entitygraph.Entity{
+		ID: "seed-wf-001", AgencyID: testAgencyID, TypeID: "Workflow",
+		Properties: map[string]any{"name": "Seed Workflow"},
+	})
+	fdm.addEntity(entitygraph.Entity{
+		ID: "seed-wi-001", AgencyID: testAgencyID, TypeID: "WorkItem",
+		Properties: map[string]any{"title": "Seed WorkItem", "order": 1},
+	})
+	fdm.addRelationship(entitygraph.Relationship{
+		ID: "seed-rel-001", AgencyID: testAgencyID,
+		Name: "has_work_item", FromID: "seed-wf-001", ToID: "seed-wi-001",
+	})
 }
 
-// ── NewAgencyManager ─────────────────────────────────────────────────────────────────
+// NewAgencyManager
 
-func TestNewAgencyManager_NilBackend(t *testing.T) {
-	_, err := codevaldagency.NewAgencyManager(nil)
-	if err == nil {
-		t.Fatal("expected error for nil backend, got nil")
-	}
-}
-
-func TestNewAgencyManager_ValidBackend(t *testing.T) {
+func TestNewAgencyManager_Constructs(t *testing.T) {
 	mgr, _ := mustNewManager(t)
 	if mgr == nil {
 		t.Fatal("expected non-nil AgencyManager")
 	}
 }
 
-// ── SetAgencyDetails ─────────────────────────────────────────────────────────────────
+// SetAgencyDetails
 
 func TestSetAgencyDetails_InvalidJSON_ReturnsErrInvalidJSON(t *testing.T) {
 	t.Parallel()
@@ -210,11 +254,14 @@ func TestSetAgencyDetails_ValidJSON_ReturnsAgency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if agency.ID != "agency-001" {
-		t.Errorf("ID: want %q, got %q", "agency-001", agency.ID)
+	if agency.ID == "" {
+		t.Error("expected non-empty agency ID")
 	}
 	if agency.Name != "Alpha" {
 		t.Errorf("Name: want %q, got %q", "Alpha", agency.Name)
+	}
+	if agency.Mission != "Build great software" {
+		t.Errorf("Mission: want %q, got %q", "Build great software", agency.Mission)
 	}
 }
 
@@ -228,7 +275,7 @@ func TestSetAgencyDetails_CalledTwice_ReplacesDocument(t *testing.T) {
 	}
 }
 
-// ── GetAgency ────────────────────────────────────────────────────────────────────────────
+// GetAgency
 
 func TestGetAgency_NotFound(t *testing.T) {
 	t.Parallel()
@@ -255,47 +302,44 @@ func TestGetAgency_RoundTrip(t *testing.T) {
 	}
 }
 
-// ── UpdateAgency — lifecycle transitions ─────────────────────────────────────────────
+// UpdateAgency lifecycle transitions
 
 func TestUpdateAgency_DraftToActive_Succeeds_WritesSnapshot(t *testing.T) {
 	t.Parallel()
-	mgr, fb := mustNewManager(t)
-	set := mustSetupAgency(t, mgr, "agency-001", "Gamma")
+	mgr, fdm := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Gamma")
+	mustSeedActivationData(fdm)
+
 	updated, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
 		Status: codevaldagency.LifecycleActive,
 	})
 	if err != nil {
-		t.Fatalf("UpdateAgency draft→active: %v", err)
+		t.Fatalf("UpdateAgency draft->active: %v", err)
 	}
 	if updated.Status != codevaldagency.LifecycleActive {
 		t.Errorf("expected Status=active, got %q", updated.Status)
 	}
-	if len(fb.snapshots) != 1 {
-		t.Fatalf("expected 1 snapshot, got %d", len(fb.snapshots))
+	snaps := fdm.entitiesByType("AgencySnapshot")
+	if len(snaps) != 1 {
+		t.Fatalf("expected 1 snapshot entity, got %d", len(snaps))
 	}
-	snap := fb.snapshots[0]
-	if snap.AgencyID != set.ID {
-		t.Errorf("snapshot AgencyID: want %q, got %q", set.ID, snap.AgencyID)
-	}
-	if snap.ID == "" {
-		t.Error("snapshot ID must not be empty")
-	}
-	if snap.SnapshotAt.IsZero() {
-		t.Error("snapshot SnapshotAt must not be zero")
+	if snaps[0].ID == "" {
+		t.Error("snapshot entity ID must not be empty")
 	}
 }
 
 func TestUpdateAgency_ActiveToDraft_ReturnsErrInvalidLifecycleTransition(t *testing.T) {
 	t.Parallel()
-	mgr, _ := mustNewManager(t)
+	mgr, fdm := mustNewManager(t)
 	mustSetupAgency(t, mgr, "agency-001", "Delta")
-	_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
+	mustSeedActivationData(fdm)
+
+	if _, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
 		Status: codevaldagency.LifecycleActive,
-	})
-	if err != nil {
-		t.Fatalf("draft→active: %v", err)
+	}); err != nil {
+		t.Fatalf("draft->active: %v", err)
 	}
-	_, err = mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
+	_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
 		Status: codevaldagency.LifecycleDraft,
 	})
 	if !errors.Is(err, codevaldagency.ErrInvalidLifecycleTransition) {
@@ -305,10 +349,21 @@ func TestUpdateAgency_ActiveToDraft_ReturnsErrInvalidLifecycleTransition(t *test
 
 func TestUpdateAgency_AchievedToAny_ReturnsErrInvalidLifecycleTransition(t *testing.T) {
 	t.Parallel()
-	mgr, _ := mustNewManager(t)
+	mgr, fdm := mustNewManager(t)
 	mustSetupAgency(t, mgr, "agency-001", "Epsilon")
-	_, _ = mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{Status: codevaldagency.LifecycleActive})
-	_, _ = mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{Status: codevaldagency.LifecycleAchieved})
+	mustSeedActivationData(fdm)
+
+	if _, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
+		Status: codevaldagency.LifecycleActive,
+	}); err != nil {
+		t.Fatalf("draft->active: %v", err)
+	}
+	if _, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
+		Status: codevaldagency.LifecycleAchieved,
+	}); err != nil {
+		t.Fatalf("active->achieved: %v", err)
+	}
+
 	for _, next := range []codevaldagency.AgencyLifecycle{
 		codevaldagency.LifecycleDraft,
 		codevaldagency.LifecycleActive,
@@ -316,27 +371,37 @@ func TestUpdateAgency_AchievedToAny_ReturnsErrInvalidLifecycleTransition(t *test
 	} {
 		_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{Status: next})
 		if !errors.Is(err, codevaldagency.ErrInvalidLifecycleTransition) {
-			t.Errorf("achieved→%q: expected ErrInvalidLifecycleTransition, got %v", next, err)
+			t.Errorf("achieved->%q: expected ErrInvalidLifecycleTransition, got %v", next, err)
 		}
 	}
 }
 
 func TestUpdateAgency_NoStatusChange_DoesNotWriteSnapshot(t *testing.T) {
 	t.Parallel()
-	mgr, fb := mustNewManager(t)
+	mgr, fdm := mustNewManager(t)
 	mustSetupAgency(t, mgr, "agency-001", "Zeta")
-	_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
-		Name: "Zeta Updated",
-	})
+	_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{Name: "Zeta Updated"})
 	if err != nil {
 		t.Fatalf("UpdateAgency: %v", err)
 	}
-	if len(fb.snapshots) != 0 {
-		t.Errorf("expected 0 snapshots for non-lifecycle update, got %d", len(fb.snapshots))
+	if snaps := fdm.entitiesByType("AgencySnapshot"); len(snaps) != 0 {
+		t.Errorf("expected 0 snapshots for non-lifecycle update, got %d", len(snaps))
 	}
 }
 
-// ── AgencyLifecycle.CanTransitionTo ───────────────────────────────────────────────
+func TestUpdateAgency_DraftToActive_MissingGoal_ReturnsErrInvalidAgency(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Eta")
+	_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
+		Status: codevaldagency.LifecycleActive,
+	})
+	if !errors.Is(err, codevaldagency.ErrInvalidAgency) {
+		t.Fatalf("expected ErrInvalidAgency (no goals), got %v", err)
+	}
+}
+
+// AgencyLifecycle.CanTransitionTo
 
 func TestAgencyLifecycle_CanTransitionTo(t *testing.T) {
 	tests := []struct {
@@ -362,14 +427,15 @@ func TestAgencyLifecycle_CanTransitionTo(t *testing.T) {
 	}
 }
 
-// ── GetGoals / GetWorkflows / GetConfiguredRoles ──────────────────────────────────────
+// GetGoals / GetWorkflows / GetConfiguredRoles
 
-func TestGetGoals_ReturnsGoalsFromBackend(t *testing.T) {
+func TestGetGoals_ReturnsGoals(t *testing.T) {
 	t.Parallel()
-	mgr, fb := mustNewManager(t)
-	fb.goals = []codevaldagency.Goal{
-		{ID: "g-001", Title: "Reduce costs", Ordinality: 1},
-	}
+	mgr, fdm := mustNewManager(t)
+	fdm.addEntity(entitygraph.Entity{
+		ID: "g-001", AgencyID: testAgencyID, TypeID: "Goal",
+		Properties: map[string]any{"title": "Reduce costs", "ordinality": 1},
+	})
 	goals, err := mgr.GetGoals(context.Background())
 	if err != nil {
 		t.Fatalf("GetGoals: %v", err)
@@ -377,16 +443,26 @@ func TestGetGoals_ReturnsGoalsFromBackend(t *testing.T) {
 	if len(goals) != 1 || goals[0].ID != "g-001" {
 		t.Errorf("unexpected goals: %+v", goals)
 	}
+	if goals[0].Title != "Reduce costs" {
+		t.Errorf("Title: want %q, got %q", "Reduce costs", goals[0].Title)
+	}
 }
 
-func TestGetWorkflows_ReturnsWorkflowsFromBackend(t *testing.T) {
+func TestGetWorkflows_ReturnsWorkflowsWithItems(t *testing.T) {
 	t.Parallel()
-	mgr, fb := mustNewManager(t)
-	fb.workflows = []codevaldagency.Workflow{
-		{ID: "wf-001", Name: "Onboarding", WorkItems: []codevaldagency.WorkItem{
-			{ID: "wi-001", Title: "Collect requirements", Order: 1},
-		}},
-	}
+	mgr, fdm := mustNewManager(t)
+	fdm.addEntity(entitygraph.Entity{
+		ID: "wf-001", AgencyID: testAgencyID, TypeID: "Workflow",
+		Properties: map[string]any{"name": "Onboarding"},
+	})
+	fdm.addEntity(entitygraph.Entity{
+		ID: "wi-001", AgencyID: testAgencyID, TypeID: "WorkItem",
+		Properties: map[string]any{"title": "Collect requirements", "order": 1},
+	})
+	fdm.addRelationship(entitygraph.Relationship{
+		ID: "rel-001", AgencyID: testAgencyID,
+		Name: "has_work_item", FromID: "wf-001", ToID: "wi-001",
+	})
 	wfs, err := mgr.GetWorkflows(context.Background())
 	if err != nil {
 		t.Fatalf("GetWorkflows: %v", err)
@@ -394,17 +470,18 @@ func TestGetWorkflows_ReturnsWorkflowsFromBackend(t *testing.T) {
 	if len(wfs) != 1 || wfs[0].ID != "wf-001" {
 		t.Errorf("unexpected workflows: %+v", wfs)
 	}
-	if len(wfs[0].WorkItems) != 1 {
-		t.Errorf("expected 1 work item, got %d", len(wfs[0].WorkItems))
+	if len(wfs[0].WorkItems) != 1 || wfs[0].WorkItems[0].ID != "wi-001" {
+		t.Errorf("unexpected work items: %+v", wfs[0].WorkItems)
 	}
 }
 
-func TestGetConfiguredRoles_ReturnsRolesFromBackend(t *testing.T) {
+func TestGetConfiguredRoles_ReturnsRoles(t *testing.T) {
 	t.Parallel()
-	mgr, fb := mustNewManager(t)
-	fb.configuredRoles = []codevaldagency.ConfiguredRole{
-		{Role: "domain_expert", ActorType: codevaldagency.ActorTypeHuman},
-	}
+	mgr, fdm := mustNewManager(t)
+	fdm.addEntity(entitygraph.Entity{
+		ID: "role-001", AgencyID: testAgencyID, TypeID: "ConfiguredRole",
+		Properties: map[string]any{"name": "domain_expert", "actor_type": "human"},
+	})
 	roles, err := mgr.GetConfiguredRoles(context.Background())
 	if err != nil {
 		t.Fatalf("GetConfiguredRoles: %v", err)
@@ -414,7 +491,7 @@ func TestGetConfiguredRoles_ReturnsRolesFromBackend(t *testing.T) {
 	}
 }
 
-// ── PublishAgency ────────────────────────────────────────────────────────────────────────
+// PublishAgency
 
 func TestPublishAgency_NoAgency_ReturnsErrAgencyNotFound(t *testing.T) {
 	t.Parallel()
@@ -427,8 +504,8 @@ func TestPublishAgency_NoAgency_ReturnsErrAgencyNotFound(t *testing.T) {
 
 func TestPublishAgency_FirstPublish_VersionIsOne(t *testing.T) {
 	t.Parallel()
-	mgr, fb := mustNewManager(t)
-	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+	mgr, fdm := mustNewManager(t)
+	set := mustSetupAgency(t, mgr, "agency-001", "Alpha")
 
 	pub, err := mgr.PublishAgency(context.Background())
 	if err != nil {
@@ -446,11 +523,11 @@ func TestPublishAgency_FirstPublish_VersionIsOne(t *testing.T) {
 	if pub.PublishedAt.IsZero() {
 		t.Error("PublishedAt must not be zero")
 	}
-	if pub.Agency.ID != "agency-001" {
-		t.Errorf("AgencyID: want %q, got %q", "agency-001", pub.Agency.ID)
+	if pub.Agency.ID != set.ID {
+		t.Errorf("Agency.ID: want %q, got %q", set.ID, pub.Agency.ID)
 	}
-	if len(fb.publications) != 1 {
-		t.Fatalf("expected 1 stored publication, got %d", len(fb.publications))
+	if pubs := fdm.entitiesByType("AgencyPublication"); len(pubs) != 1 {
+		t.Fatalf("expected 1 stored publication entity, got %d", len(pubs))
 	}
 }
 
@@ -482,7 +559,6 @@ func TestPublishAgency_DoesNotChangeAgencyStatus(t *testing.T) {
 	if _, err := mgr.PublishAgency(context.Background()); err != nil {
 		t.Fatalf("PublishAgency: %v", err)
 	}
-
 	agency, err := mgr.GetAgency(context.Background())
 	if err != nil {
 		t.Fatalf("GetAgency: %v", err)
@@ -495,31 +571,29 @@ func TestPublishAgency_DoesNotChangeAgencyStatus(t *testing.T) {
 func TestPublishAgency_PublishesEvent(t *testing.T) {
 	t.Parallel()
 	mgr, _, fp := mustNewManagerWithPublisher(t)
-	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+	set := mustSetupAgency(t, mgr, "agency-001", "Alpha")
 	fp.events = nil // reset; SetAgencyDetails fires cross.agency.created
 
 	if _, err := mgr.PublishAgency(context.Background()); err != nil {
 		t.Fatalf("PublishAgency: %v", err)
 	}
-
 	if len(fp.events) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(fp.events))
 	}
 	if fp.events[0].topic != "cross.agency.published" {
 		t.Errorf("topic: want %q, got %q", "cross.agency.published", fp.events[0].topic)
 	}
-	if fp.events[0].id != "agency-001" {
-		t.Errorf("agencyID: want %q, got %q", "agency-001", fp.events[0].id)
+	if fp.events[0].id != set.ID {
+		t.Errorf("agencyID: want %q, got %q", set.ID, fp.events[0].id)
 	}
 }
 
-// ── GetPublication ───────────────────────────────────────────────────────────────────────
+// GetPublication
 
 func TestGetPublication_NotFound_ReturnsErrPublicationNotFound(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "agency-001", "Alpha")
-
 	_, err := mgr.GetPublication(context.Background(), 99)
 	if !errors.Is(err, codevaldagency.ErrPublicationNotFound) {
 		t.Fatalf("expected ErrPublicationNotFound, got %v", err)
@@ -530,12 +604,10 @@ func TestGetPublication_RoundTrip(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "agency-001", "Alpha")
-
 	pub, err := mgr.PublishAgency(context.Background())
 	if err != nil {
 		t.Fatalf("PublishAgency: %v", err)
 	}
-
 	got, err := mgr.GetPublication(context.Background(), 1)
 	if err != nil {
 		t.Fatalf("GetPublication: %v", err)
@@ -547,17 +619,16 @@ func TestGetPublication_RoundTrip(t *testing.T) {
 		t.Errorf("Tag: want %q, got %q", pub.Tag, got.Tag)
 	}
 	if got.Agency.ID != pub.Agency.ID {
-		t.Errorf("AgencyID: want %q, got %q", pub.Agency.ID, got.Agency.ID)
+		t.Errorf("Agency.ID: want %q, got %q", pub.Agency.ID, got.Agency.ID)
 	}
 }
 
-// ── ListPublications ─────────────────────────────────────────────────────────────────────
+// ListPublications
 
 func TestListPublications_EmptyBeforeAnyPublish(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "agency-001", "Alpha")
-
 	list, err := mgr.ListPublications(context.Background())
 	if err != nil {
 		t.Fatalf("ListPublications: %v", err)
@@ -571,13 +642,11 @@ func TestListPublications_AscendingVersionOrder(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "agency-001", "Alpha")
-
 	for i := 0; i < 3; i++ {
 		if _, err := mgr.PublishAgency(context.Background()); err != nil {
 			t.Fatalf("publish %d: %v", i+1, err)
 		}
 	}
-
 	list, err := mgr.ListPublications(context.Background())
 	if err != nil {
 		t.Fatalf("ListPublications: %v", err)

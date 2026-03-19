@@ -18,6 +18,9 @@
 //	AGENCY_ARANGO_USER             ArangoDB username (default "root")
 //	AGENCY_ARANGO_PASSWORD         ArangoDB password
 //	AGENCY_ARANGO_DATABASE         ArangoDB database name (default "codevaldagency")
+//
+// TODO(MVP-AGENCY-008-D): replace stub DataManager/SchemaManager with
+// the real arangodb.New(db) constructor once storage split is complete.
 package main
 
 import (
@@ -34,7 +37,6 @@ import (
 	"github.com/aosanya/CodeValdAgency/internal/config"
 	"github.com/aosanya/CodeValdAgency/internal/registrar"
 	"github.com/aosanya/CodeValdAgency/internal/server"
-	"github.com/aosanya/CodeValdAgency/storage/arangodb"
 	healthpb "github.com/aosanya/CodeValdSharedLib/gen/go/codevaldhealth/v1"
 	"github.com/aosanya/CodeValdSharedLib/health"
 	"github.com/aosanya/CodeValdSharedLib/serverutil"
@@ -43,17 +45,10 @@ import (
 func main() {
 	cfg := config.Load()
 
-	backend, err := initBackend(cfg)
-	if err != nil {
-		log.Fatalf("codevaldagency: failed to initialise backend: %v", err)
-	}
-
-	// Build AgencyManager options — attach a CrossPublisher if Cross is configured.
-	var mgrOpts []codevaldagency.AgencyManagerOption
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	var pub codevaldagency.CrossPublisher
 	if cfg.CrossGRPCAddr != "" {
 		reg, err := registrar.New(
 			cfg.CrossGRPCAddr,
@@ -67,16 +62,17 @@ func main() {
 		} else {
 			defer reg.Close()
 			go reg.Run(ctx)
-			mgrOpts = append(mgrOpts, codevaldagency.WithPublisher(reg))
+			pub = reg
 		}
 	} else {
 		log.Println("codevaldagency: CROSS_GRPC_ADDR not set — skipping CodeValdCross registration")
 	}
 
-	mgr, err := codevaldagency.NewAgencyManager(backend, mgrOpts...)
-	if err != nil {
-		log.Fatalf("codevaldagency: failed to create AgencyManager: %v", err)
-	}
+	// TODO(MVP-AGENCY-008-D): construct real DataManager and SchemaManager
+	// from arangodb.New(db) once the storage split is complete.
+	// For now the service panics at startup if called — wiring is a placeholder.
+	log.Println("codevaldagency: WARNING — DataManager not wired (pending MVP-AGENCY-008-D)")
+	mgr := codevaldagency.NewAgencyManager(nil, nil, pub, cfg.AgencyID)
 
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 	if err != nil {
@@ -97,14 +93,4 @@ func main() {
 
 	log.Printf("CodeValdAgency gRPC server listening on :%s", cfg.GRPCPort)
 	serverutil.RunWithGracefulShutdown(ctx, grpcServer, lis, 30*time.Second)
-}
-
-// initBackend constructs the ArangoDB storage backend from config.
-func initBackend(cfg config.Config) (codevaldagency.Backend, error) {
-	return arangodb.NewBackend(arangodb.Config{
-		Endpoint: cfg.ArangoEndpoint,
-		Username: cfg.ArangoUser,
-		Password: cfg.ArangoPassword,
-		Database: cfg.ArangoDatabase,
-	})
 }

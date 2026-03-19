@@ -19,12 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AgencyService_SetAgencyDetails_FullMethodName = "/codevaldagency.v1.AgencyService/SetAgencyDetails"
-	AgencyService_GetAgency_FullMethodName        = "/codevaldagency.v1.AgencyService/GetAgency"
-	AgencyService_UpdateAgency_FullMethodName     = "/codevaldagency.v1.AgencyService/UpdateAgency"
-	AgencyService_PublishAgency_FullMethodName    = "/codevaldagency.v1.AgencyService/PublishAgency"
-	AgencyService_GetPublication_FullMethodName   = "/codevaldagency.v1.AgencyService/GetPublication"
-	AgencyService_ListPublications_FullMethodName = "/codevaldagency.v1.AgencyService/ListPublications"
+	AgencyService_SetAgencyDetails_FullMethodName   = "/codevaldagency.v1.AgencyService/SetAgencyDetails"
+	AgencyService_GetAgency_FullMethodName          = "/codevaldagency.v1.AgencyService/GetAgency"
+	AgencyService_UpdateAgency_FullMethodName       = "/codevaldagency.v1.AgencyService/UpdateAgency"
+	AgencyService_PublishAgency_FullMethodName      = "/codevaldagency.v1.AgencyService/PublishAgency"
+	AgencyService_GetPublication_FullMethodName     = "/codevaldagency.v1.AgencyService/GetPublication"
+	AgencyService_ListPublications_FullMethodName   = "/codevaldagency.v1.AgencyService/ListPublications"
+	AgencyService_GetGoals_FullMethodName           = "/codevaldagency.v1.AgencyService/GetGoals"
+	AgencyService_GetWorkflows_FullMethodName       = "/codevaldagency.v1.AgencyService/GetWorkflows"
+	AgencyService_GetConfiguredRoles_FullMethodName = "/codevaldagency.v1.AgencyService/GetConfiguredRoles"
 )
 
 // AgencyServiceClient is the client API for AgencyService service.
@@ -53,6 +56,13 @@ type AgencyServiceClient interface {
 	GetPublication(ctx context.Context, in *GetPublicationRequest, opts ...grpc.CallOption) (*AgencyPublication, error)
 	// ListPublications returns all publications in ascending version order.
 	ListPublications(ctx context.Context, in *ListPublicationsRequest, opts ...grpc.CallOption) (*ListPublicationsResponse, error)
+	// GetGoals returns all Goal entities linked to the Agency.
+	GetGoals(ctx context.Context, in *GetGoalsRequest, opts ...grpc.CallOption) (*GetGoalsResponse, error)
+	// GetWorkflows returns all Workflow entities linked to the Agency,
+	// each populated with its ordered WorkItems.
+	GetWorkflows(ctx context.Context, in *GetWorkflowsRequest, opts ...grpc.CallOption) (*GetWorkflowsResponse, error)
+	// GetConfiguredRoles returns all ConfiguredRole entities linked to the Agency.
+	GetConfiguredRoles(ctx context.Context, in *GetConfiguredRolesRequest, opts ...grpc.CallOption) (*GetConfiguredRolesResponse, error)
 }
 
 type agencyServiceClient struct {
@@ -123,6 +133,36 @@ func (c *agencyServiceClient) ListPublications(ctx context.Context, in *ListPubl
 	return out, nil
 }
 
+func (c *agencyServiceClient) GetGoals(ctx context.Context, in *GetGoalsRequest, opts ...grpc.CallOption) (*GetGoalsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetGoalsResponse)
+	err := c.cc.Invoke(ctx, AgencyService_GetGoals_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) GetWorkflows(ctx context.Context, in *GetWorkflowsRequest, opts ...grpc.CallOption) (*GetWorkflowsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWorkflowsResponse)
+	err := c.cc.Invoke(ctx, AgencyService_GetWorkflows_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) GetConfiguredRoles(ctx context.Context, in *GetConfiguredRolesRequest, opts ...grpc.CallOption) (*GetConfiguredRolesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetConfiguredRolesResponse)
+	err := c.cc.Invoke(ctx, AgencyService_GetConfiguredRoles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgencyServiceServer is the server API for AgencyService service.
 // All implementations must embed UnimplementedAgencyServiceServer
 // for forward compatibility.
@@ -149,6 +189,13 @@ type AgencyServiceServer interface {
 	GetPublication(context.Context, *GetPublicationRequest) (*AgencyPublication, error)
 	// ListPublications returns all publications in ascending version order.
 	ListPublications(context.Context, *ListPublicationsRequest) (*ListPublicationsResponse, error)
+	// GetGoals returns all Goal entities linked to the Agency.
+	GetGoals(context.Context, *GetGoalsRequest) (*GetGoalsResponse, error)
+	// GetWorkflows returns all Workflow entities linked to the Agency,
+	// each populated with its ordered WorkItems.
+	GetWorkflows(context.Context, *GetWorkflowsRequest) (*GetWorkflowsResponse, error)
+	// GetConfiguredRoles returns all ConfiguredRole entities linked to the Agency.
+	GetConfiguredRoles(context.Context, *GetConfiguredRolesRequest) (*GetConfiguredRolesResponse, error)
 	mustEmbedUnimplementedAgencyServiceServer()
 }
 
@@ -176,6 +223,15 @@ func (UnimplementedAgencyServiceServer) GetPublication(context.Context, *GetPubl
 }
 func (UnimplementedAgencyServiceServer) ListPublications(context.Context, *ListPublicationsRequest) (*ListPublicationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListPublications not implemented")
+}
+func (UnimplementedAgencyServiceServer) GetGoals(context.Context, *GetGoalsRequest) (*GetGoalsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetGoals not implemented")
+}
+func (UnimplementedAgencyServiceServer) GetWorkflows(context.Context, *GetWorkflowsRequest) (*GetWorkflowsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetWorkflows not implemented")
+}
+func (UnimplementedAgencyServiceServer) GetConfiguredRoles(context.Context, *GetConfiguredRolesRequest) (*GetConfiguredRolesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetConfiguredRoles not implemented")
 }
 func (UnimplementedAgencyServiceServer) mustEmbedUnimplementedAgencyServiceServer() {}
 func (UnimplementedAgencyServiceServer) testEmbeddedByValue()                       {}
@@ -306,6 +362,60 @@ func _AgencyService_ListPublications_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgencyService_GetGoals_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetGoalsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).GetGoals(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_GetGoals_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).GetGoals(ctx, req.(*GetGoalsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_GetWorkflows_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkflowsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).GetWorkflows(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_GetWorkflows_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).GetWorkflows(ctx, req.(*GetWorkflowsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_GetConfiguredRoles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetConfiguredRolesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).GetConfiguredRoles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_GetConfiguredRoles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).GetConfiguredRoles(ctx, req.(*GetConfiguredRolesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgencyService_ServiceDesc is the grpc.ServiceDesc for AgencyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -336,6 +446,18 @@ var AgencyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListPublications",
 			Handler:    _AgencyService_ListPublications_Handler,
+		},
+		{
+			MethodName: "GetGoals",
+			Handler:    _AgencyService_GetGoals_Handler,
+		},
+		{
+			MethodName: "GetWorkflows",
+			Handler:    _AgencyService_GetWorkflows_Handler,
+		},
+		{
+			MethodName: "GetConfiguredRoles",
+			Handler:    _AgencyService_GetConfiguredRoles_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

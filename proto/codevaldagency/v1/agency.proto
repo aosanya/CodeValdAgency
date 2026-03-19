@@ -143,6 +143,33 @@ message ListPublicationsResponse {
   repeated AgencyPublication publications = 1;
 }
 
+// GetGoalsRequest is intentionally empty — goals are scoped to the single
+// agency in this database.
+message GetGoalsRequest {}
+
+// GetGoalsResponse wraps the ordered list of Goals.
+message GetGoalsResponse {
+  repeated Goal goals = 1;
+}
+
+// GetWorkflowsRequest is intentionally empty — workflows are scoped to the
+// single agency in this database.
+message GetWorkflowsRequest {}
+
+// GetWorkflowsResponse wraps the list of Workflows, each with its WorkItems.
+message GetWorkflowsResponse {
+  repeated Workflow workflows = 1;
+}
+
+// GetConfiguredRolesRequest is intentionally empty — roles are scoped to the
+// single agency in this database.
+message GetConfiguredRolesRequest {}
+
+// GetConfiguredRolesResponse wraps the list of ConfiguredRoles.
+message GetConfiguredRolesResponse {
+  repeated ConfiguredRole configured_roles = 1;
+}
+
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
@@ -173,4 +200,14 @@ service AgencyService {
 
   // ListPublications returns all publications in ascending version order.
   rpc ListPublications(ListPublicationsRequest) returns (ListPublicationsResponse);
+
+  // GetGoals returns all Goal entities linked to the Agency.
+  rpc GetGoals(GetGoalsRequest) returns (GetGoalsResponse);
+
+  // GetWorkflows returns all Workflow entities linked to the Agency,
+  // each populated with its ordered WorkItems.
+  rpc GetWorkflows(GetWorkflowsRequest) returns (GetWorkflowsResponse);
+
+  // GetConfiguredRoles returns all ConfiguredRole entities linked to the Agency.
+  rpc GetConfiguredRoles(GetConfiguredRolesRequest) returns (GetConfiguredRolesResponse);
 }

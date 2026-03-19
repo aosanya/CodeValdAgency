@@ -34,7 +34,7 @@ The MVP delivers:
 | MVP-AGENCY-008-A | Models refactor — standalone entity types | ✅ Done | ~~SHAREDLIB-010~~ ✅ |
 | MVP-AGENCY-008-B | Pre-delivered schema (`schema.go`) | ✅ Done | ~~MVP-AGENCY-008-A~~ ✅ |
 | MVP-AGENCY-008-C | `AgencyManager` refactor — entitygraph wrapper | ✅ Done | MVP-AGENCY-008-A |
-| MVP-AGENCY-008-D | ArangoDB storage split (`entities.go`, `relationships.go`, `schemaops.go`) | 🔲 Not Started | MVP-AGENCY-008-C |
+| MVP-AGENCY-008-D | ArangoDB storage split (`entities.go`, `relationships.go`, `schemaops.go`) | � In Progress | MVP-AGENCY-008-C |
 | MVP-AGENCY-008-E | Proto + gRPC handlers (`GetGoals`, `GetWorkflows`, `GetConfiguredRoles`) | 🔲 Not Started | MVP-AGENCY-008-C |
 | MVP-AGENCY-008-F | `cmd/main.go` wiring — inject DataManager, seed schema on startup | 🔲 Not Started | MVP-AGENCY-008-D, MVP-AGENCY-008-E |
 | MVP-AGENCY-008-G | Test rewrite — `fakeDataManager` replacing `fakeBackend` | ✅ Done | MVP-AGENCY-008-D |

@@ -1,15 +1,24 @@
-// Package arangodb implements the codevaldagency.Backend interface backed by
-// ArangoDB. Agency documents are stored in the `agency_details` collection,
-// activation snapshots in `agency_snapshots`, and publications in
-// `agency_publications`.
+// Package arangodb implements the [entitygraph.DataManager] and
+// [entitygraph.SchemaManager] interfaces for CodeValdAgency, backed by
+// ArangoDB.
 //
-// Use [NewBackend] to construct; pass the result to
-// codevaldagency.NewAgencyManager.
+// All agency entity data is stored in five collections:
+//   - agency_entities      — mutable entity documents (Agency, Goal, Workflow, WorkItem, ConfiguredRole)
+//   - agency_relationships — directed graph edges (ArangoDB edge collection)
+//   - agency_schemas       — versioned schema documents
+//   - agency_snapshots     — immutable AgencySnapshot entities
+//   - agency_publications  — immutable AgencyPublication entities
 //
 // File layout:
-//   - storage.go â Config, Backend struct, constructors, collection setup
-//   - docs.go    â ArangoDB document types and domainâdocument conversions
-//   - ops.go     â Backend interface method implementations
+//   - storage.go       — Config, Backend struct, constructors, collection setup
+//   - entities.go      — CreateEntity, GetEntity, UpdateEntity, DeleteEntity, ListEntities
+//   - relationships.go — CreateRelationship, GetRelationship, DeleteRelationship,
+//     ListRelationships, TraverseGraph
+//   - schemaops.go     — SetSchema, GetSchema, ListSchemaVersions
+//
+// Use [New] to obtain a (DataManager, SchemaManager) pair from an open database.
+// Use [NewBackend] to connect and construct in a single call.
+// Use [NewBackendFromDB] in tests that manage their own database lifecycle.
 package arangodb
 
 import (
@@ -20,12 +29,17 @@ import (
 	driver "github.com/arangodb/go-driver"
 
 	"github.com/aosanya/CodeValdSharedLib/arangoutil"
+	"github.com/aosanya/CodeValdSharedLib/entitygraph"
 )
 
+// Collection name constants.
 const (
-	colAgencies     = "agency_details"
-	colSnapshots    = "agency_snapshots"
-	colPublications = "agency_publications"
+	colEntities      = "agency_entities"
+	colRelationships = "agency_relationships"
+	colSchemas       = "agency_schemas"
+	colSnapshots     = "agency_snapshots"
+	colPublications  = "agency_publications"
+	graphName        = "agency_graph"
 )
 
 // Config holds the connection parameters for the ArangoDB backend.
@@ -43,16 +57,36 @@ type Config struct {
 	Database string
 }
 
-// Backend is the ArangoDB implementation of [codevaldagency.Backend].
+// Backend is the ArangoDB implementation of both [entitygraph.DataManager] and
+// [entitygraph.SchemaManager] for CodeValdAgency. It is obtained via [New],
+// [NewBackend], or [NewBackendFromDB].
 type Backend struct {
 	db            driver.Database
-	agencyDetails driver.Collection
+	entities      driver.Collection
+	relationships driver.Collection
+	schemas       driver.Collection
 	snapshots     driver.Collection
 	publications  driver.Collection
 }
 
-// NewBackend connects to ArangoDB, ensures all collections exist, and returns
-// a ready-to-use [Backend].
+// New constructs a [Backend] from an already-open [driver.Database], ensures
+// all collections and the named graph exist, and returns the Backend as both a
+// [entitygraph.DataManager] and a [entitygraph.SchemaManager].
+//
+// This is the primary constructor for use in cmd/main.go:
+//
+// dm, sm, err := arangodb.New(db)
+// mgr := codevaldagency.NewAgencyManager(dm, sm, publisher, agencyID)
+func New(db driver.Database) (entitygraph.DataManager, entitygraph.SchemaManager, error) {
+	b, err := newBackendFromDB(context.Background(), db)
+	if err != nil {
+		return nil, nil, err
+	}
+	return b, b, nil
+}
+
+// NewBackend connects to ArangoDB using cfg, ensures all collections exist, and
+// returns a ready-to-use [Backend].
 func NewBackend(cfg Config) (*Backend, error) {
 	if cfg.Endpoint == "" {
 		cfg.Endpoint = "http://localhost:8529"
@@ -90,30 +124,77 @@ func NewBackendFromDB(db driver.Database) (*Backend, error) {
 }
 
 func newBackendFromDB(ctx context.Context, db driver.Database) (*Backend, error) {
-	agencyDetails, err := ensureCollection(ctx, db, colAgencies)
+	entities, relationships, schemas, snapshots, publications, err := ensureCollections(ctx, db)
 	if err != nil {
-		return nil, fmt.Errorf("arangodb: ensure %q: %w", colAgencies, err)
+		return nil, err
 	}
-
-	snapshots, err := ensureCollection(ctx, db, colSnapshots)
-	if err != nil {
-		return nil, fmt.Errorf("arangodb: ensure %q: %w", colSnapshots, err)
+	if err := ensureGraph(ctx, db); err != nil {
+		return nil, err
 	}
-
-	publications, err := ensureCollection(ctx, db, colPublications)
-	if err != nil {
-		return nil, fmt.Errorf("arangodb: ensure %q: %w", colPublications, err)
-	}
-
 	return &Backend{
 		db:            db,
-		agencyDetails: agencyDetails,
+		entities:      entities,
+		relationships: relationships,
+		schemas:       schemas,
 		snapshots:     snapshots,
 		publications:  publications,
 	}, nil
 }
 
-func ensureCollection(ctx context.Context, db driver.Database, name string) (driver.Collection, error) {
+// ensureCollections creates or opens all five required collections.
+// agency_relationships is created as an ArangoDB edge collection.
+func ensureCollections(ctx context.Context, db driver.Database) (
+	entities, relationships, schemas, snapshots, publications driver.Collection, err error,
+) {
+	entities, err = ensureDocumentCollection(ctx, db, colEntities)
+	if err != nil {
+		return nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colEntities, err)
+	}
+	relationships, err = ensureEdgeCollection(ctx, db, colRelationships)
+	if err != nil {
+		return nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colRelationships, err)
+	}
+	schemas, err = ensureDocumentCollection(ctx, db, colSchemas)
+	if err != nil {
+		return nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colSchemas, err)
+	}
+	snapshots, err = ensureDocumentCollection(ctx, db, colSnapshots)
+	if err != nil {
+		return nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colSnapshots, err)
+	}
+	publications, err = ensureDocumentCollection(ctx, db, colPublications)
+	if err != nil {
+		return nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colPublications, err)
+	}
+	return entities, relationships, schemas, snapshots, publications, nil
+}
+
+// ensureGraph creates the named ArangoDB graph agency_graph if it does not
+// already exist.
+func ensureGraph(ctx context.Context, db driver.Database) error {
+	exists, err := db.GraphExists(ctx, graphName)
+	if err != nil {
+		return fmt.Errorf("ensureGraph: check exists: %w", err)
+	}
+	if exists {
+		return nil
+	}
+	_, err = db.CreateGraph(ctx, graphName, &driver.CreateGraphOptions{
+		EdgeDefinitions: []driver.EdgeDefinition{
+			{
+				Collection: colRelationships,
+				From:       []string{colEntities, colSnapshots, colPublications},
+				To:         []string{colEntities, colSnapshots, colPublications},
+			},
+		},
+	})
+	if err != nil && !driver.IsConflict(err) {
+		return fmt.Errorf("ensureGraph: create: %w", err)
+	}
+	return nil
+}
+
+func ensureDocumentCollection(ctx context.Context, db driver.Database, name string) (driver.Collection, error) {
 	exists, err := db.CollectionExists(ctx, name)
 	if err != nil {
 		return nil, err
@@ -122,6 +203,26 @@ func ensureCollection(ctx context.Context, db driver.Database, name string) (dri
 		return db.Collection(ctx, name)
 	}
 	col, err := db.CreateCollection(ctx, name, nil)
+	if err != nil {
+		if driver.IsConflict(err) {
+			return db.Collection(ctx, name)
+		}
+		return nil, err
+	}
+	return col, nil
+}
+
+func ensureEdgeCollection(ctx context.Context, db driver.Database, name string) (driver.Collection, error) {
+	exists, err := db.CollectionExists(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return db.Collection(ctx, name)
+	}
+	col, err := db.CreateCollection(ctx, name, &driver.CreateCollectionOptions{
+		Type: driver.CollectionTypeEdge,
+	})
 	if err != nil {
 		if driver.IsConflict(err) {
 			return db.Collection(ctx, name)

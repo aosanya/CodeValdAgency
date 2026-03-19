@@ -18,13 +18,11 @@
 //	AGENCY_ARANGO_USER             ArangoDB username (default "root")
 //	AGENCY_ARANGO_PASSWORD         ArangoDB password
 //	AGENCY_ARANGO_DATABASE         ArangoDB database name (default "codevaldagency")
-//
-// TODO(MVP-AGENCY-008-D): replace stub DataManager/SchemaManager with
-// the real arangodb.New(db) constructor once storage split is complete.
 package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -37,6 +35,7 @@ import (
 	"github.com/aosanya/CodeValdAgency/internal/config"
 	"github.com/aosanya/CodeValdAgency/internal/registrar"
 	"github.com/aosanya/CodeValdAgency/internal/server"
+	arangodb "github.com/aosanya/CodeValdAgency/storage/arangodb"
 	healthpb "github.com/aosanya/CodeValdSharedLib/gen/go/codevaldhealth/v1"
 	"github.com/aosanya/CodeValdSharedLib/health"
 	"github.com/aosanya/CodeValdSharedLib/serverutil"
@@ -68,11 +67,29 @@ func main() {
 		log.Println("codevaldagency: CROSS_GRPC_ADDR not set — skipping CodeValdCross registration")
 	}
 
-	// TODO(MVP-AGENCY-008-D): construct real DataManager and SchemaManager
-	// from arangodb.New(db) once the storage split is complete.
-	// For now the service panics at startup if called — wiring is a placeholder.
-	log.Println("codevaldagency: WARNING — DataManager not wired (pending MVP-AGENCY-008-D)")
-	mgr := codevaldagency.NewAgencyManager(nil, nil, pub, cfg.AgencyID)
+	// Connect to ArangoDB and construct the DataManager + SchemaManager.
+	backend, err := arangodb.NewBackend(arangodb.Config{
+		Endpoint: cfg.ArangoEndpoint,
+		Username: cfg.ArangoUser,
+		Password: cfg.ArangoPassword,
+		Database: cfg.ArangoDatabase,
+	})
+	if err != nil {
+		log.Fatalf("codevaldagency: ArangoDB backend: %v", err)
+	}
+
+	// Seed the pre-delivered schema idempotently on startup.
+	if cfg.AgencyID != "" {
+		seedCtx, seedCancel := context.WithTimeout(ctx, 10*time.Second)
+		if err := seedSchemaIfNeeded(seedCtx, backend, cfg.AgencyID); err != nil {
+			log.Printf("codevaldagency: schema seed: %v", err)
+		}
+		seedCancel()
+	} else {
+		log.Println("codevaldagency: CODEVALDAGENCY_AGENCY_ID not set — skipping schema seed")
+	}
+
+	mgr := codevaldagency.NewAgencyManager(backend, backend, pub, cfg.AgencyID)
 
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 	if err != nil {
@@ -93,4 +110,23 @@ func main() {
 
 	log.Printf("CodeValdAgency gRPC server listening on :%s", cfg.GRPCPort)
 	serverutil.RunWithGracefulShutdown(ctx, grpcServer, lis, 30*time.Second)
+}
+
+// seedSchemaIfNeeded seeds the pre-delivered agency schema idempotently on
+// startup. It is a no-op if any schema version already exists for the agency.
+func seedSchemaIfNeeded(ctx context.Context, sm codevaldagency.AgencySchemaManager, agencyID string) error {
+	versions, err := sm.ListSchemaVersions(ctx, agencyID)
+	if err != nil {
+		return fmt.Errorf("seedSchemaIfNeeded %s: list versions: %w", agencyID, err)
+	}
+	if len(versions) > 0 {
+		return nil // already seeded — idempotent
+	}
+	schema := codevaldagency.DefaultAgencySchema()
+	schema.AgencyID = agencyID
+	if err := sm.SetSchema(ctx, schema); err != nil {
+		return fmt.Errorf("seedSchemaIfNeeded %s: set schema: %w", agencyID, err)
+	}
+	log.Printf("codevaldagency: schema seeded for agency %s", agencyID)
+	return nil
 }

@@ -83,6 +83,33 @@ func (s *Server) ListPublications(ctx context.Context, _ *pb.ListPublicationsReq
 	return &pb.ListPublicationsResponse{Publications: out}, nil
 }
 
+// GetGoals implements pb.AgencyServiceServer.
+func (s *Server) GetGoals(ctx context.Context, _ *pb.GetGoalsRequest) (*pb.GetGoalsResponse, error) {
+	goals, err := s.mgr.GetGoals(ctx)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &pb.GetGoalsResponse{Goals: goalsToProto(goals)}, nil
+}
+
+// GetWorkflows implements pb.AgencyServiceServer.
+func (s *Server) GetWorkflows(ctx context.Context, _ *pb.GetWorkflowsRequest) (*pb.GetWorkflowsResponse, error) {
+	workflows, err := s.mgr.GetWorkflows(ctx)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &pb.GetWorkflowsResponse{Workflows: workflowsToProto(workflows)}, nil
+}
+
+// GetConfiguredRoles implements pb.AgencyServiceServer.
+func (s *Server) GetConfiguredRoles(ctx context.Context, _ *pb.GetConfiguredRolesRequest) (*pb.GetConfiguredRolesResponse, error) {
+	roles, err := s.mgr.GetConfiguredRoles(ctx)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &pb.GetConfiguredRolesResponse{ConfiguredRoles: configuredRolesToProto(roles)}, nil
+}
+
 // ── Proto → Domain converters ─────────────────────────────────────────────────
 
 func protoToUpdateRequest(req *pb.UpdateAgencyRequest) codevaldagency.UpdateAgencyRequest {

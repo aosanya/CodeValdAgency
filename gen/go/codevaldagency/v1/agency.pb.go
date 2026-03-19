@@ -1052,6 +1052,255 @@ func (x *ListPublicationsResponse) GetPublications() []*AgencyPublication {
 	return nil
 }
 
+// GetGoalsRequest is intentionally empty — goals are scoped to the single
+// agency in this database.
+type GetGoalsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetGoalsRequest) Reset() {
+	*x = GetGoalsRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetGoalsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetGoalsRequest) ProtoMessage() {}
+
+func (x *GetGoalsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetGoalsRequest.ProtoReflect.Descriptor instead.
+func (*GetGoalsRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{14}
+}
+
+// GetGoalsResponse wraps the ordered list of Goals.
+type GetGoalsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Goals         []*Goal                `protobuf:"bytes,1,rep,name=goals,proto3" json:"goals,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetGoalsResponse) Reset() {
+	*x = GetGoalsResponse{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetGoalsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetGoalsResponse) ProtoMessage() {}
+
+func (x *GetGoalsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetGoalsResponse.ProtoReflect.Descriptor instead.
+func (*GetGoalsResponse) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GetGoalsResponse) GetGoals() []*Goal {
+	if x != nil {
+		return x.Goals
+	}
+	return nil
+}
+
+// GetWorkflowsRequest is intentionally empty — workflows are scoped to the
+// single agency in this database.
+type GetWorkflowsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWorkflowsRequest) Reset() {
+	*x = GetWorkflowsRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkflowsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkflowsRequest) ProtoMessage() {}
+
+func (x *GetWorkflowsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkflowsRequest.ProtoReflect.Descriptor instead.
+func (*GetWorkflowsRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{16}
+}
+
+// GetWorkflowsResponse wraps the list of Workflows, each with its WorkItems.
+type GetWorkflowsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Workflows     []*Workflow            `protobuf:"bytes,1,rep,name=workflows,proto3" json:"workflows,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWorkflowsResponse) Reset() {
+	*x = GetWorkflowsResponse{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkflowsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkflowsResponse) ProtoMessage() {}
+
+func (x *GetWorkflowsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkflowsResponse.ProtoReflect.Descriptor instead.
+func (*GetWorkflowsResponse) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *GetWorkflowsResponse) GetWorkflows() []*Workflow {
+	if x != nil {
+		return x.Workflows
+	}
+	return nil
+}
+
+// GetConfiguredRolesRequest is intentionally empty — roles are scoped to the
+// single agency in this database.
+type GetConfiguredRolesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetConfiguredRolesRequest) Reset() {
+	*x = GetConfiguredRolesRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetConfiguredRolesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetConfiguredRolesRequest) ProtoMessage() {}
+
+func (x *GetConfiguredRolesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetConfiguredRolesRequest.ProtoReflect.Descriptor instead.
+func (*GetConfiguredRolesRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{18}
+}
+
+// GetConfiguredRolesResponse wraps the list of ConfiguredRoles.
+type GetConfiguredRolesResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	ConfiguredRoles []*ConfiguredRole      `protobuf:"bytes,1,rep,name=configured_roles,json=configuredRoles,proto3" json:"configured_roles,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetConfiguredRolesResponse) Reset() {
+	*x = GetConfiguredRolesResponse{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetConfiguredRolesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetConfiguredRolesResponse) ProtoMessage() {}
+
+func (x *GetConfiguredRolesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetConfiguredRolesResponse.ProtoReflect.Descriptor instead.
+func (*GetConfiguredRolesResponse) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetConfiguredRolesResponse) GetConfiguredRoles() []*ConfiguredRole {
+	if x != nil {
+		return x.ConfiguredRoles
+	}
+	return nil
+}
+
 var File_codevaldagency_v1_agency_proto protoreflect.FileDescriptor
 
 const file_codevaldagency_v1_agency_proto_rawDesc = "" +
@@ -1120,7 +1369,16 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\aversion\x18\x01 \x01(\x05R\aversion\"\x19\n" +
 	"\x17ListPublicationsRequest\"d\n" +
 	"\x18ListPublicationsResponse\x12H\n" +
-	"\fpublications\x18\x01 \x03(\v2$.codevaldagency.v1.AgencyPublicationR\fpublications*\x8b\x01\n" +
+	"\fpublications\x18\x01 \x03(\v2$.codevaldagency.v1.AgencyPublicationR\fpublications\"\x11\n" +
+	"\x0fGetGoalsRequest\"A\n" +
+	"\x10GetGoalsResponse\x12-\n" +
+	"\x05goals\x18\x01 \x03(\v2\x17.codevaldagency.v1.GoalR\x05goals\"\x15\n" +
+	"\x13GetWorkflowsRequest\"Q\n" +
+	"\x14GetWorkflowsResponse\x129\n" +
+	"\tworkflows\x18\x01 \x03(\v2\x1b.codevaldagency.v1.WorkflowR\tworkflows\"\x1b\n" +
+	"\x19GetConfiguredRolesRequest\"j\n" +
+	"\x1aGetConfiguredRolesResponse\x12L\n" +
+	"\x10configured_roles\x18\x01 \x03(\v2!.codevaldagency.v1.ConfiguredRoleR\x0fconfiguredRoles*\x8b\x01\n" +
 	"\x0fAgencyLifecycle\x12 \n" +
 	"\x1cAGENCY_LIFECYCLE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16AGENCY_LIFECYCLE_DRAFT\x10\x01\x12\x1b\n" +
@@ -1136,14 +1394,17 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x16ACTOR_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10ACTOR_TYPE_HUMAN\x10\x01\x12\x11\n" +
 	"\rACTOR_TYPE_AI\x10\x02\x12\x15\n" +
-	"\x11ACTOR_TYPE_EITHER\x10\x032\xb9\x04\n" +
+	"\x11ACTOR_TYPE_EITHER\x10\x032\xe2\x06\n" +
 	"\rAgencyService\x12Y\n" +
 	"\x10SetAgencyDetails\x12*.codevaldagency.v1.SetAgencyDetailsRequest\x1a\x19.codevaldagency.v1.Agency\x12K\n" +
 	"\tGetAgency\x12#.codevaldagency.v1.GetAgencyRequest\x1a\x19.codevaldagency.v1.Agency\x12Q\n" +
 	"\fUpdateAgency\x12&.codevaldagency.v1.UpdateAgencyRequest\x1a\x19.codevaldagency.v1.Agency\x12^\n" +
 	"\rPublishAgency\x12'.codevaldagency.v1.PublishAgencyRequest\x1a$.codevaldagency.v1.AgencyPublication\x12`\n" +
 	"\x0eGetPublication\x12(.codevaldagency.v1.GetPublicationRequest\x1a$.codevaldagency.v1.AgencyPublication\x12k\n" +
-	"\x10ListPublications\x12*.codevaldagency.v1.ListPublicationsRequest\x1a+.codevaldagency.v1.ListPublicationsResponseBMZKgithub.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1;codevaldagencyv1b\x06proto3"
+	"\x10ListPublications\x12*.codevaldagency.v1.ListPublicationsRequest\x1a+.codevaldagency.v1.ListPublicationsResponse\x12S\n" +
+	"\bGetGoals\x12\".codevaldagency.v1.GetGoalsRequest\x1a#.codevaldagency.v1.GetGoalsResponse\x12_\n" +
+	"\fGetWorkflows\x12&.codevaldagency.v1.GetWorkflowsRequest\x1a'.codevaldagency.v1.GetWorkflowsResponse\x12q\n" +
+	"\x12GetConfiguredRoles\x12,.codevaldagency.v1.GetConfiguredRolesRequest\x1a-.codevaldagency.v1.GetConfiguredRolesResponseBMZKgithub.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1;codevaldagencyv1b\x06proto3"
 
 var (
 	file_codevaldagency_v1_agency_proto_rawDescOnce sync.Once
@@ -1158,26 +1419,32 @@ func file_codevaldagency_v1_agency_proto_rawDescGZIP() []byte {
 }
 
 var file_codevaldagency_v1_agency_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_codevaldagency_v1_agency_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_codevaldagency_v1_agency_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_codevaldagency_v1_agency_proto_goTypes = []any{
-	(AgencyLifecycle)(0),             // 0: codevaldagency.v1.AgencyLifecycle
-	(RACILabel)(0),                   // 1: codevaldagency.v1.RACILabel
-	(ActorType)(0),                   // 2: codevaldagency.v1.ActorType
-	(*RoleAssignment)(nil),           // 3: codevaldagency.v1.RoleAssignment
-	(*ConfiguredRole)(nil),           // 4: codevaldagency.v1.ConfiguredRole
-	(*WorkItem)(nil),                 // 5: codevaldagency.v1.WorkItem
-	(*Workflow)(nil),                 // 6: codevaldagency.v1.Workflow
-	(*Goal)(nil),                     // 7: codevaldagency.v1.Goal
-	(*Agency)(nil),                   // 8: codevaldagency.v1.Agency
-	(*GetAgencyRequest)(nil),         // 9: codevaldagency.v1.GetAgencyRequest
-	(*SetAgencyDetailsRequest)(nil),  // 10: codevaldagency.v1.SetAgencyDetailsRequest
-	(*UpdateAgencyRequest)(nil),      // 11: codevaldagency.v1.UpdateAgencyRequest
-	(*AgencyPublication)(nil),        // 12: codevaldagency.v1.AgencyPublication
-	(*PublishAgencyRequest)(nil),     // 13: codevaldagency.v1.PublishAgencyRequest
-	(*GetPublicationRequest)(nil),    // 14: codevaldagency.v1.GetPublicationRequest
-	(*ListPublicationsRequest)(nil),  // 15: codevaldagency.v1.ListPublicationsRequest
-	(*ListPublicationsResponse)(nil), // 16: codevaldagency.v1.ListPublicationsResponse
-	(*timestamppb.Timestamp)(nil),    // 17: google.protobuf.Timestamp
+	(AgencyLifecycle)(0),               // 0: codevaldagency.v1.AgencyLifecycle
+	(RACILabel)(0),                     // 1: codevaldagency.v1.RACILabel
+	(ActorType)(0),                     // 2: codevaldagency.v1.ActorType
+	(*RoleAssignment)(nil),             // 3: codevaldagency.v1.RoleAssignment
+	(*ConfiguredRole)(nil),             // 4: codevaldagency.v1.ConfiguredRole
+	(*WorkItem)(nil),                   // 5: codevaldagency.v1.WorkItem
+	(*Workflow)(nil),                   // 6: codevaldagency.v1.Workflow
+	(*Goal)(nil),                       // 7: codevaldagency.v1.Goal
+	(*Agency)(nil),                     // 8: codevaldagency.v1.Agency
+	(*GetAgencyRequest)(nil),           // 9: codevaldagency.v1.GetAgencyRequest
+	(*SetAgencyDetailsRequest)(nil),    // 10: codevaldagency.v1.SetAgencyDetailsRequest
+	(*UpdateAgencyRequest)(nil),        // 11: codevaldagency.v1.UpdateAgencyRequest
+	(*AgencyPublication)(nil),          // 12: codevaldagency.v1.AgencyPublication
+	(*PublishAgencyRequest)(nil),       // 13: codevaldagency.v1.PublishAgencyRequest
+	(*GetPublicationRequest)(nil),      // 14: codevaldagency.v1.GetPublicationRequest
+	(*ListPublicationsRequest)(nil),    // 15: codevaldagency.v1.ListPublicationsRequest
+	(*ListPublicationsResponse)(nil),   // 16: codevaldagency.v1.ListPublicationsResponse
+	(*GetGoalsRequest)(nil),            // 17: codevaldagency.v1.GetGoalsRequest
+	(*GetGoalsResponse)(nil),           // 18: codevaldagency.v1.GetGoalsResponse
+	(*GetWorkflowsRequest)(nil),        // 19: codevaldagency.v1.GetWorkflowsRequest
+	(*GetWorkflowsResponse)(nil),       // 20: codevaldagency.v1.GetWorkflowsResponse
+	(*GetConfiguredRolesRequest)(nil),  // 21: codevaldagency.v1.GetConfiguredRolesRequest
+	(*GetConfiguredRolesResponse)(nil), // 22: codevaldagency.v1.GetConfiguredRolesResponse
+	(*timestamppb.Timestamp)(nil),      // 23: google.protobuf.Timestamp
 }
 var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	1,  // 0: codevaldagency.v1.RoleAssignment.raci:type_name -> codevaldagency.v1.RACILabel
@@ -1188,32 +1455,41 @@ var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	7,  // 5: codevaldagency.v1.Agency.goals:type_name -> codevaldagency.v1.Goal
 	6,  // 6: codevaldagency.v1.Agency.workflows:type_name -> codevaldagency.v1.Workflow
 	4,  // 7: codevaldagency.v1.Agency.configured_roles:type_name -> codevaldagency.v1.ConfiguredRole
-	17, // 8: codevaldagency.v1.Agency.created_at:type_name -> google.protobuf.Timestamp
-	17, // 9: codevaldagency.v1.Agency.updated_at:type_name -> google.protobuf.Timestamp
+	23, // 8: codevaldagency.v1.Agency.created_at:type_name -> google.protobuf.Timestamp
+	23, // 9: codevaldagency.v1.Agency.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 10: codevaldagency.v1.UpdateAgencyRequest.status:type_name -> codevaldagency.v1.AgencyLifecycle
 	7,  // 11: codevaldagency.v1.UpdateAgencyRequest.goals:type_name -> codevaldagency.v1.Goal
 	6,  // 12: codevaldagency.v1.UpdateAgencyRequest.workflows:type_name -> codevaldagency.v1.Workflow
 	4,  // 13: codevaldagency.v1.UpdateAgencyRequest.configured_roles:type_name -> codevaldagency.v1.ConfiguredRole
 	8,  // 14: codevaldagency.v1.AgencyPublication.agency:type_name -> codevaldagency.v1.Agency
-	17, // 15: codevaldagency.v1.AgencyPublication.published_at:type_name -> google.protobuf.Timestamp
+	23, // 15: codevaldagency.v1.AgencyPublication.published_at:type_name -> google.protobuf.Timestamp
 	12, // 16: codevaldagency.v1.ListPublicationsResponse.publications:type_name -> codevaldagency.v1.AgencyPublication
-	10, // 17: codevaldagency.v1.AgencyService.SetAgencyDetails:input_type -> codevaldagency.v1.SetAgencyDetailsRequest
-	9,  // 18: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
-	11, // 19: codevaldagency.v1.AgencyService.UpdateAgency:input_type -> codevaldagency.v1.UpdateAgencyRequest
-	13, // 20: codevaldagency.v1.AgencyService.PublishAgency:input_type -> codevaldagency.v1.PublishAgencyRequest
-	14, // 21: codevaldagency.v1.AgencyService.GetPublication:input_type -> codevaldagency.v1.GetPublicationRequest
-	15, // 22: codevaldagency.v1.AgencyService.ListPublications:input_type -> codevaldagency.v1.ListPublicationsRequest
-	8,  // 23: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
-	8,  // 24: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
-	8,  // 25: codevaldagency.v1.AgencyService.UpdateAgency:output_type -> codevaldagency.v1.Agency
-	12, // 26: codevaldagency.v1.AgencyService.PublishAgency:output_type -> codevaldagency.v1.AgencyPublication
-	12, // 27: codevaldagency.v1.AgencyService.GetPublication:output_type -> codevaldagency.v1.AgencyPublication
-	16, // 28: codevaldagency.v1.AgencyService.ListPublications:output_type -> codevaldagency.v1.ListPublicationsResponse
-	23, // [23:29] is the sub-list for method output_type
-	17, // [17:23] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	7,  // 17: codevaldagency.v1.GetGoalsResponse.goals:type_name -> codevaldagency.v1.Goal
+	6,  // 18: codevaldagency.v1.GetWorkflowsResponse.workflows:type_name -> codevaldagency.v1.Workflow
+	4,  // 19: codevaldagency.v1.GetConfiguredRolesResponse.configured_roles:type_name -> codevaldagency.v1.ConfiguredRole
+	10, // 20: codevaldagency.v1.AgencyService.SetAgencyDetails:input_type -> codevaldagency.v1.SetAgencyDetailsRequest
+	9,  // 21: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
+	11, // 22: codevaldagency.v1.AgencyService.UpdateAgency:input_type -> codevaldagency.v1.UpdateAgencyRequest
+	13, // 23: codevaldagency.v1.AgencyService.PublishAgency:input_type -> codevaldagency.v1.PublishAgencyRequest
+	14, // 24: codevaldagency.v1.AgencyService.GetPublication:input_type -> codevaldagency.v1.GetPublicationRequest
+	15, // 25: codevaldagency.v1.AgencyService.ListPublications:input_type -> codevaldagency.v1.ListPublicationsRequest
+	17, // 26: codevaldagency.v1.AgencyService.GetGoals:input_type -> codevaldagency.v1.GetGoalsRequest
+	19, // 27: codevaldagency.v1.AgencyService.GetWorkflows:input_type -> codevaldagency.v1.GetWorkflowsRequest
+	21, // 28: codevaldagency.v1.AgencyService.GetConfiguredRoles:input_type -> codevaldagency.v1.GetConfiguredRolesRequest
+	8,  // 29: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
+	8,  // 30: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
+	8,  // 31: codevaldagency.v1.AgencyService.UpdateAgency:output_type -> codevaldagency.v1.Agency
+	12, // 32: codevaldagency.v1.AgencyService.PublishAgency:output_type -> codevaldagency.v1.AgencyPublication
+	12, // 33: codevaldagency.v1.AgencyService.GetPublication:output_type -> codevaldagency.v1.AgencyPublication
+	16, // 34: codevaldagency.v1.AgencyService.ListPublications:output_type -> codevaldagency.v1.ListPublicationsResponse
+	18, // 35: codevaldagency.v1.AgencyService.GetGoals:output_type -> codevaldagency.v1.GetGoalsResponse
+	20, // 36: codevaldagency.v1.AgencyService.GetWorkflows:output_type -> codevaldagency.v1.GetWorkflowsResponse
+	22, // 37: codevaldagency.v1.AgencyService.GetConfiguredRoles:output_type -> codevaldagency.v1.GetConfiguredRolesResponse
+	29, // [29:38] is the sub-list for method output_type
+	20, // [20:29] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_codevaldagency_v1_agency_proto_init() }
@@ -1227,7 +1503,7 @@ func file_codevaldagency_v1_agency_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_codevaldagency_v1_agency_proto_rawDesc), len(file_codevaldagency_v1_agency_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   14,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

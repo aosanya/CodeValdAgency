@@ -283,3 +283,143 @@ func TestServer_ListPublications_Empty_ReturnsEmptyList(t *testing.T) {
 		t.Errorf("expected empty list, got %d", len(got.GetPublications()))
 	}
 }
+
+// ── GetGoals ────────────────────────────────────────────────────────────────────────────
+
+func TestServer_GetGoals_OK(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		goalsResult: []codevaldagency.Goal{
+			{ID: "g1", Title: "Goal One", Ordinality: 1},
+			{ID: "g2", Title: "Goal Two", Ordinality: 2},
+		},
+	}
+	srv := server.New(mgr)
+	got, err := srv.GetGoals(context.Background(), &pb.GetGoalsRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.GetGoals()) != 2 {
+		t.Fatalf("expected 2 goals, got %d", len(got.GetGoals()))
+	}
+	if got.GetGoals()[0].GetId() != "g1" {
+		t.Errorf("Goal[0].ID: want %q, got %q", "g1", got.GetGoals()[0].GetId())
+	}
+}
+
+func TestServer_GetGoals_Empty_ReturnsEmptyList(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{goalsResult: nil}
+	srv := server.New(mgr)
+	got, err := srv.GetGoals(context.Background(), &pb.GetGoalsRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.GetGoals()) != 0 {
+		t.Errorf("expected empty list, got %d", len(got.GetGoals()))
+	}
+}
+
+func TestServer_GetGoals_ManagerError_ReturnsInternal(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{goalsErr: fmt.Errorf("storage failure")}
+	srv := server.New(mgr)
+	_, err := srv.GetGoals(context.Background(), &pb.GetGoalsRequest{})
+	requireCode(t, err, codes.Internal)
+}
+
+// ── GetWorkflows ───────────────────────────────────────────────────────────────────────
+
+func TestServer_GetWorkflows_OK(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		workflowsResult: []codevaldagency.Workflow{
+			{
+				ID:   "wf1",
+				Name: "Workflow One",
+				WorkItems: []codevaldagency.WorkItem{
+					{ID: "wi1", Title: "Item One", Order: 1},
+				},
+			},
+		},
+	}
+	srv := server.New(mgr)
+	got, err := srv.GetWorkflows(context.Background(), &pb.GetWorkflowsRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.GetWorkflows()) != 1 {
+		t.Fatalf("expected 1 workflow, got %d", len(got.GetWorkflows()))
+	}
+	if got.GetWorkflows()[0].GetId() != "wf1" {
+		t.Errorf("Workflow[0].ID: want %q, got %q", "wf1", got.GetWorkflows()[0].GetId())
+	}
+	if len(got.GetWorkflows()[0].GetWorkItems()) != 1 {
+		t.Errorf("expected 1 work item, got %d", len(got.GetWorkflows()[0].GetWorkItems()))
+	}
+}
+
+func TestServer_GetWorkflows_Empty_ReturnsEmptyList(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{workflowsResult: nil}
+	srv := server.New(mgr)
+	got, err := srv.GetWorkflows(context.Background(), &pb.GetWorkflowsRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.GetWorkflows()) != 0 {
+		t.Errorf("expected empty list, got %d", len(got.GetWorkflows()))
+	}
+}
+
+func TestServer_GetWorkflows_ManagerError_ReturnsInternal(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{workflowsErr: fmt.Errorf("storage failure")}
+	srv := server.New(mgr)
+	_, err := srv.GetWorkflows(context.Background(), &pb.GetWorkflowsRequest{})
+	requireCode(t, err, codes.Internal)
+}
+
+// ── GetConfiguredRoles ─────────────────────────────────────────────────────────────────
+
+func TestServer_GetConfiguredRoles_OK(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		rolesResult: []codevaldagency.ConfiguredRole{
+			{Role: "analyst", ActorType: codevaldagency.ActorTypeHuman},
+			{Role: "reviewer", ActorType: codevaldagency.ActorTypeAI},
+		},
+	}
+	srv := server.New(mgr)
+	got, err := srv.GetConfiguredRoles(context.Background(), &pb.GetConfiguredRolesRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.GetConfiguredRoles()) != 2 {
+		t.Fatalf("expected 2 roles, got %d", len(got.GetConfiguredRoles()))
+	}
+	if got.GetConfiguredRoles()[0].GetRole() != "analyst" {
+		t.Errorf("Role[0]: want %q, got %q", "analyst", got.GetConfiguredRoles()[0].GetRole())
+	}
+}
+
+func TestServer_GetConfiguredRoles_Empty_ReturnsEmptyList(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{rolesResult: nil}
+	srv := server.New(mgr)
+	got, err := srv.GetConfiguredRoles(context.Background(), &pb.GetConfiguredRolesRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.GetConfiguredRoles()) != 0 {
+		t.Errorf("expected empty list, got %d", len(got.GetConfiguredRoles()))
+	}
+}
+
+func TestServer_GetConfiguredRoles_ManagerError_ReturnsInternal(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{rolesErr: fmt.Errorf("storage failure")}
+	srv := server.New(mgr)
+	_, err := srv.GetConfiguredRoles(context.Background(), &pb.GetConfiguredRolesRequest{})
+	requireCode(t, err, codes.Internal)
+}

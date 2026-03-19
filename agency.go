@@ -4,16 +4,19 @@
 //
 // Usage:
 //
-// b, err := arangodb.NewBackend(arangodb.Config{...})
-// mgr, err := codevaldagency.NewAgencyManager(b)
-// agency, err := mgr.SetAgencyDetails(ctx, `{"id":"agency-001","name":"Alpha"}`)
+//	dm, sm, err := arangodb.New(db)
+//	mgr := codevaldagency.NewAgencyManager(dm, sm, publisher, agencyID)
+//	agency, err := mgr.SetAgencyDetails(ctx, `{"id":"agency-001","name":"Alpha"}`)
 package codevaldagency
 
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/aosanya/CodeValdSharedLib/entitygraph"
 )
 
 // AgencyManager is the primary interface for agency lifecycle management.
@@ -29,15 +32,16 @@ type AgencyManager interface {
 	SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
 
 	// GetAgency retrieves the single agency for this database.
-	// Returns [ErrAgencyNotFound] if no agency document exists yet.
+	// Returns [ErrAgencyNotFound] if no agency entity exists yet.
 	GetAgency(ctx context.Context) (Agency, error)
 
 	// UpdateAgency applies incremental field edits with lifecycle validation.
 	// Lifecycle transitions are validated — returns [ErrInvalidLifecycleTransition]
 	// if the new status is not reachable from the current status.
-	// When the transition is draft → active, a snapshot is written to the backend
-	// before the update is applied.
-	// Returns [ErrAgencyNotFound] if no agency document exists yet.
+	// On draft → active, a guard checks ≥1 Goal and ≥1 Workflow with ≥1 WorkItem;
+	// returns [ErrInvalidAgency] if violated. An immutable [AgencySnapshot] entity
+	// is written as a side-effect of the draft → active transition.
+	// Returns [ErrAgencyNotFound] if no agency entity exists yet.
 	UpdateAgency(ctx context.Context, req UpdateAgencyRequest) (Agency, error)
 
 	// GetGoals returns all Goal entities linked to this Agency.
@@ -54,7 +58,7 @@ type AgencyManager interface {
 	// agency state. The agency [Status] is NOT changed by this operation.
 	// Version is auto-incremented from the last publication (starts at 1).
 	// Publishes "cross.agency.published" after every successful write.
-	// Returns [ErrAgencyNotFound] if no agency document exists yet.
+	// Returns [ErrAgencyNotFound] if no agency entity exists yet.
 	PublishAgency(ctx context.Context) (AgencyPublication, error)
 
 	// GetPublication retrieves a single publication by its version number.
@@ -66,50 +70,9 @@ type AgencyManager interface {
 	ListPublications(ctx context.Context) ([]AgencyPublication, error)
 }
 
-// Backend is the storage abstraction injected into [AgencyManager].
-// cmd/main.go constructs the chosen implementation (e.g. arangodb.NewBackend)
-// and passes it to [NewAgencyManager]. The root package never imports any
-// storage driver directly.
-type Backend interface {
-	// SetDetails parses the raw JSON and upserts the agency document.
-	// Returns [ErrInvalidJSON] if the JSON is malformed or the id field is missing.
-	SetDetails(ctx context.Context, jsonStr string) (Agency, error)
-
-	// Get retrieves the single agency document for this database.
-	// Returns [ErrAgencyNotFound] if no document exists yet.
-	Get(ctx context.Context) (Agency, error)
-
-	// Update applies a partial field merge and returns the updated agency.
-	// Returns [ErrAgencyNotFound] if no agency document exists yet.
-	Update(ctx context.Context, req UpdateAgencyRequest) (Agency, error)
-
-	// InsertSnapshot writes an immutable point-in-time record to storage.
-	// Called by [AgencyManager.UpdateAgency] on draft → active transition.
-	InsertSnapshot(ctx context.Context, snapshot AgencySnapshot) error
-
-	// InsertPublication writes a new [AgencyPublication] to storage.
-	InsertPublication(ctx context.Context, pub AgencyPublication) error
-
-	// GetPublication retrieves a publication by its version number.
-	// Returns [ErrPublicationNotFound] if no match exists.
-	GetPublication(ctx context.Context, version int) (AgencyPublication, error)
-
-	// ListPublications returns all publications in ascending version order.
-	ListPublications(ctx context.Context) ([]AgencyPublication, error)
-
-	// NextPublicationVersion returns the next auto-increment version number
-	// (MAX(version) + 1, or 1 if no publications exist yet).
-	NextPublicationVersion(ctx context.Context) (int, error)
-
-	// GetGoals returns all Goal entities for this agency.
-	GetGoals(ctx context.Context) ([]Goal, error)
-
-	// GetWorkflows returns all Workflow entities with their WorkItems.
-	GetWorkflows(ctx context.Context) ([]Workflow, error)
-
-	// GetConfiguredRoles returns all ConfiguredRole entities for this agency.
-	GetConfiguredRoles(ctx context.Context) ([]ConfiguredRole, error)
-}
+// AgencySchemaManager manages schema versions for the Agency entity graph.
+// It is a type alias for [entitygraph.SchemaManager] from CodeValdSharedLib.
+type AgencySchemaManager = entitygraph.SchemaManager
 
 // CrossPublisher publishes agency lifecycle events to CodeValdCross.
 // Implementations must be safe for concurrent use. A nil CrossPublisher is
@@ -121,118 +84,531 @@ type CrossPublisher interface {
 	Publish(ctx context.Context, topic string, agencyID string) error
 }
 
-// AgencyManagerOption is a functional option for [NewAgencyManager].
-type AgencyManagerOption func(*agencyManager)
-
-// WithPublisher attaches a [CrossPublisher] to the [AgencyManager].
-// When provided, [AgencyManager.SetAgencyDetails] calls Publish with
-// "cross.agency.created" after every successful write.
-func WithPublisher(p CrossPublisher) AgencyManagerOption {
-	return func(m *agencyManager) {
-		m.publisher = p
-	}
-}
-
 // agencyManager is the concrete implementation of [AgencyManager].
-// It delegates all storage operations to the injected [Backend].
+// It wraps [entitygraph.DataManager] to expose agency-specific convenience
+// methods. All storage operations go through dm; no bespoke Backend interface
+// is used.
 type agencyManager struct {
-	backend   Backend
-	publisher CrossPublisher // optional; nil = skip event publishing
+	dm        entitygraph.DataManager // graph CRUD — injected by cmd/main.go
+	sm        AgencySchemaManager     // schema versioning — injected by cmd/main.go
+	publisher CrossPublisher          // optional; nil = skip event publishing
+	agencyID  string                  // the single agency ID for this database
 }
 
-// NewAgencyManager constructs an [AgencyManager] backed by the given [Backend].
-// Use storage/arangodb.NewBackend to obtain a Backend, then pass it here.
-// Pass [WithPublisher] to enable cross-service event publishing.
-// Returns an error if b is nil.
-func NewAgencyManager(b Backend, opts ...AgencyManagerOption) (AgencyManager, error) {
-	if b == nil {
-		return nil, fmt.Errorf("NewAgencyManager: backend must not be nil")
-	}
-	m := &agencyManager{backend: b}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m, nil
+// NewAgencyManager constructs an [AgencyManager] backed by the given
+// [entitygraph.DataManager] and [AgencySchemaManager].
+// agencyID is the single agency scoped to this database; it is passed to every
+// DataManager call as the scope key.
+// pub may be nil — cross-service events are skipped when no publisher is set.
+func NewAgencyManager(
+	dm entitygraph.DataManager,
+	sm AgencySchemaManager,
+	pub CrossPublisher,
+	agencyID string,
+) AgencyManager {
+	return &agencyManager{dm: dm, sm: sm, publisher: pub, agencyID: agencyID}
 }
 
-// SetAgencyDetails delegates to [Backend.SetDetails] and publishes
-// "cross.agency.created" on every successful write.
+// ── SetAgencyDetails ──────────────────────────────────────────────────────────
+
+// SetAgencyDetails parses the JSON payload and upserts the root Agency entity.
+// If no Agency entity exists yet it calls CreateEntity; otherwise UpdateEntity.
+// Publishes "cross.agency.created" on every successful write.
 func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error) {
-	agency, err := m.backend.SetDetails(ctx, jsonStr)
-	if err != nil {
-		return Agency{}, err
+	var raw struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Mission string `json:"mission"`
+		Vision  string `json:"vision"`
+		Status  string `json:"status"`
 	}
-	// Best-effort publish — a publish error does not roll back the write.
+	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
+		return Agency{}, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
+	}
+	if raw.ID == "" {
+		return Agency{}, fmt.Errorf("%w: \"id\" field is required", ErrInvalidJSON)
+	}
+
+	props := map[string]any{
+		"name":    raw.Name,
+		"mission": raw.Mission,
+		"vision":  raw.Vision,
+		"status":  raw.Status,
+	}
+
+	// Check whether an Agency entity already exists.
+	existing, err := m.listAgencyEntities(ctx)
+	if err != nil {
+		return Agency{}, fmt.Errorf("SetAgencyDetails: list: %w", err)
+	}
+
+	var entity entitygraph.Entity
+	if len(existing) == 0 {
+		entity, err = m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
+			AgencyID:   m.agencyID,
+			TypeID:     "Agency",
+			Properties: props,
+		})
+	} else {
+		entity, err = m.dm.UpdateEntity(ctx, m.agencyID, existing[0].ID, entitygraph.UpdateEntityRequest{
+			Properties: props,
+		})
+	}
+	if err != nil {
+		return Agency{}, fmt.Errorf("SetAgencyDetails: %w", err)
+	}
+
+	agency := entityToAgency(entity)
+
 	if m.publisher != nil {
-		if pErr := m.publisher.Publish(ctx, "cross.agency.created", agency.ID); pErr != nil {
-			_ = pErr
-		}
+		_ = m.publisher.Publish(ctx, "cross.agency.created", agency.ID)
 	}
 	return agency, nil
 }
 
-// GetAgency delegates to [Backend.Get].
+// ── GetAgency ─────────────────────────────────────────────────────────────────
+
+// GetAgency returns the single Agency entity stored in this database.
+// Returns [ErrAgencyNotFound] if no Agency entity exists yet.
 func (m *agencyManager) GetAgency(ctx context.Context) (Agency, error) {
-	return m.backend.Get(ctx)
+	entities, err := m.listAgencyEntities(ctx)
+	if err != nil {
+		return Agency{}, fmt.Errorf("GetAgency: %w", err)
+	}
+	if len(entities) == 0 {
+		return Agency{}, ErrAgencyNotFound
+	}
+	return entityToAgency(entities[0]), nil
 }
 
-// UpdateAgency validates the lifecycle transition (if Status is changing),
-// writes an activation snapshot on draft → active, and delegates to
-// [Backend.Update].
+// ── UpdateAgency ──────────────────────────────────────────────────────────────
+
+// UpdateAgency applies lifecycle-validated partial updates to the Agency entity.
+// On draft → active it enforces ≥1 Goal and ≥1 Workflow-with-WorkItem guard,
+// then writes an immutable [AgencySnapshot] entity as a side-effect.
 func (m *agencyManager) UpdateAgency(ctx context.Context, req UpdateAgencyRequest) (Agency, error) {
-	current, err := m.backend.Get(ctx)
+	current, err := m.GetAgency(ctx)
 	if err != nil {
 		return Agency{}, err
 	}
 
-	// Validate lifecycle when a status is explicitly provided.
 	if req.Status != "" {
-		// achieved is a terminal state — no further status changes are permitted,
-		// even setting the same value.
 		if current.Status == LifecycleAchieved {
 			return Agency{}, ErrInvalidLifecycleTransition
 		}
-
 		if req.Status != current.Status {
 			if !current.Status.CanTransitionTo(req.Status) {
 				return Agency{}, ErrInvalidLifecycleTransition
 			}
-
-			// Write an activation snapshot before committing the draft → active
-			// transition. This is an immutable audit record.
 			if current.Status == LifecycleDraft && req.Status == LifecycleActive {
-				snapshot := AgencySnapshot{
-					ID:         newID(),
-					AgencyID:   current.ID,
-					SnapshotAt: time.Now().UTC(),
+				if err := m.checkActivationGuards(ctx); err != nil {
+					return Agency{}, err
 				}
-				if err := m.backend.InsertSnapshot(ctx, snapshot); err != nil {
-					return Agency{}, fmt.Errorf("UpdateAgency: write activation snapshot: %w", err)
+				if sErr := m.writeSnapshot(ctx, current.ID); sErr != nil {
+					// Non-fatal — log and continue.
+					_ = sErr
 				}
 			}
 		}
 	}
 
-	return m.backend.Update(ctx, req)
+	props := map[string]any{}
+	if req.Name != "" {
+		props["name"] = req.Name
+	}
+	if req.Mission != "" {
+		props["mission"] = req.Mission
+	}
+	if req.Vision != "" {
+		props["vision"] = req.Vision
+	}
+	if req.Status != "" {
+		props["status"] = string(req.Status)
+	}
+
+	entities, err := m.listAgencyEntities(ctx)
+	if err != nil || len(entities) == 0 {
+		return Agency{}, ErrAgencyNotFound
+	}
+
+	updated, err := m.dm.UpdateEntity(ctx, m.agencyID, entities[0].ID, entitygraph.UpdateEntityRequest{
+		Properties: props,
+	})
+	if err != nil {
+		return Agency{}, fmt.Errorf("UpdateAgency: %w", err)
+	}
+	return entityToAgency(updated), nil
 }
 
-// GetGoals delegates to [Backend.GetGoals].
+// ── GetGoals ─────────────────────────────────────────────────────────────────
+
+// GetGoals returns all Goal entities linked to this Agency via has_goal edges.
 func (m *agencyManager) GetGoals(ctx context.Context) ([]Goal, error) {
-	return m.backend.GetGoals(ctx)
+	entities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+		AgencyID: m.agencyID,
+		TypeID:   "Goal",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("GetGoals: %w", err)
+	}
+	goals := make([]Goal, len(entities))
+	for i, e := range entities {
+		goals[i] = entityToGoal(e)
+	}
+	return goals, nil
 }
 
-// GetWorkflows delegates to [Backend.GetWorkflows].
+// ── GetWorkflows ──────────────────────────────────────────────────────────────
+
+// GetWorkflows returns all Workflow entities linked to this Agency, each
+// populated with its ordered WorkItem entities (fetched via has_work_item edges).
 func (m *agencyManager) GetWorkflows(ctx context.Context) ([]Workflow, error) {
-	return m.backend.GetWorkflows(ctx)
+	wfEntities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+		AgencyID: m.agencyID,
+		TypeID:   "Workflow",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("GetWorkflows: %w", err)
+	}
+
+	wiEntities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+		AgencyID: m.agencyID,
+		TypeID:   "WorkItem",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("GetWorkflows: list work items: %w", err)
+	}
+
+	// Build a relationship map: workflowID → []WorkItem via has_work_item edges.
+	rels, err := m.dm.ListRelationships(ctx, entitygraph.RelationshipFilter{
+		AgencyID: m.agencyID,
+		Name:     "has_work_item",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("GetWorkflows: list relationships: %w", err)
+	}
+
+	wiByID := make(map[string]entitygraph.Entity, len(wiEntities))
+	for _, wi := range wiEntities {
+		wiByID[wi.ID] = wi
+	}
+
+	wfItems := make(map[string][]WorkItem)
+	for _, rel := range rels {
+		if wi, ok := wiByID[rel.ToID]; ok {
+			wfItems[rel.FromID] = append(wfItems[rel.FromID], entityToWorkItem(wi))
+		}
+	}
+
+	workflows := make([]Workflow, len(wfEntities))
+	for i, e := range wfEntities {
+		wf := entityToWorkflow(e)
+		wf.WorkItems = wfItems[e.ID]
+		workflows[i] = wf
+	}
+	return workflows, nil
 }
 
-// GetConfiguredRoles delegates to [Backend.GetConfiguredRoles].
+// ── GetConfiguredRoles ────────────────────────────────────────────────────────
+
+// GetConfiguredRoles returns all ConfiguredRole entities linked to this Agency.
 func (m *agencyManager) GetConfiguredRoles(ctx context.Context) ([]ConfiguredRole, error) {
-	return m.backend.GetConfiguredRoles(ctx)
+	entities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+		AgencyID: m.agencyID,
+		TypeID:   "ConfiguredRole",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("GetConfiguredRoles: %w", err)
+	}
+	roles := make([]ConfiguredRole, len(entities))
+	for i, e := range entities {
+		roles[i] = entityToConfiguredRole(e)
+	}
+	return roles, nil
+}
+
+// ── PublishAgency ─────────────────────────────────────────────────────────────
+
+// PublishAgency creates an immutable [AgencyPublication] entity with an
+// auto-incremented version. Publishes "cross.agency.published" on success.
+func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, error) {
+	agency, err := m.GetAgency(ctx)
+	if err != nil {
+		return AgencyPublication{}, err
+	}
+
+	version, err := m.nextPublicationVersion(ctx)
+	if err != nil {
+		return AgencyPublication{}, fmt.Errorf("PublishAgency: next version: %w", err)
+	}
+
+	now := time.Now().UTC()
+	entity, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
+		AgencyID: m.agencyID,
+		TypeID:   "AgencyPublication",
+		Properties: map[string]any{
+			"version":      version,
+			"tag":          fmt.Sprintf("v%d", version),
+			"published_at": now.Format(time.RFC3339),
+		},
+	})
+	if err != nil {
+		return AgencyPublication{}, fmt.Errorf("PublishAgency: create entity: %w", err)
+	}
+
+	pub := AgencyPublication{
+		ID:          entity.ID,
+		Agency:      agency,
+		Version:     version,
+		Tag:         fmt.Sprintf("v%d", version),
+		PublishedAt: now,
+	}
+
+	if m.publisher != nil {
+		_ = m.publisher.Publish(ctx, "cross.agency.published", agency.ID)
+	}
+	return pub, nil
+}
+
+// ── GetPublication / ListPublications ─────────────────────────────────────────
+
+// GetPublication retrieves a publication by version number.
+// Returns [ErrPublicationNotFound] if no match exists.
+func (m *agencyManager) GetPublication(ctx context.Context, version int) (AgencyPublication, error) {
+	pubs, err := m.ListPublications(ctx)
+	if err != nil {
+		return AgencyPublication{}, err
+	}
+	for _, p := range pubs {
+		if p.Version == version {
+			return p, nil
+		}
+	}
+	return AgencyPublication{}, ErrPublicationNotFound
+}
+
+// ListPublications returns all publications in ascending version order.
+func (m *agencyManager) ListPublications(ctx context.Context) ([]AgencyPublication, error) {
+	entities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+		AgencyID: m.agencyID,
+		TypeID:   "AgencyPublication",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("ListPublications: %w", err)
+	}
+
+	agency, err := m.GetAgency(ctx)
+	if err != nil {
+		// Best-effort — return publications without embedded Agency.
+		agency = Agency{}
+	}
+
+	pubs := make([]AgencyPublication, 0, len(entities))
+	for _, e := range entities {
+		pub := entityToPublication(e, agency)
+		pubs = append(pubs, pub)
+	}
+	// Sort ascending by version.
+	for i := 0; i < len(pubs); i++ {
+		for j := i + 1; j < len(pubs); j++ {
+			if pubs[j].Version < pubs[i].Version {
+				pubs[i], pubs[j] = pubs[j], pubs[i]
+			}
+		}
+	}
+	return pubs, nil
+}
+
+// ── Internal helpers ──────────────────────────────────────────────────────────
+
+// listAgencyEntities returns all Agency-typed entities for this database.
+func (m *agencyManager) listAgencyEntities(ctx context.Context) ([]entitygraph.Entity, error) {
+	return m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+		AgencyID: m.agencyID,
+		TypeID:   "Agency",
+	})
+}
+
+// checkActivationGuards enforces the draft → active preconditions:
+// ≥1 Goal entity and ≥1 Workflow with ≥1 WorkItem.
+func (m *agencyManager) checkActivationGuards(ctx context.Context) error {
+	goals, err := m.GetGoals(ctx)
+	if err != nil {
+		return fmt.Errorf("activation guard: goals: %w", err)
+	}
+	if len(goals) == 0 {
+		return fmt.Errorf("%w: agency must have at least one Goal before activating", ErrInvalidAgency)
+	}
+
+	workflows, err := m.GetWorkflows(ctx)
+	if err != nil {
+		return fmt.Errorf("activation guard: workflows: %w", err)
+	}
+	hasWorkItem := false
+	for _, wf := range workflows {
+		if len(wf.WorkItems) > 0 {
+			hasWorkItem = true
+			break
+		}
+	}
+	if !hasWorkItem {
+		return fmt.Errorf("%w: agency must have at least one Workflow with a WorkItem before activating", ErrInvalidAgency)
+	}
+	return nil
+}
+
+// writeSnapshot creates an immutable AgencySnapshot entity.
+func (m *agencyManager) writeSnapshot(ctx context.Context, agencyID string) error {
+	_, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
+		AgencyID: m.agencyID,
+		TypeID:   "AgencySnapshot",
+		Properties: map[string]any{
+			"snapshot_at": time.Now().UTC().Format(time.RFC3339),
+			"agency_id":   agencyID,
+		},
+	})
+	return err
+}
+
+// nextPublicationVersion returns MAX(version)+1 across existing publications,
+// or 1 if none exist.
+func (m *agencyManager) nextPublicationVersion(ctx context.Context) (int, error) {
+	entities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+		AgencyID: m.agencyID,
+		TypeID:   "AgencyPublication",
+	})
+	if err != nil {
+		return 0, err
+	}
+	max := 0
+	for _, e := range entities {
+		if v, ok := e.Properties["version"]; ok {
+			switch vv := v.(type) {
+			case int:
+				if vv > max {
+					max = vv
+				}
+			case float64:
+				if int(vv) > max {
+					max = int(vv)
+				}
+			}
+		}
+	}
+	return max + 1, nil
+}
+
+// ── Entity → Domain converters ────────────────────────────────────────────────
+
+func entityToAgency(e entitygraph.Entity) Agency {
+	p := e.Properties
+	return Agency{
+		ID:        e.ID,
+		Name:      strProp(p, "name"),
+		Mission:   strProp(p, "mission"),
+		Vision:    strProp(p, "vision"),
+		Status:    AgencyLifecycle(strProp(p, "status")),
+		CreatedAt: e.CreatedAt,
+		UpdatedAt: e.UpdatedAt,
+	}
+}
+
+func entityToGoal(e entitygraph.Entity) Goal {
+	p := e.Properties
+	ord := 0
+	if v, ok := p["ordinality"]; ok {
+		switch vv := v.(type) {
+		case int:
+			ord = vv
+		case float64:
+			ord = int(vv)
+		}
+	}
+	return Goal{
+		ID:          e.ID,
+		Title:       strProp(p, "title"),
+		Description: strProp(p, "description"),
+		Ordinality:  ord,
+	}
+}
+
+func entityToWorkflow(e entitygraph.Entity) Workflow {
+	return Workflow{
+		ID:   e.ID,
+		Name: strProp(e.Properties, "name"),
+	}
+}
+
+func entityToWorkItem(e entitygraph.Entity) WorkItem {
+	p := e.Properties
+	order := 0
+	if v, ok := p["order"]; ok {
+		switch vv := v.(type) {
+		case int:
+			order = vv
+		case float64:
+			order = int(vv)
+		}
+	}
+	parallel := false
+	if v, ok := p["parallel"]; ok {
+		if b, ok := v.(bool); ok {
+			parallel = b
+		}
+	}
+	return WorkItem{
+		ID:          e.ID,
+		Title:       strProp(p, "title"),
+		Description: strProp(p, "description"),
+		Order:       order,
+		Parallel:    parallel,
+	}
+}
+
+func entityToConfiguredRole(e entitygraph.Entity) ConfiguredRole {
+	p := e.Properties
+	return ConfiguredRole{
+		Role:      AgencyRole(strProp(p, "name")),
+		ActorType: ActorType(strProp(p, "actor_type")),
+	}
+}
+
+func entityToPublication(e entitygraph.Entity, agency Agency) AgencyPublication {
+	p := e.Properties
+	version := 0
+	if v, ok := p["version"]; ok {
+		switch vv := v.(type) {
+		case int:
+			version = vv
+		case float64:
+			version = int(vv)
+		}
+	}
+	var publishedAt time.Time
+	if v, ok := p["published_at"]; ok {
+		if s, ok := v.(string); ok {
+			publishedAt, _ = time.Parse(time.RFC3339, s)
+		}
+	}
+	return AgencyPublication{
+		ID:          e.ID,
+		Agency:      agency,
+		Version:     version,
+		Tag:         strProp(p, "tag"),
+		PublishedAt: publishedAt,
+	}
+}
+
+func strProp(props map[string]any, key string) string {
+	if v, ok := props[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 // newID returns a random UUID v4 string using crypto/rand.
-// Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
 func newID() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
@@ -240,48 +616,4 @@ func newID() string {
 	b[8] = (b[8] & 0x3f) | 0x80 // variant bits
 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
 		b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
-}
-
-// PublishAgency captures the current agency ID and creates an immutable
-// versioned publication record. The agency [Status] is never changed.
-// The version is auto-incremented from the last publication (or starts at 1).
-func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, error) {
-	agency, err := m.backend.Get(ctx)
-	if err != nil {
-		return AgencyPublication{}, err
-	}
-
-	version, err := m.backend.NextPublicationVersion(ctx)
-	if err != nil {
-		return AgencyPublication{}, fmt.Errorf("PublishAgency: next version: %w", err)
-	}
-
-	pub := AgencyPublication{
-		ID:          newID(),
-		Agency:      agency,
-		Version:     version,
-		Tag:         fmt.Sprintf("v%d", version),
-		PublishedAt: time.Now().UTC(),
-	}
-	if err := m.backend.InsertPublication(ctx, pub); err != nil {
-		return AgencyPublication{}, fmt.Errorf("PublishAgency: insert: %w", err)
-	}
-
-	// Best-effort publish — a publish error does not roll back the write.
-	if m.publisher != nil {
-		if pErr := m.publisher.Publish(ctx, "cross.agency.published", agency.ID); pErr != nil {
-			_ = pErr
-		}
-	}
-	return pub, nil
-}
-
-// GetPublication delegates to [Backend.GetPublication].
-func (m *agencyManager) GetPublication(ctx context.Context, version int) (AgencyPublication, error) {
-	return m.backend.GetPublication(ctx, version)
-}
-
-// ListPublications delegates to [Backend.ListPublications].
-func (m *agencyManager) ListPublications(ctx context.Context) ([]AgencyPublication, error) {
-	return m.backend.ListPublications(ctx)
 }

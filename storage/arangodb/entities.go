@@ -56,18 +56,18 @@ func (b *Backend) collectionForTypeID(typeID string) driver.Collection {
 	}
 }
 
-// collectionNameForTypeID returns the ArangoDB collection name string for the
-// given TypeID. Used when constructing _from / _to handles for edge documents.
-func collectionNameForTypeID(typeID string) string {
-	switch typeID {
-	case "AgencySnapshot":
-		return colSnapshots
-	case "AgencyPublication":
-		return colPublications
-	default:
-		return colEntities
-	}
-}
+// // collectionNameForTypeID returns the ArangoDB collection name string for the
+// // given TypeID. Used when constructing _from / _to handles for edge documents.
+// func collectionNameForTypeID(typeID string) string {
+// 	switch typeID {
+// 	case "AgencySnapshot":
+// 		return colSnapshots
+// 	case "AgencyPublication":
+// 		return colPublications
+// 	default:
+// 		return colEntities
+// 	}
+// }
 
 // CreateEntity creates a new entity document in the appropriate collection.
 // Returns errEntityAlreadyExists if a document with the same key already exists.

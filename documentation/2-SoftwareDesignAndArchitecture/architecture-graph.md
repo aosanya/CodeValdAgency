@@ -12,8 +12,7 @@ Agency ──has_goal──────────────► Goal
        ──has_configured_role──► ConfiguredRole                        │
        ──has_snapshot─────────► AgencySnapshot   (Immutable)          ├──has_instruction──► Instruction ──has_content_ref──► ContentRef
        ──has_publication──────► AgencyPublication (Immutable)         ├──has_deliverable──► Deliverable
-                                    │                                 ├──has_content_ref──► ContentRef
-                                    └──has_instruction──► Instruction └──assigned_role────► ConfiguredRole
+                                    │                                 ├──has_content_ref──► ContentRef                                    ├──has_status──────────────► AgencyPublicationStatus (mutable)                                    └──has_instruction──► Instruction └──assigned_role────► ConfiguredRole
 
 Deliverable ──has_result──────► DeliverableResult ──has_content_ref──► ContentRef
             ──reviewer_role───► ConfiguredRole  (waiver authority)
@@ -40,7 +39,8 @@ All nodes and edges live in two ArangoDB collections:
 | `ContentRef` | ❌ immutable | `path`(req) | CodeValdGit artifact path; attaches to DeliverableResult, Instruction, or WorkItem |
 | `ConfiguredRole` | ✅ | `name`(req), `description`, `actor_type`(req), `ordinality`(req) | `actor_type`: `"human"` / `"ai_agent"` / `"compute_agent"` |
 | `AgencySnapshot` | ❌ immutable | `snapshot_at`(req) | Written on `draft → active` transition |
-| `AgencyPublication` | ❌ immutable | `version`(req), `tag`(req), `published_at`(req), `status`(req) | `status`: `"draft"` / `"active"` / `"archived"` |
+| `AgencyPublication` | ❌ immutable | `version`(req), `tag`(req), `published_at`(req) | Content record; status is stored in the linked `AgencyPublicationStatus` entity |
+| `AgencyPublicationStatus` | ✅ | `status`(req) | Mutable status node (`"draft"` / `"active"` / `"archived"`) linked via `has_status` |
 
 ---
 
@@ -72,6 +72,7 @@ Edges are stored in `agency_relationships`. Each edge has `_from`, `_to`, `name`
 | `has_result` | `Deliverable` | `DeliverableResult` | ✅ | `belongs_to_deliverable` |
 | `reviewer_role` | `Deliverable` | `ConfiguredRole` | ❌ | `reviews_deliverable` |
 | `has_content_ref` | `DeliverableResult` | `ContentRef` | ✅ | `belongs_to_result` |
+| `has_status` | `AgencyPublication` | `AgencyPublicationStatus` | ❌ | `belongs_to_publication` |
 
 ### Inverse relationships (auto-written by `CreateRelationship`)
 
@@ -88,6 +89,7 @@ Edges are stored in `agency_relationships`. Each edge has `_from`, `_to`, `name`
 | `belongs_to_deliverable` | `DeliverableResult` | `Deliverable` | ✅ |
 | `reviews_deliverable` | `ConfiguredRole` | `Deliverable` | — |
 | `belongs_to_result` | `ContentRef` | `DeliverableResult` | — |
+| `belongs_to_publication` | `AgencyPublicationStatus` | `AgencyPublication` | — |
 
 ---
 
@@ -110,8 +112,11 @@ Edges are stored in `agency_relationships`. Each edge has `_from`, `_to`, `name`
 | `ConfiguredRole` | — | `agency_entities` (default) |
 | `AgencySnapshot` | **true** | `agency_snapshots` |
 | `AgencyPublication` | **true** | `agency_publications` |
+| `AgencyPublicationStatus` | — | `publication_statuses` |
 
-**`Immutable: true`** — `UpdateEntity` returns `ErrEntityImmutable` for these types. Each submission or review decision creates a new record, giving a full audit trail. The latest result by `produced_at` is the current state.
+**`Immutable: true`** — `UpdateEntity` returns `ErrImmutableType` for these types. Each submission or review decision creates a new record, giving a full audit trail.
+
+> **Publication status exception**: `AgencyPublication` is immutable (version, tag, published\_at never change), but its lifecycle status (`draft`/`active`/`archived`) must be mutable. This is handled by the separate `AgencyPublicationStatus` entity, linked via `has_status`. `UpdatePublicationStatus` updates the `AgencyPublicationStatus` entity, leaving the immutable publication record untouched.
 
 ### `DeliverableResult` status lifecycle
 

@@ -67,6 +67,12 @@ type AgencyManager interface {
 	// ListPublications returns all publications for this agency in ascending
 	// version order.
 	ListPublications(ctx context.Context) ([]AgencyPublication, error)
+
+	// UpdatePublicationStatus transitions a publication to a new status.
+	// Allowed transitions: draft → active, active → archived.
+	// Returns [ErrPublicationNotFound] if no publication with that version exists.
+	// Returns [ErrInvalidPublicationStatus] if the transition is not permitted.
+	UpdatePublicationStatus(ctx context.Context, version int, status string) (AgencyPublication, error)
 }
 
 // AgencySchemaManager manages schema versions for the Agency entity graph.
@@ -297,8 +303,16 @@ func (m *agencyManager) GetConfiguredRoles(ctx context.Context) ([]ConfiguredRol
 // ── PublishAgency ─────────────────────────────────────────────────────────────
 
 // PublishAgency creates an immutable [AgencyPublication] entity with an
-// auto-incremented version. Publishes "cross.agency.published" on success.
+// auto-incremented version, then creates a linked mutable
+// [AgencyPublicationStatus] entity seeded at status "draft".
+// Publishes "cross.agency.published" on success.
+// Returns [ErrAgencyNotFound] if no agency entity exists yet.
 func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, error) {
+	agency, err := m.GetAgency(ctx)
+	if err != nil {
+		return AgencyPublication{}, err
+	}
+
 	version, err := m.nextPublicationVersion(ctx)
 	if err != nil {
 		return AgencyPublication{}, fmt.Errorf("PublishAgency: next version: %w", err)
@@ -312,11 +326,33 @@ func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, e
 			"version":      version,
 			"tag":          fmt.Sprintf("v%d", version),
 			"published_at": now.Format(time.RFC3339),
-			"status":       "draft",
 		},
 	})
 	if err != nil {
 		return AgencyPublication{}, fmt.Errorf("PublishAgency: create entity: %w", err)
+	}
+
+	// Create the mutable status node for this publication.
+	statusEntity, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
+		AgencyID: m.agencyID,
+		TypeID:   "AgencyPublicationStatus",
+		Properties: map[string]any{
+			"status": "draft",
+		},
+	})
+	if err != nil {
+		return AgencyPublication{}, fmt.Errorf("PublishAgency: create status entity: %w", err)
+	}
+
+	// Link publication → status via has_status edge.
+	_, err = m.dm.CreateRelationship(ctx, entitygraph.CreateRelationshipRequest{
+		AgencyID: m.agencyID,
+		Name:     "has_status",
+		FromID:   entity.ID,
+		ToID:     statusEntity.ID,
+	})
+	if err != nil {
+		return AgencyPublication{}, fmt.Errorf("PublishAgency: link status entity: %w", err)
 	}
 
 	pub := AgencyPublication{
@@ -329,7 +365,7 @@ func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, e
 	}
 
 	if m.publisher != nil {
-		_ = m.publisher.Publish(ctx, "cross.agency.published", m.agencyID)
+		_ = m.publisher.Publish(ctx, "cross.agency.published", agency.ID)
 	}
 	return pub, nil
 }
@@ -352,6 +388,8 @@ func (m *agencyManager) GetPublication(ctx context.Context, version int) (Agency
 }
 
 // ListPublications returns all publications in ascending version order.
+// Each publication's Status field is populated from its linked
+// [AgencyPublicationStatus] entity.
 func (m *agencyManager) ListPublications(ctx context.Context) ([]AgencyPublication, error) {
 	entities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
 		AgencyID: m.agencyID,
@@ -361,9 +399,15 @@ func (m *agencyManager) ListPublications(ctx context.Context) ([]AgencyPublicati
 		return nil, fmt.Errorf("ListPublications: %w", err)
 	}
 
+	// Build pubID → status map from the mutable status entities.
+	statusMap, err := m.pubStatusMap(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("ListPublications: %w", err)
+	}
+
 	pubs := make([]AgencyPublication, 0, len(entities))
 	for _, e := range entities {
-		pub := entityToPublication(e)
+		pub := entityToPublication(e, statusMap[e.ID])
 		pub.AgencyID = m.agencyID
 		pubs = append(pubs, pub)
 	}
@@ -376,6 +420,117 @@ func (m *agencyManager) ListPublications(ctx context.Context) ([]AgencyPublicati
 		}
 	}
 	return pubs, nil
+}
+
+// pubStatusMap fetches all has_status relationships for this agency and
+// returns a map from AgencyPublication entity ID to its current status string.
+func (m *agencyManager) pubStatusMap(ctx context.Context) (map[string]string, error) {
+	rels, err := m.dm.ListRelationships(ctx, entitygraph.RelationshipFilter{
+		AgencyID: m.agencyID,
+		Name:     "has_status",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("pubStatusMap: list rels: %w", err)
+	}
+
+	statusEntities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+		AgencyID: m.agencyID,
+		TypeID:   "AgencyPublicationStatus",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("pubStatusMap: list status entities: %w", err)
+	}
+
+	// Index status entities by their ID.
+	statusByID := make(map[string]string, len(statusEntities))
+	for _, se := range statusEntities {
+		statusByID[se.ID] = strProp(se.Properties, "status")
+	}
+
+	// Map publicationID → status using the has_status edges.
+	m2 := make(map[string]string, len(rels))
+	for _, r := range rels {
+		if s, ok := statusByID[r.ToID]; ok {
+			m2[r.FromID] = s
+		}
+	}
+	return m2, nil
+}
+
+// ── UpdatePublicationStatus ───────────────────────────────────────────────────
+
+// canTransitionPublicationStatus reports whether transitioning from current
+// to next is a valid publication lifecycle move.
+//
+// Allowed transitions:
+//
+//	draft  → active
+//	active → archived
+func canTransitionPublicationStatus(current, next string) bool {
+	switch current {
+	case "draft":
+		return next == "active"
+	case "active":
+		return next == "archived"
+	default:
+		return false // archived is terminal
+	}
+}
+
+// UpdatePublicationStatus transitions the publication at the given version to
+// a new status. Allowed: draft → active, active → archived.
+// Returns [ErrPublicationNotFound] if no matching version exists.
+// Returns [ErrInvalidPublicationStatus] if the transition is not permitted.
+//
+// Status is stored in the mutable [AgencyPublicationStatus] entity linked via
+// the has_status edge; the immutable [AgencyPublication] entity is never
+// updated.
+func (m *agencyManager) UpdatePublicationStatus(ctx context.Context, version int, status string) (AgencyPublication, error) {
+	pub, err := m.GetPublication(ctx, version)
+	if err != nil {
+		return AgencyPublication{}, err
+	}
+
+	if !canTransitionPublicationStatus(pub.Status, status) {
+		return AgencyPublication{}, fmt.Errorf(
+			"UpdatePublicationStatus v%d: %w (%s → %s)",
+			version, ErrInvalidPublicationStatus, pub.Status, status,
+		)
+	}
+
+	// Locate the mutable AgencyPublicationStatus entity via has_status edge.
+	statusEntityID, err := m.findStatusEntityID(ctx, pub.ID)
+	if err != nil {
+		return AgencyPublication{}, fmt.Errorf("UpdatePublicationStatus v%d: %w", version, err)
+	}
+
+	_, err = m.dm.UpdateEntity(ctx, m.agencyID, statusEntityID, entitygraph.UpdateEntityRequest{
+		Properties: map[string]any{"status": status},
+	})
+	if err != nil {
+		return AgencyPublication{}, fmt.Errorf("UpdatePublicationStatus v%d: update status entity: %w", version, err)
+	}
+
+	pub.Status = status
+	return pub, nil
+}
+
+// findStatusEntityID returns the ID of the [AgencyPublicationStatus] entity
+// linked to the given publication entity via the has_status edge.
+// Returns [ErrPublicationNotFound] if the edge or entity is missing.
+func (m *agencyManager) findStatusEntityID(ctx context.Context, pubEntityID string) (string, error) {
+	rels, err := m.dm.ListRelationships(ctx, entitygraph.RelationshipFilter{
+		AgencyID: m.agencyID,
+		Name:     "has_status",
+		FromID:   pubEntityID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("findStatusEntityID: %w", err)
+	}
+	if len(rels) == 0 {
+		return "", fmt.Errorf("findStatusEntityID: %w", ErrPublicationNotFound)
+	}
+	return rels[0].ToID, nil
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -554,7 +709,11 @@ func entityToConfiguredRole(e entitygraph.Entity) ConfiguredRole {
 	}
 }
 
-func entityToPublication(e entitygraph.Entity) AgencyPublication {
+// entityToPublication converts a raw [entitygraph.Entity] of type
+// "AgencyPublication" to a domain [AgencyPublication]. The status is sourced
+// from the linked [AgencyPublicationStatus] entity and must be supplied by the
+// caller — it is not stored on the immutable publication entity itself.
+func entityToPublication(e entitygraph.Entity, status string) AgencyPublication {
 	p := e.Properties
 	version := 0
 	if v, ok := p["version"]; ok {
@@ -576,7 +735,7 @@ func entityToPublication(e entitygraph.Entity) AgencyPublication {
 		Version:     version,
 		Tag:         strProp(p, "tag"),
 		PublishedAt: publishedAt,
-		Status:      strProp(p, "status"),
+		Status:      status,
 	}
 }
 

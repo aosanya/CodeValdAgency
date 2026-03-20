@@ -4,18 +4,19 @@
 // [types.Schema] for CodeValdAgency. cmd/main.go seeds this schema
 // idempotently on startup via AgencySchemaManager.SetSchema.
 //
-// The schema declares eleven TypeDefinitions:
-//   - Agency             — root entity (mutable)
-//   - Goal               — strategic objective (mutable)
-//   - Workflow           — ordered container of WorkItems (mutable)
-//   - WorkItem           — unit of work within a Workflow (mutable)
-//   - Instruction        — ordered rule or constraint attached to a Workflow or WorkItem (mutable)
-//   - Deliverable        — spec: expected output a WorkItem must produce (mutable)
-//   - DeliverableResult  — instance: actual output submitted against a Deliverable spec (immutable)
-//   - ContentRef         — path to a single artifact in CodeValdGit; attachable to DeliverableResult, Instruction, or WorkItem (immutable)
-//   - ConfiguredRole     — custom role beyond super_admin/admin (mutable)
-//   - AgencySnapshot     — immutable activation record (draft → active)
-//   - AgencyPublication  — immutable versioned publication snapshot
+// The schema declares twelve TypeDefinitions:
+//   - Agency                    — root entity (mutable)
+//   - Goal                      — strategic objective (mutable)
+//   - Workflow                  — ordered container of WorkItems (mutable)
+//   - WorkItem                  — unit of work within a Workflow (mutable)
+//   - Instruction               — ordered rule or constraint attached to a Workflow or WorkItem (mutable)
+//   - Deliverable               — spec: expected output a WorkItem must produce (mutable)
+//   - DeliverableResult         — instance: actual output submitted against a Deliverable spec (immutable)
+//   - ContentRef                — path to a single artifact in CodeValdGit; attachable to DeliverableResult, Instruction, or WorkItem (immutable)
+//   - ConfiguredRole            — custom role beyond super_admin/admin (mutable)
+//   - AgencySnapshot            — immutable activation record (draft → active)
+//   - AgencyPublication         — immutable versioned publication snapshot
+//   - AgencyPublicationStatus   — mutable status node for a publication (draft → active → archived)
 //
 // Relationship graph:
 //
@@ -25,6 +26,7 @@
 //	       ──has_snapshot─────────► AgencySnapshot   (Immutable)          ├──has_instruction──► Instruction
 //	       ──has_publication──────► AgencyPublication (Immutable)         └──has_deliverable──► Deliverable
 //	                                    │                                                            │
+//	                                    ├──has_status──────────────► AgencyPublicationStatus (mutable)
 //	                                    └──has_instruction──► Instruction ──has_content_ref──► ContentRef
 //	                                                              has_result ──┤
 //	                                                                          ▼
@@ -33,16 +35,17 @@
 //
 //	Deliverable ──reviewer_role──► ConfiguredRole  (waiver authority)
 //
-//	Goal              ──belongs_to_agency──►      Agency            (ToMany=false, inverse)
-//	Workflow          ──belongs_to_agency──►      Agency            (ToMany=false, inverse)
-//	WorkItem          ──belongs_to_workflow──►    Workflow          (ToMany=false, inverse)
-//	Instruction       ──belongs_to_workflow──►    Workflow          (ToMany=false, inverse, optional)
-//	Instruction       ──belongs_to_work_item──►   WorkItem          (ToMany=false, inverse, optional)
-//	Deliverable       ──belongs_to_work_item──►   WorkItem          (ToMany=false, inverse)
-//	DeliverableResult ──belongs_to_deliverable──► Deliverable       (ToMany=false, inverse)
-//	ConfiguredRole    ──belongs_to_agency──►      Agency            (ToMany=false, inverse)
-//	AgencySnapshot    ──belongs_to_agency──►      Agency            (ToMany=false, inverse)
-//	AgencyPublication ──belongs_to_agency──►      Agency            (ToMany=false, inverse)
+//	Goal                  ──belongs_to_agency──────────►   Agency            (ToMany=false, inverse)
+//	Workflow              ──belongs_to_agency──────────►   Agency            (ToMany=false, inverse)
+//	WorkItem              ──belongs_to_workflow──────────► Workflow          (ToMany=false, inverse)
+//	Instruction           ──belongs_to_workflow──────────► Workflow          (ToMany=false, inverse, optional)
+//	Instruction           ──belongs_to_work_item──────────► WorkItem         (ToMany=false, inverse, optional)
+//	Deliverable           ──belongs_to_work_item──────────► WorkItem         (ToMany=false, inverse)
+//	DeliverableResult     ──belongs_to_deliverable──────►   Deliverable      (ToMany=false, inverse)
+//	ConfiguredRole        ──belongs_to_agency──────────►   Agency            (ToMany=false, inverse)
+//	AgencySnapshot        ──belongs_to_agency──────────►   Agency            (ToMany=false, inverse)
+//	AgencyPublication     ──belongs_to_agency──────────►   Agency            (ToMany=false, inverse)
+//	AgencyPublicationStatus ──belongs_to_publication──► AgencyPublication   (ToMany=false, inverse)
 package codevaldagency
 
 import "github.com/aosanya/CodeValdSharedLib/types"
@@ -286,14 +289,35 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "version", Type: types.PropertyTypeInteger, Required: true},
 					{Name: "tag", Type: types.PropertyTypeString, Required: true},
 					{Name: "published_at", Type: types.PropertyTypeDatetime, Required: true},
-					// status valid values: "draft", "active", "archived"
-					// Stored as runtime option data — not enforced by the schema layer.
-					{Name: "status", Type: types.PropertyTypeOption, Required: true},
 				},
 				Relationships: []types.RelationshipDefinition{
 					// ToMany=false, Required=true: a Publication must belong to exactly one Agency.
 					// Inverse of Agency.has_publication — auto-created by CreateRelationship.
 					{Name: "belongs_to_agency", Label: "Agency", PathSegment: "agency", ToType: "Agency", ToMany: false, Required: true},
+					// ToMany=false: at-most-one mutable status node per publication.
+					// Inverse of AgencyPublicationStatus.belongs_to_publication.
+					{Name: "has_status", Label: "Status", PathSegment: "status", ToType: "AgencyPublicationStatus", ToMany: false, Inverse: "belongs_to_publication"},
+				},
+			},
+			// AgencyPublicationStatus is the mutable counterpart to the immutable
+			// AgencyPublication entity. It holds the current lifecycle status
+			// (draft → active → archived) so that UpdatePublicationStatus can call
+			// UpdateEntity on this type without hitting ErrImmutableType.
+			{
+				Name:              "AgencyPublicationStatus",
+				DisplayName:       "Agency Publication Status",
+				PathSegment:       "publication-statuses",
+				StorageCollection: "publication_statuses",
+				Properties: []types.PropertyDefinition{
+					// status valid values: "draft", "active", "archived"
+					{Name: "status", Type: types.PropertyTypeOption, Required: true},
+				},
+				Relationships: []types.RelationshipDefinition{
+					// ToMany=false: each status node belongs to exactly one publication.
+					// Inverse of AgencyPublication.has_status.
+					// Required=false: the link is created via an explicit CreateRelationship
+					// call in PublishAgency immediately after entity creation.
+					{Name: "belongs_to_publication", Label: "Publication", PathSegment: "publication", ToType: "AgencyPublication", ToMany: false, Required: false, Inverse: "has_status"},
 				},
 			},
 		},

@@ -134,51 +134,6 @@ func protoToLifecycle(l pb.AgencyLifecycle) codevaldagency.AgencyLifecycle {
 	}
 }
 
-func protoToGoals(pgs []*pb.Goal) []codevaldagency.Goal {
-	if len(pgs) == 0 {
-		return nil
-	}
-	goals := make([]codevaldagency.Goal, len(pgs))
-	for i, pg := range pgs {
-		goals[i] = codevaldagency.Goal{
-			ID:          pg.GetId(),
-			Title:       pg.GetTitle(),
-			Description: pg.GetDescription(),
-			Ordinality:  int(pg.GetOrdinality()),
-		}
-	}
-	return goals
-}
-
-func protoToWorkflows(pws []*pb.Workflow) []codevaldagency.Workflow {
-	if len(pws) == 0 {
-		return nil
-	}
-	wfs := make([]codevaldagency.Workflow, len(pws))
-	for i, pw := range pws {
-		wfs[i] = codevaldagency.Workflow{
-			ID:   pw.GetId(),
-			Name: pw.GetName(),
-		}
-	}
-	return wfs
-}
-
-func protoToWorkItems(pwis []*pb.WorkItem) []codevaldagency.WorkItem {
-	if len(pwis) == 0 {
-		return nil
-	}
-	items := make([]codevaldagency.WorkItem, len(pwis))
-	for i, pwi := range pwis {
-		items[i] = codevaldagency.WorkItem{
-			ID:          pwi.GetId(),
-			Title:       pwi.GetTitle(),
-			Description: pwi.GetDescription(),
-		}
-	}
-	return items
-}
-
 // ── Domain → Proto converters ─────────────────────────────────────────────────
 
 func agencyToProto(a codevaldagency.Agency) *pb.Agency {
@@ -236,21 +191,6 @@ func workflowsToProto(workflows []codevaldagency.Workflow) []*pb.Workflow {
 	return pws
 }
 
-func workItemsToProto(items []codevaldagency.WorkItem) []*pb.WorkItem {
-	if len(items) == 0 {
-		return nil
-	}
-	pwis := make([]*pb.WorkItem, len(items))
-	for i, wi := range items {
-		pwis[i] = &pb.WorkItem{
-			Id:          wi.ID,
-			Title:       wi.Title,
-			Description: wi.Description,
-		}
-	}
-	return pwis
-}
-
 func protoToActorType(a pb.ActorType) codevaldagency.ActorType {
 	switch a {
 	case pb.ActorType_ACTOR_TYPE_HUMAN:
@@ -275,20 +215,6 @@ func actorTypeToProto(a codevaldagency.ActorType) pb.ActorType {
 	default:
 		return pb.ActorType_ACTOR_TYPE_UNSPECIFIED
 	}
-}
-
-func protoToConfiguredRoles(prs []*pb.ConfiguredRole) []codevaldagency.ConfiguredRole {
-	if len(prs) == 0 {
-		return nil
-	}
-	out := make([]codevaldagency.ConfiguredRole, len(prs))
-	for i, pr := range prs {
-		out[i] = codevaldagency.ConfiguredRole{
-			Name:      pr.GetRole(),
-			ActorType: protoToActorType(pr.GetActorType()),
-		}
-	}
-	return out
 }
 
 func configuredRolesToProto(roles []codevaldagency.ConfiguredRole) []*pb.ConfiguredRole {

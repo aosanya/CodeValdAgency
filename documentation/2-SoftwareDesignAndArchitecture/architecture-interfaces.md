@@ -29,9 +29,9 @@ type AgencyManager interface {
     // GetGoals returns all Goal entities linked to the Agency.
     GetGoals(ctx context.Context) ([]Goal, error)
 
-    // GetWorkflows returns all Workflow entities linked to the Agency,
-    // each populated with its ordered WorkItems, top-level Instructions,
-    // and each WorkItem's Instructions and Deliverables.
+    // GetWorkflows returns all Workflow entities linked to the Agency.
+    // Sub-resources (WorkItems, Instructions, Deliverables) are fetched
+    // via separate manager methods — Workflow is a scalar entity.
     GetWorkflows(ctx context.Context) ([]Workflow, error)
 
     // GetConfiguredRoles returns all ConfiguredRole entities linked to the Agency.
@@ -46,6 +46,12 @@ type AgencyManager interface {
 
     // ListPublications returns all publications in ascending version order.
     ListPublications(ctx context.Context) ([]AgencyPublication, error)
+
+    // UpdatePublicationStatus transitions a publication to a new status.
+    // Allowed: draft → active, active → archived (archived is terminal).
+    // Returns ErrPublicationNotFound if no publication with that version exists.
+    // Returns ErrInvalidPublicationStatus if the transition is not permitted.
+    UpdatePublicationStatus(ctx context.Context, version int, status string) (AgencyPublication, error)
 }
 ```
 
@@ -115,6 +121,11 @@ type CrossPublisher interface {
 Defined in `models.go` at the module root. All types are pure value structs;
 methods are limited to `AgencyLifecycle.CanTransitionTo`.
 
+Sub-resources (WorkItems, Instructions, Deliverables, ContentRefs) are **never
+embedded** as slices on their parent struct — they are fetched via separate
+`AgencyManager` methods. Nested convenience fields will be added in a future
+iteration.
+
 ### Core types
 
 ```go
@@ -122,9 +133,12 @@ methods are limited to `AgencyLifecycle.CanTransitionTo`.
 type ActorType string
 
 const (
-	ActorTypeHuman         ActorType = "human"
-	ActorTypeAIAgent       ActorType = "ai_agent"
-	ActorTypeComputeAgent  ActorType = "compute_agent"
+    ActorTypeHuman        ActorType = "human"
+    ActorTypeAIAgent      ActorType = "ai_agent"
+    ActorTypeComputeAgent ActorType = "compute_agent"
+)
+
+// AgencyLifecycle is the forward-only progression of an Agency.
 type AgencyLifecycle string
 
 const (
@@ -139,127 +153,119 @@ func (l AgencyLifecycle) CanTransitionTo(next AgencyLifecycle) bool
 
 ### Domain types (graph entity counterparts)
 
-> **Note:** `models.go` is currently being updated to align with this specification.
-> This section reflects the intended design as of the current schema revision.
-
 ```go
 // Agency is the root entity. One Agency per database.
 type Agency struct {
-	ID        string
-	Name      string
-	Mission   string
-	Vision    string
-	Status    AgencyLifecycle
-	CreatedAt time.Time
-	UpdatedAt time.Time
+    ID        string
+    Name      string
+    Mission   string
+    Vision    string
+    Status    AgencyLifecycle
+    CreatedAt time.Time
+    UpdatedAt time.Time
 }
 
 // Goal is a strategic objective linked to the Agency via a has_goal edge.
 type Goal struct {
-	ID          string
-	Title       string
-	Description string
-	Ordinality  int // sort order among Goals; lower = higher priority
+    ID          string
+    Title       string
+    Description string
+    Ordinality  int // sort order among Goals; lower = higher priority
 }
 
-// Workflow is an ordered container of WorkItems and top-level Instructions,
-// linked to the Agency via a has_workflow edge.
+// Workflow is an ordered container of WorkItems, linked to the Agency
+// via a has_workflow edge. WorkItems are fetched separately.
 type Workflow struct {
-	ID           string
-	Name         string
-	Description  string
-	Ordinality   int           // execution order among Workflows on this Agency
-	WorkItems    []WorkItem
-	Instructions []Instruction
+    ID          string
+    Name        string
+    Description string
+    Ordinality  int // execution order among Workflows on this Agency
 }
 
 // WorkItem is a single unit of work within a Workflow.
-// An agent executes a WorkItem by following its Instructions and producing
-// the required Deliverables. May be assigned to a ConfiguredRole via
-// assigned_role edges.
+// Instructions and Deliverables are fetched separately.
 type WorkItem struct {
-	ID           string
-	Title        string
-	Description  string
-	Ordinality   int           // execution order within the Workflow
-	Prompt       string        // optional agent prompt override for this item
-	Instructions []Instruction
-	Deliverables []Deliverable
+    ID          string
+    Title       string
+    Description string
+    Ordinality  int    // execution order within the Workflow
+    Prompt      string // optional agent prompt delivered to the actor at dispatch
 }
 
-// Instruction is an ordered rule or constraint attached to either a Workflow
-// or a WorkItem. Uses the multi-parent pattern — the parent is determined by
-// whichever belongs_to_* relationship was set at creation.
+// Instruction is an ordered rule or constraint attached to a Workflow or
+// WorkItem. Uses the multi-parent pattern — the parent is whichever
+// belongs_to_* relationship was set at creation.
 type Instruction struct {
-	ID         string
-	Content    string
-	Ordinality int // sort order among Instructions on the parent
+    ID         string
+    Content    string
+    Ordinality int // sort order among Instructions on the parent
 }
 
-// Deliverable is the specification of an expected output for a WorkItem.
-// It is a spec entity — DeliverableResult is the corresponding instance.
+// Deliverable is the spec of an expected output for a WorkItem.
+// DeliverableResult is the corresponding instance (one per submission).
 type Deliverable struct {
-	ID             string
-	Title          string
-	Description    string
-	Ordinality     int    // sort order among Deliverables on the WorkItem
-	Blocking       bool   // if true, a rejected result halts the workflow until waived
-	ReviewerRoleID string // ID of the ConfiguredRole with waiver authority; may be empty
+    ID          string
+    Title       string
+    Description string
+    Ordinality  int  // sort order among Deliverables on the WorkItem
+    Blocking    bool // if true, a rejected result halts the Workflow until waived
 }
 
 // DeliverableResult is an immutable record of a single submission against
-// a Deliverable. Multiple results may exist per Deliverable (full history).
+// a Deliverable. Multiple results may exist per Deliverable (full audit trail).
 // ProducedAt is server-stamped at creation — callers do not set it.
 //
 // Status lifecycle: pending → completed | rejected → waived
 type DeliverableResult struct {
-	ID          string
-	Status      string    // "pending" | "completed" | "rejected" | "waived"
-	ProducedAt  time.Time // server-stamped; zero value until persisted
-	ContentRefs []ContentRef
+    ID         string
+    Status     string    // "pending" | "completed" | "rejected" | "waived"
+    ProducedAt time.Time // server-stamped; zero value until persisted
 }
 
 // ContentRef is an immutable pointer to a single artifact path in CodeValdGit.
 // Uses the multi-parent pattern — attachable to a DeliverableResult,
 // an Instruction, or a WorkItem.
 type ContentRef struct {
-	ID   string
-	Path string // relative path within the CodeValdGit repo for this agency
+    ID   string
+    Path string // relative path within the CodeValdGit repo for this agency
 }
 
 // ConfiguredRole is a named role entity defined by the agency beyond the
-// built-in roles (super_admin, admin). Linked to the Agency and may be
-// referenced by assigned_role edges on WorkItems.
+// built-in roles. Linked to the Agency and referenced via assigned_role
+// edges on WorkItems.
 type ConfiguredRole struct {
-	ID          string
-	Name        string
-	Description string
-	ActorType   ActorType // human | ai_agent | compute_agent
-	Ordinality  int       // sort order among ConfiguredRoles on this Agency
+    ID          string
+    Name        string
+    Description string
+    ActorType   ActorType // human | ai_agent | compute_agent
+    Ordinality  int       // sort order among ConfiguredRoles on this Agency
 }
 
 // AgencySnapshot is an immutable point-in-time record captured at the
 // draft → active lifecycle transition. Written once, never modified.
 type AgencySnapshot struct {
-	ID         string
-	AgencyID   string
-	SnapshotAt time.Time
+    ID         string
+    AgencyID   string
+    SnapshotAt time.Time
 }
 
 // AgencyPublication is an immutable versioned snapshot created by an explicit
 // publish action. Written once, never modified.
 type AgencyPublication struct {
-	ID          string
-	AgencyID    string
-	Version     int
-	Tag         string
-	PublishedAt time.Time
-	Status      string // "draft" | "active" | "archived"
+    ID          string
+    AgencyID    string
+    Version     int
+    Tag         string
+    PublishedAt time.Time
+    Status      string // "draft" | "active" | "archived"
+}
+```
 
 ### Request types
 
 ```go
-// UpdateAgencyRequest carries the fields that may be changed via UpdateAgency.
+// UpdateAgencyRequest carries the scalar Agency fields that may be changed
+// via UpdateAgency. Sub-resources are managed through dedicated manager methods.
 type UpdateAgencyRequest struct {
     Name    string
     Mission string

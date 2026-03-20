@@ -22,3 +22,8 @@ var ErrInvalidJSON = errors.New("invalid agency: malformed JSON payload")
 // ErrPublicationNotFound is returned by [AgencyManager.GetPublication] when
 // no publication with the requested version number exists for this agency.
 var ErrPublicationNotFound = errors.New("agency publication not found")
+
+// ErrInvalidPublicationStatus is returned by [AgencyManager.UpdatePublicationStatus]
+// when the requested status is not a valid transition from the publication's
+// current status. Allowed transitions: draft → active, active → archived.
+var ErrInvalidPublicationStatus = errors.New("invalid publication status transition")

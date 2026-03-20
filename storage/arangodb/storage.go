@@ -2,19 +2,20 @@
 // [entitygraph.SchemaManager] interfaces for CodeValdAgency, backed by
 // ArangoDB.
 //
-// All agency entity data is stored in five collections:
-//   - agency_entities      — mutable entity documents (Agency, Goal, Workflow, WorkItem, ConfiguredRole)
-//   - agency_relationships — directed graph edges (ArangoDB edge collection)
-//   - agency_schemas       — versioned schema documents
-//   - agency_snapshots     — immutable AgencySnapshot entities
-//   - agency_publications  — immutable AgencyPublication entities
+// All agency entity data is stored in six collections:
+//   - agency_entities          — mutable entity documents (Agency, Goal, Workflow, WorkItem, ConfiguredRole)
+//   - agency_relationships     — directed graph edges (ArangoDB edge collection)
+//   - agency_schemas_draft     — mutable draft schema (one document per agency, keyed by agencyID)
+//   - agency_schemas_published — immutable published snapshots (append-only; one Active per agency)
+//   - agency_snapshots         — immutable AgencySnapshot entities
+//   - agency_publications      — immutable AgencyPublication entities
 //
 // File layout:
 //   - storage.go       — Config, Backend struct, constructors, collection setup
 //   - entities.go      — CreateEntity, GetEntity, UpdateEntity, DeleteEntity, ListEntities
 //   - relationships.go — CreateRelationship, GetRelationship, DeleteRelationship,
 //     ListRelationships, TraverseGraph
-//   - schemaops.go     — SetSchema, GetSchema, ListSchemaVersions
+//   - schemaops.go     — SetSchema, GetSchema, Publish, Activate, GetActive, GetVersion, ListVersions
 //
 // Use [New] to obtain a (DataManager, SchemaManager) pair from an open database.
 // Use [NewBackend] to connect and construct in a single call.
@@ -34,12 +35,13 @@ import (
 
 // Collection name constants.
 const (
-	colEntities      = "agency_entities"
-	colRelationships = "agency_relationships"
-	colSchemas       = "agency_schemas"
-	colSnapshots     = "agency_snapshots"
-	colPublications  = "agency_publications"
-	graphName        = "agency_graph"
+	colEntities         = "agency_entities"
+	colRelationships    = "agency_relationships"
+	colSchemasDraft     = "agency_schemas_draft"
+	colSchemasPublished = "agency_schemas_published"
+	colSnapshots        = "agency_snapshots"
+	colPublications     = "agency_publications"
+	graphName           = "agency_graph"
 )
 
 // Config holds the connection parameters for the ArangoDB backend.
@@ -61,12 +63,13 @@ type Config struct {
 // [entitygraph.SchemaManager] for CodeValdAgency. It is obtained via [New],
 // [NewBackend], or [NewBackendFromDB].
 type Backend struct {
-	db            driver.Database
-	entities      driver.Collection
-	relationships driver.Collection
-	schemas       driver.Collection
-	snapshots     driver.Collection
-	publications  driver.Collection
+	db               driver.Database
+	entities         driver.Collection
+	relationships    driver.Collection
+	schemasDraft     driver.Collection
+	schemasPublished driver.Collection
+	snapshots        driver.Collection
+	publications     driver.Collection
 }
 
 // New constructs a [Backend] from an already-open [driver.Database], ensures
@@ -124,7 +127,7 @@ func NewBackendFromDB(db driver.Database) (*Backend, error) {
 }
 
 func newBackendFromDB(ctx context.Context, db driver.Database) (*Backend, error) {
-	entities, relationships, schemas, snapshots, publications, err := ensureCollections(ctx, db)
+	entities, relationships, schemasDraft, schemasPublished, snapshots, publications, err := ensureCollections(ctx, db)
 	if err != nil {
 		return nil, err
 	}
@@ -132,41 +135,46 @@ func newBackendFromDB(ctx context.Context, db driver.Database) (*Backend, error)
 		return nil, err
 	}
 	return &Backend{
-		db:            db,
-		entities:      entities,
-		relationships: relationships,
-		schemas:       schemas,
-		snapshots:     snapshots,
-		publications:  publications,
+		db:               db,
+		entities:         entities,
+		relationships:    relationships,
+		schemasDraft:     schemasDraft,
+		schemasPublished: schemasPublished,
+		snapshots:        snapshots,
+		publications:     publications,
 	}, nil
 }
 
-// ensureCollections creates or opens all five required collections.
+// ensureCollections creates or opens all six required collections.
 // agency_relationships is created as an ArangoDB edge collection.
 func ensureCollections(ctx context.Context, db driver.Database) (
-	entities, relationships, schemas, snapshots, publications driver.Collection, err error,
+	entities, relationships, schemasDraft, schemasPublished, snapshots, publications driver.Collection, err error,
 ) {
 	entities, err = ensureDocumentCollection(ctx, db, colEntities)
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colEntities, err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colEntities, err)
 	}
 	relationships, err = ensureEdgeCollection(ctx, db, colRelationships)
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colRelationships, err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colRelationships, err)
 	}
-	schemas, err = ensureDocumentCollection(ctx, db, colSchemas)
+	schemasDraft, err = ensureDocumentCollection(ctx, db, colSchemasDraft)
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colSchemas, err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colSchemasDraft, err)
+	}
+	schemasPublished, err = ensureDocumentCollection(ctx, db, colSchemasPublished)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colSchemasPublished, err)
 	}
 	snapshots, err = ensureDocumentCollection(ctx, db, colSnapshots)
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colSnapshots, err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colSnapshots, err)
 	}
 	publications, err = ensureDocumentCollection(ctx, db, colPublications)
 	if err != nil {
-		return nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colPublications, err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("ensure %q: %w", colPublications, err)
 	}
-	return entities, relationships, schemas, snapshots, publications, nil
+	return entities, relationships, schemasDraft, schemasPublished, snapshots, publications, nil
 }
 
 // ensureGraph creates the named ArangoDB graph agency_graph if it does not

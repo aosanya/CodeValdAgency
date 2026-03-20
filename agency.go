@@ -669,26 +669,6 @@ func entityToWorkflow(e entitygraph.Entity) Workflow {
 	}
 }
 
-func entityToWorkItem(e entitygraph.Entity) WorkItem {
-	p := e.Properties
-	ord := 0
-	if v, ok := p["ordinality"]; ok {
-		switch vv := v.(type) {
-		case int:
-			ord = vv
-		case float64:
-			ord = int(vv)
-		}
-	}
-	return WorkItem{
-		ID:          e.ID,
-		Title:       strProp(p, "title"),
-		Description: strProp(p, "description"),
-		Ordinality:  ord,
-		Prompt:      strProp(p, "prompt"),
-	}
-}
-
 func entityToConfiguredRole(e entitygraph.Entity) ConfiguredRole {
 	p := e.Properties
 	ord := 0

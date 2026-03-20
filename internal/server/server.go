@@ -191,19 +191,6 @@ func workflowsToProto(workflows []codevaldagency.Workflow) []*pb.Workflow {
 	return pws
 }
 
-func protoToActorType(a pb.ActorType) codevaldagency.ActorType {
-	switch a {
-	case pb.ActorType_ACTOR_TYPE_HUMAN:
-		return codevaldagency.ActorTypeHuman
-	case pb.ActorType_ACTOR_TYPE_AI:
-		return codevaldagency.ActorTypeAIAgent
-	case pb.ActorType_ACTOR_TYPE_EITHER:
-		return codevaldagency.ActorTypeComputeAgent
-	default:
-		return ""
-	}
-}
-
 func actorTypeToProto(a codevaldagency.ActorType) pb.ActorType {
 	switch a {
 	case codevaldagency.ActorTypeHuman:

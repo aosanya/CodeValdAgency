@@ -30,7 +30,8 @@ type AgencyManager interface {
     GetGoals(ctx context.Context) ([]Goal, error)
 
     // GetWorkflows returns all Workflow entities linked to the Agency,
-    // each populated with its ordered WorkItem entities.
+    // each populated with its ordered WorkItems, top-level Instructions,
+    // and each WorkItem's Instructions and Deliverables.
     GetWorkflows(ctx context.Context) ([]Workflow, error)
 
     // GetConfiguredRoles returns all ConfiguredRole entities linked to the Agency.
@@ -117,17 +118,13 @@ methods are limited to `AgencyLifecycle.CanTransitionTo`.
 ### Core types
 
 ```go
-// RACILabel is the RACI designation for a role on a Work Item.
-type RACILabel string
+// ActorType constrains who may fill a ConfiguredRole.
+type ActorType string
 
 const (
-    RACIResponsible RACILabel = "R"
-    RACIAccountable RACILabel = "A"
-    RACIConsulted   RACILabel = "C"
-    RACIInformed    RACILabel = "I"
-)
-
-// AgencyLifecycle is the forward-only progression of an Agency.
+	ActorTypeHuman         ActorType = "human"
+	ActorTypeAIAgent       ActorType = "ai_agent"
+	ActorTypeComputeAgent  ActorType = "compute_agent"
 type AgencyLifecycle string
 
 const (
@@ -142,68 +139,122 @@ func (l AgencyLifecycle) CanTransitionTo(next AgencyLifecycle) bool
 
 ### Domain types (graph entity counterparts)
 
+> **Note:** `models.go` is currently being updated to align with this specification.
+> This section reflects the intended design as of the current schema revision.
+
 ```go
 // Agency is the root entity. One Agency per database.
 type Agency struct {
-    ID        string
-    Name      string
-    Mission   string
-    Vision    string
-    Status    AgencyLifecycle
-    CreatedAt time.Time
-    UpdatedAt time.Time
+	ID        string
+	Name      string
+	Mission   string
+	Vision    string
+	Status    AgencyLifecycle
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // Goal is a strategic objective linked to the Agency via a has_goal edge.
 type Goal struct {
-    ID          string
-    Title       string
-    Description string
-    Ordinality  int // Priority order among Goals on this Agency
+	ID          string
+	Title       string
+	Description string
+	Ordinality  int // sort order among Goals; lower = higher priority
 }
 
-// Workflow is a named container of ordered WorkItems,
+// Workflow is an ordered container of WorkItems and top-level Instructions,
 // linked to the Agency via a has_workflow edge.
 type Workflow struct {
-    ID        string
-    Name      string
-    WorkItems []WorkItem
+	ID           string
+	Name         string
+	Description  string
+	Ordinality   int           // execution order among Workflows on this Agency
+	WorkItems    []WorkItem
+	Instructions []Instruction
 }
 
-// WorkItem is a single unit of work within a Workflow,
-// linked via has_work_item. May be linked to Goals (advances_goal edges)
-// and to ConfiguredRoles (assigned_role edges carrying a RACI property).
+// WorkItem is a single unit of work within a Workflow.
+// An agent executes a WorkItem by following its Instructions and producing
+// the required Deliverables. May be assigned to a ConfiguredRole via
+// assigned_role edges.
 type WorkItem struct {
-    ID          string
-    Title       string
-    Description string
-    Order       int  // Execution sequence within the Workflow
-    Parallel    bool // If true, may run concurrently with adjacent items
+	ID           string
+	Title        string
+	Description  string
+	Ordinality   int           // execution order within the Workflow
+	Prompt       string        // optional agent prompt override for this item
+	Instructions []Instruction
+	Deliverables []Deliverable
 }
 
-// ConfiguredRole is a named role (beyond the default super_admin / admin),
-// linked to the Agency. May be referenced by assigned_role edges on WorkItems.
+// Instruction is an ordered rule or constraint attached to either a Workflow
+// or a WorkItem. Uses the multi-parent pattern — the parent is determined by
+// whichever belongs_to_* relationship was set at creation.
+type Instruction struct {
+	ID         string
+	Content    string
+	Ordinality int // sort order among Instructions on the parent
+}
+
+// Deliverable is the specification of an expected output for a WorkItem.
+// It is a spec entity — DeliverableResult is the corresponding instance.
+type Deliverable struct {
+	ID             string
+	Title          string
+	Description    string
+	Ordinality     int    // sort order among Deliverables on the WorkItem
+	Blocking       bool   // if true, a rejected result halts the workflow until waived
+	ReviewerRoleID string // ID of the ConfiguredRole with waiver authority; may be empty
+}
+
+// DeliverableResult is an immutable record of a single submission against
+// a Deliverable. Multiple results may exist per Deliverable (full history).
+// ProducedAt is server-stamped at creation — callers do not set it.
+//
+// Status lifecycle: pending → completed | rejected → waived
+type DeliverableResult struct {
+	ID          string
+	Status      string    // "pending" | "completed" | "rejected" | "waived"
+	ProducedAt  time.Time // server-stamped; zero value until persisted
+	ContentRefs []ContentRef
+}
+
+// ContentRef is an immutable pointer to a single artifact path in CodeValdGit.
+// Uses the multi-parent pattern — attachable to a DeliverableResult,
+// an Instruction, or a WorkItem.
+type ContentRef struct {
+	ID   string
+	Path string // relative path within the CodeValdGit repo for this agency
+}
+
+// ConfiguredRole is a named role entity defined by the agency beyond the
+// built-in roles (super_admin, admin). Linked to the Agency and may be
+// referenced by assigned_role edges on WorkItems.
 type ConfiguredRole struct {
-    ID   string
-    Name string
+	ID          string
+	Name        string
+	Description string
+	ActorType   ActorType // human | ai_agent | compute_agent
+	Ordinality  int       // sort order among ConfiguredRoles on this Agency
 }
 
-// AgencySnapshot is an immutable capture of Agency state at draft → active.
+// AgencySnapshot is an immutable point-in-time record captured at the
+// draft → active lifecycle transition. Written once, never modified.
 type AgencySnapshot struct {
-    ID         string
-    AgencyID   string
-    SnapshotAt time.Time
+	ID         string
+	AgencyID   string
+	SnapshotAt time.Time
 }
 
-// AgencyPublication is an immutable versioned snapshot created by PublishAgency.
+// AgencyPublication is an immutable versioned snapshot created by an explicit
+// publish action. Written once, never modified.
 type AgencyPublication struct {
-    ID          string
-    AgencyID    string
-    Version     int
-    Tag         string
-    PublishedAt time.Time
-}
-```
+	ID          string
+	AgencyID    string
+	Version     int
+	Tag         string
+	PublishedAt time.Time
+	Status      string // "draft" | "active" | "archived"
 
 ### Request types
 

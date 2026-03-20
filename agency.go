@@ -259,8 +259,7 @@ func (m *agencyManager) GetGoals(ctx context.Context) ([]Goal, error) {
 
 // ── GetWorkflows ──────────────────────────────────────────────────────────────
 
-// GetWorkflows returns all Workflow entities linked to this Agency, each
-// populated with its ordered WorkItem entities (fetched via has_work_item edges).
+// GetWorkflows returns all Workflow entities linked to this Agency.
 func (m *agencyManager) GetWorkflows(ctx context.Context) ([]Workflow, error) {
 	wfEntities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
 		AgencyID: m.agencyID,
@@ -270,40 +269,9 @@ func (m *agencyManager) GetWorkflows(ctx context.Context) ([]Workflow, error) {
 		return nil, fmt.Errorf("GetWorkflows: %w", err)
 	}
 
-	wiEntities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
-		AgencyID: m.agencyID,
-		TypeID:   "WorkItem",
-	})
-	if err != nil {
-		return nil, fmt.Errorf("GetWorkflows: list work items: %w", err)
-	}
-
-	// Build a relationship map: workflowID → []WorkItem via has_work_item edges.
-	rels, err := m.dm.ListRelationships(ctx, entitygraph.RelationshipFilter{
-		AgencyID: m.agencyID,
-		Name:     "has_work_item",
-	})
-	if err != nil {
-		return nil, fmt.Errorf("GetWorkflows: list relationships: %w", err)
-	}
-
-	wiByID := make(map[string]entitygraph.Entity, len(wiEntities))
-	for _, wi := range wiEntities {
-		wiByID[wi.ID] = wi
-	}
-
-	wfItems := make(map[string][]WorkItem)
-	for _, rel := range rels {
-		if wi, ok := wiByID[rel.ToID]; ok {
-			wfItems[rel.FromID] = append(wfItems[rel.FromID], entityToWorkItem(wi))
-		}
-	}
-
 	workflows := make([]Workflow, len(wfEntities))
 	for i, e := range wfEntities {
-		wf := entityToWorkflow(e)
-		wf.WorkItems = wfItems[e.ID]
-		workflows[i] = wf
+		workflows[i] = entityToWorkflow(e)
 	}
 	return workflows, nil
 }
@@ -331,11 +299,6 @@ func (m *agencyManager) GetConfiguredRoles(ctx context.Context) ([]ConfiguredRol
 // PublishAgency creates an immutable [AgencyPublication] entity with an
 // auto-incremented version. Publishes "cross.agency.published" on success.
 func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, error) {
-	agency, err := m.GetAgency(ctx)
-	if err != nil {
-		return AgencyPublication{}, err
-	}
-
 	version, err := m.nextPublicationVersion(ctx)
 	if err != nil {
 		return AgencyPublication{}, fmt.Errorf("PublishAgency: next version: %w", err)
@@ -349,6 +312,7 @@ func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, e
 			"version":      version,
 			"tag":          fmt.Sprintf("v%d", version),
 			"published_at": now.Format(time.RFC3339),
+			"status":       "draft",
 		},
 	})
 	if err != nil {
@@ -357,14 +321,15 @@ func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, e
 
 	pub := AgencyPublication{
 		ID:          entity.ID,
-		Agency:      agency,
+		AgencyID:    m.agencyID,
 		Version:     version,
 		Tag:         fmt.Sprintf("v%d", version),
 		PublishedAt: now,
+		Status:      "draft",
 	}
 
 	if m.publisher != nil {
-		_ = m.publisher.Publish(ctx, "cross.agency.published", agency.ID)
+		_ = m.publisher.Publish(ctx, "cross.agency.published", m.agencyID)
 	}
 	return pub, nil
 }
@@ -396,15 +361,10 @@ func (m *agencyManager) ListPublications(ctx context.Context) ([]AgencyPublicati
 		return nil, fmt.Errorf("ListPublications: %w", err)
 	}
 
-	agency, err := m.GetAgency(ctx)
-	if err != nil {
-		// Best-effort — return publications without embedded Agency.
-		agency = Agency{}
-	}
-
 	pubs := make([]AgencyPublication, 0, len(entities))
 	for _, e := range entities {
-		pub := entityToPublication(e, agency)
+		pub := entityToPublication(e)
+		pub.AgencyID = m.agencyID
 		pubs = append(pubs, pub)
 	}
 	// Sort ascending by version.
@@ -443,14 +403,18 @@ func (m *agencyManager) checkActivationGuards(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("activation guard: workflows: %w", err)
 	}
-	hasWorkItem := false
-	for _, wf := range workflows {
-		if len(wf.WorkItems) > 0 {
-			hasWorkItem = true
-			break
-		}
+	if len(workflows) == 0 {
+		return fmt.Errorf("%w: agency must have at least one Workflow with a WorkItem before activating", ErrInvalidAgency)
 	}
-	if !hasWorkItem {
+
+	wiEntities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+		AgencyID: m.agencyID,
+		TypeID:   "WorkItem",
+	})
+	if err != nil {
+		return fmt.Errorf("activation guard: work items: %w", err)
+	}
+	if len(wiEntities) == 0 {
 		return fmt.Errorf("%w: agency must have at least one Workflow with a WorkItem before activating", ErrInvalidAgency)
 	}
 	return nil
@@ -532,47 +496,65 @@ func entityToGoal(e entitygraph.Entity) Goal {
 }
 
 func entityToWorkflow(e entitygraph.Entity) Workflow {
+	p := e.Properties
+	ord := 0
+	if v, ok := p["ordinality"]; ok {
+		switch vv := v.(type) {
+		case int:
+			ord = vv
+		case float64:
+			ord = int(vv)
+		}
+	}
 	return Workflow{
-		ID:   e.ID,
-		Name: strProp(e.Properties, "name"),
+		ID:          e.ID,
+		Name:        strProp(p, "name"),
+		Description: strProp(p, "description"),
+		Ordinality:  ord,
 	}
 }
 
 func entityToWorkItem(e entitygraph.Entity) WorkItem {
 	p := e.Properties
-	order := 0
-	if v, ok := p["order"]; ok {
+	ord := 0
+	if v, ok := p["ordinality"]; ok {
 		switch vv := v.(type) {
 		case int:
-			order = vv
+			ord = vv
 		case float64:
-			order = int(vv)
-		}
-	}
-	parallel := false
-	if v, ok := p["parallel"]; ok {
-		if b, ok := v.(bool); ok {
-			parallel = b
+			ord = int(vv)
 		}
 	}
 	return WorkItem{
 		ID:          e.ID,
 		Title:       strProp(p, "title"),
 		Description: strProp(p, "description"),
-		Order:       order,
-		Parallel:    parallel,
+		Ordinality:  ord,
+		Prompt:      strProp(p, "prompt"),
 	}
 }
 
 func entityToConfiguredRole(e entitygraph.Entity) ConfiguredRole {
 	p := e.Properties
+	ord := 0
+	if v, ok := p["ordinality"]; ok {
+		switch vv := v.(type) {
+		case int:
+			ord = vv
+		case float64:
+			ord = int(vv)
+		}
+	}
 	return ConfiguredRole{
-		Role:      AgencyRole(strProp(p, "name")),
-		ActorType: ActorType(strProp(p, "actor_type")),
+		ID:          e.ID,
+		Name:        strProp(p, "name"),
+		Description: strProp(p, "description"),
+		ActorType:   ActorType(strProp(p, "actor_type")),
+		Ordinality:  ord,
 	}
 }
 
-func entityToPublication(e entitygraph.Entity, agency Agency) AgencyPublication {
+func entityToPublication(e entitygraph.Entity) AgencyPublication {
 	p := e.Properties
 	version := 0
 	if v, ok := p["version"]; ok {
@@ -591,10 +573,10 @@ func entityToPublication(e entitygraph.Entity, agency Agency) AgencyPublication 
 	}
 	return AgencyPublication{
 		ID:          e.ID,
-		Agency:      agency,
 		Version:     version,
 		Tag:         strProp(p, "tag"),
 		PublishedAt: publishedAt,
+		Status:      strProp(p, "status"),
 	}
 }
 

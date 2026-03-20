@@ -57,7 +57,6 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "mission", Type: types.PropertyTypeString, Required: false},
 					{Name: "vision", Type: types.PropertyTypeString, Required: false},
-
 				},
 				Relationships: []types.RelationshipDefinition{
 					{Name: "has_goal", Label: "Goals", PathSegment: "goals", ToType: "Goal", ToMany: true, Inverse: "belongs_to_agency"},
@@ -87,8 +86,9 @@ func DefaultAgencySchema() types.Schema {
 				DisplayName: "Workflow",
 				PathSegment: "workflows",
 				Properties: []types.PropertyDefinition{
-					{Name: "name",       Type: types.PropertyTypeString,  Required: true},
-					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
+					{Name: "name",        Type: types.PropertyTypeString,  Required: true},
+					{Name: "description", Type: types.PropertyTypeString,  Required: false},
+					{Name: "ordinality",  Type: types.PropertyTypeInteger, Required: true},
 				},
 				Relationships: []types.RelationshipDefinition{
 					{Name: "has_work_item", Label: "Work Items", PathSegment: "work-items", ToType: "WorkItem", ToMany: true, Inverse: "belongs_to_workflow"},
@@ -106,12 +106,22 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "description", Type: types.PropertyTypeString,  Required: false},
 					// WorkItems with the same ordinality value run in parallel.
 					// WorkItems with a higher ordinality run after all items at the lower value complete.
-					{Name: "ordinality",  Type: types.PropertyTypeInteger, Required: true},
+					{Name: "ordinality",    Type: types.PropertyTypeInteger, Required: true},
+					// prompt is the task-specific input sent to the actor at dispatch time.
+					// For ai_agent: the LLM prompt. For compute_agent: the function input payload.
+					// For human: the task brief shown in the UI.
+					{Name: "prompt",        Type: types.PropertyTypeString,  Required: false},
+					// instructions sets the standing rules and constraints the actor must follow
+					// regardless of the specific prompt (e.g. output format, tone, safety rules).
+					{Name: "instructions",  Type: types.PropertyTypeString,  Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
 					// ToMany=false, Required=true: a WorkItem must belong to exactly one Workflow.
 					// Inverse of Workflow.has_work_item — auto-created by CreateRelationship.
 					{Name: "belongs_to_workflow", Label: "Workflow", PathSegment: "workflow", ToType: "Workflow", ToMany: false, Required: true},
+					// ToMany=true, Required=false: zero or more eligible roles may be assigned.
+					// Whichever actor (human or ai_agent) claims the task first executes it.
+					{Name: "assigned_role", Label: "Assigned Roles", PathSegment: "assigned-roles", ToType: "ConfiguredRole", ToMany: true, Inverse: "assigned_work_item"},
 				},
 			},
 			{
@@ -119,14 +129,20 @@ func DefaultAgencySchema() types.Schema {
 				DisplayName: "Configured Role",
 				PathSegment: "configured-roles",
 				Properties: []types.PropertyDefinition{
-					{Name: "name",       Type: types.PropertyTypeString,  Required: true},
-					{Name: "actor_type", Type: types.PropertyTypeString,  Required: true},
+					{Name: "name", Type: types.PropertyTypeString, Required: true},
+					// actor_type valid values: "human", "ai_agent", "compute_agent"
+					//   human         — person; performs judgment, approval, manual action
+					//   ai_agent      — LLM-backed agent; non-deterministic, prompt-driven
+					//   compute_agent — pure function; deterministic, retryable, no LLM needed
+					{Name: "actor_type", Type: types.PropertyTypeOption, Required: true},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
 				},
 				Relationships: []types.RelationshipDefinition{
 					// ToMany=false, Required=true: a ConfiguredRole must belong to exactly one Agency.
 					// Inverse of Agency.has_configured_role — auto-created by CreateRelationship.
 					{Name: "belongs_to_agency", Label: "Agency", PathSegment: "agency", ToType: "Agency", ToMany: false, Required: true},
+					// ToMany=true: inverse of WorkItem.assigned_role — auto-created by CreateRelationship.
+					{Name: "assigned_work_item", Label: "Work Items", PathSegment: "work-items", ToType: "WorkItem", ToMany: true},
 				},
 			},
 			{

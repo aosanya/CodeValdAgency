@@ -5,6 +5,7 @@ package codevaldagency.v1;
 option go_package = "github.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1;codevaldagencyv1";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
 
 // ── Enumerations ─────────────────────────────────────────────────────────────
 
@@ -210,4 +211,142 @@ service AgencyService {
 
   // GetConfiguredRoles returns all ConfiguredRole entities linked to the Agency.
   rpc GetConfiguredRoles(GetConfiguredRolesRequest) returns (GetConfiguredRolesResponse);
+}
+
+// ── EntityService ─────────────────────────────────────────────────────────────────────────────
+
+// EntityItem is a generic entity document as managed by EntityService.
+// Properties are represented as an arbitrary JSON object.
+message EntityItem {
+  string                    id         = 1;
+  string                    agency_id  = 2;
+  string                    type_id    = 3;
+  google.protobuf.Struct    properties = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// RelationshipItem is a directed graph edge between two entities.
+message RelationshipItem {
+  string                    id         = 1;
+  string                    agency_id  = 2;
+  string                    name       = 3;
+  string                    from_id    = 4;
+  string                    to_id      = 5;
+  google.protobuf.Struct    properties = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+// ListEntitiesRequest selects all entities of a given type for the agency.
+// type_id is injected at dispatch time via ConstantBinding — HTTP callers never
+// set it explicitly.
+message ListEntitiesRequest {
+  string agency_id = 1;
+  string type_id   = 2;
+}
+
+// ListEntitiesResponse wraps the result slice.
+message ListEntitiesResponse {
+  repeated EntityItem entities = 1;
+}
+
+// CreateEntityRequest creates a new entity of the route-bound type.
+// type_id is injected at dispatch time via ConstantBinding.
+message CreateEntityRequest {
+  string                 agency_id  = 1;
+  string                 type_id    = 2;
+  google.protobuf.Struct properties = 3;
+}
+
+// GetEntityRequest retrieves a single entity by its ID.
+// type_id is injected at dispatch time via ConstantBinding.
+message GetEntityRequest {
+  string agency_id = 1;
+  string entity_id = 2;
+  string type_id   = 3;
+}
+
+// UpdateEntityRequest patches the properties of an existing entity.
+// type_id is injected at dispatch time via ConstantBinding.
+message UpdateEntityRequest {
+  string                 agency_id  = 1;
+  string                 entity_id  = 2;
+  string                 type_id    = 3;
+  google.protobuf.Struct properties = 4;
+}
+
+// DeleteEntityRequest soft-deletes an entity by its ID.
+message DeleteEntityRequest {
+  string agency_id = 1;
+  string entity_id = 2;
+}
+
+// DeleteEntityResponse is intentionally empty.
+message DeleteEntityResponse {}
+
+// ListRelationshipsRequest selects all outbound edges from a source entity
+// with a given relationship name.
+// name is injected at dispatch time via ConstantBinding.
+message ListRelationshipsRequest {
+  string agency_id = 1;
+  string entity_id = 2;
+  string name      = 3;
+}
+
+// ListRelationshipsResponse wraps the result slice.
+message ListRelationshipsResponse {
+  repeated RelationshipItem relationships = 1;
+}
+
+// CreateRelationshipRequest creates a directed edge from entity_id to to_id.
+// name is injected at dispatch time via ConstantBinding.
+message CreateRelationshipRequest {
+  string                 agency_id  = 1;
+  string                 entity_id  = 2;
+  string                 name       = 3;
+  string                 to_id      = 4;
+  google.protobuf.Struct properties = 5;
+}
+
+// DeleteRelationshipRequest removes a directed edge by its ID.
+message DeleteRelationshipRequest {
+  string agency_id       = 1;
+  string entity_id       = 2;
+  string relationship_id = 3;
+}
+
+// DeleteRelationshipResponse is intentionally empty.
+message DeleteRelationshipResponse {}
+
+// EntityService provides generic CRUD for entities and relationships managed
+// by the agency's entitygraph DataManager. HTTP routes for each entity type
+// (Goal, Workflow, ConfiguredRole, etc.) are generated from the agency schema
+// by schemaroutes.RoutesFromSchema and wired to this service's methods.
+// CodeValdCross injects type_id and name via ConstantBindings so a single
+// generic RPC handles all entity types.
+service EntityService {
+  // ListEntities returns all entities of the type_id bound to this route.
+  rpc ListEntities(ListEntitiesRequest) returns (ListEntitiesResponse);
+
+  // CreateEntity creates a new entity with the type_id bound to this route.
+  rpc CreateEntity(CreateEntityRequest) returns (EntityItem);
+
+  // GetEntity retrieves a single entity by ID.
+  rpc GetEntity(GetEntityRequest) returns (EntityItem);
+
+  // UpdateEntity patches the properties of an existing entity.
+  rpc UpdateEntity(UpdateEntityRequest) returns (EntityItem);
+
+  // DeleteEntity soft-deletes an entity by ID.
+  rpc DeleteEntity(DeleteEntityRequest) returns (DeleteEntityResponse);
+
+  // ListRelationships returns all outbound edges of the relationship name
+  // bound to this route from the given source entity.
+  rpc ListRelationships(ListRelationshipsRequest) returns (ListRelationshipsResponse);
+
+  // CreateRelationship creates a directed edge from entity_id to to_id.
+  rpc CreateRelationship(CreateRelationshipRequest) returns (RelationshipItem);
+
+  // DeleteRelationship removes a directed edge by its ID.
+  rpc DeleteRelationship(DeleteRelationshipRequest) returns (DeleteRelationshipResponse);
 }

@@ -44,7 +44,9 @@ CodeValdAgency/
 │   ├── registrar/
 │   │   └── registrar.go         # Cross registration heartbeat loop + CrossPublisher impl
 │   └── server/
-│       └── server.go            # Inbound gRPC server — AgencyService handlers
+        ├── server.go            # Inbound gRPC server — AgencyService handlers
+        ├── entity_server.go     # EntityService handlers — delegates to entitygraph.DataManager
+        └── errors.go            # gRPC status code mapping (toGRPCError, toEntityGRPCError)
 ├── storage/
 │   └── arangodb/
 │       ├── storage.go   # Config, Backend struct, constructors, ensureCollection

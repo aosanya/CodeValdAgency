@@ -100,6 +100,7 @@ func main() {
 
 	grpcServer, _ := serverutil.NewGRPCServer()
 	pb.RegisterAgencyServiceServer(grpcServer, server.New(mgr))
+	pb.RegisterEntityServiceServer(grpcServer, server.NewEntityServer(backend))
 	healthpb.RegisterHealthServiceServer(grpcServer, health.New("codevaldagency"))
 
 	quit := make(chan os.Signal, 1)

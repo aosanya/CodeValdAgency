@@ -86,9 +86,10 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:        "Goal",
-				DisplayName: "Goal",
-				PathSegment: "goals",
+				Name:          "Goal",
+				DisplayName:   "Goal",
+				PathSegment:   "goals",
+				EntityIDParam: "goalId",
 				Properties: []types.PropertyDefinition{
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
@@ -101,9 +102,10 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:        "Workflow",
-				DisplayName: "Workflow",
-				PathSegment: "workflows",
+				Name:          "Workflow",
+				DisplayName:   "Workflow",
+				PathSegment:   "workflows",
+				EntityIDParam: "workflowId",
 				Properties: []types.PropertyDefinition{
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
@@ -118,9 +120,10 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:        "WorkItem",
-				DisplayName: "Work Item",
-				PathSegment: "work-items",
+				Name:          "WorkItem",
+				DisplayName:   "Work Item",
+				PathSegment:   "work-items",
+				EntityIDParam: "workItemId",
 				Properties: []types.PropertyDefinition{
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
@@ -148,9 +151,10 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:        "Instruction",
-				DisplayName: "Instruction",
-				PathSegment: "instructions",
+				Name:          "Instruction",
+				DisplayName:   "Instruction",
+				PathSegment:   "instructions",
+				EntityIDParam: "instructionId",
 				Properties: []types.PropertyDefinition{
 					// content is the rule or constraint text delivered to the actor.
 					{Name: "content", Type: types.PropertyTypeString, Required: true},
@@ -167,9 +171,10 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:        "Deliverable",
-				DisplayName: "Deliverable",
-				PathSegment: "deliverables",
+				Name:          "Deliverable",
+				DisplayName:   "Deliverable",
+				PathSegment:   "deliverables",
+				EntityIDParam: "deliverableId",
 				Properties: []types.PropertyDefinition{
 					// title names the expected output (e.g. "Analysis Report", "Migration Script").
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
@@ -197,6 +202,7 @@ func DefaultAgencySchema() types.Schema {
 				Name:              "DeliverableResult",
 				DisplayName:       "Deliverable Result",
 				PathSegment:       "results",
+				EntityIDParam:     "resultId",
 				Immutable:         true,
 				StorageCollection: "deliverable_results",
 				Properties: []types.PropertyDefinition{
@@ -221,6 +227,7 @@ func DefaultAgencySchema() types.Schema {
 				Name:              "ContentRef",
 				DisplayName:       "Content Ref",
 				PathSegment:       "content-refs",
+				EntityIDParam:     "contentRefId",
 				Immutable:         true,
 				StorageCollection: "content_refs",
 				Properties: []types.PropertyDefinition{
@@ -239,9 +246,10 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:        "ConfiguredRole",
-				DisplayName: "Configured Role",
-				PathSegment: "configured-roles",
+				Name:          "ConfiguredRole",
+				DisplayName:   "Configured Role",
+				PathSegment:   "configured-roles",
+				EntityIDParam: "configuredRoleId",
 				Properties: []types.PropertyDefinition{
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					// description is the role brief — responsibilities, boundaries, and context
@@ -268,6 +276,7 @@ func DefaultAgencySchema() types.Schema {
 				Name:              "AgencySnapshot",
 				DisplayName:       "Agency Snapshot",
 				PathSegment:       "snapshots",
+				EntityIDParam:     "snapshotId",
 				Immutable:         true,
 				StorageCollection: "agency_snapshots",
 				Properties: []types.PropertyDefinition{
@@ -283,6 +292,7 @@ func DefaultAgencySchema() types.Schema {
 				Name:              "AgencyPublication",
 				DisplayName:       "Agency Publication",
 				PathSegment:       "publications",
+				EntityIDParam:     "publicationId",
 				Immutable:         true,
 				StorageCollection: "agency_publications",
 				Properties: []types.PropertyDefinition{
@@ -307,6 +317,7 @@ func DefaultAgencySchema() types.Schema {
 				Name:              "AgencyPublicationStatus",
 				DisplayName:       "Agency Publication Status",
 				PathSegment:       "publication-statuses",
+				EntityIDParam:     "publicationStatusId",
 				StorageCollection: "publication_statuses",
 				Properties: []types.PropertyDefinition{
 					// status valid values: "draft", "active", "archived"

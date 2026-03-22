@@ -10,8 +10,9 @@ import (
 	"time"
 
 	codevaldagency "github.com/aosanya/CodeValdAgency"
-	crossv1 "github.com/aosanya/CodeValdSharedLib/gen/go/codevaldcross/v1"
 	sharedregistrar "github.com/aosanya/CodeValdSharedLib/registrar"
+	"github.com/aosanya/CodeValdSharedLib/schemaroutes"
+	"github.com/aosanya/CodeValdSharedLib/types"
 )
 
 // Registrar handles two responsibilities:
@@ -82,59 +83,86 @@ func (r *Registrar) Publish(ctx context.Context, topic string, agencyID string) 
 	return nil
 }
 
-// agencyRoutes returns the HTTP routes that CodeValdAgency exposes via Cross.
-// All routes are prefixed with /agency/{agencyId} so that the service name
-// disambiguates agency endpoints from other services, and the Cross dynamic
-// proxy can extract the agency ID from the path to resolve the correct
-// service instance via ConnForAgency.
-func agencyRoutes() []*crossv1.RouteDeclaration {
-	return []*crossv1.RouteDeclaration{
-		// POST /agency/{agencyId} — replace (or create) the full agency document from a JSON body.
-		// Body: {"json": "<agency-document-as-JSON-string>"}
-		// agencyId is used by Cross for routing only — SetAgencyDetailsRequest has no agency_id field.
+// agencyRoutes returns all HTTP routes CodeValdAgency exposes via Cross.
+//
+// It combines:
+//   - Static routes for the agency-level gRPC methods (SetAgencyDetails,
+//     GetAgency, UpdateAgency, PublishAgency, GetPublication, ListPublications,
+//     UpdatePublicationStatus).
+//   - Dynamic entity CRUD and relationship routes generated from
+//     [codevaldagency.DefaultAgencySchema] via
+//     [schemaroutes.RoutesFromSchema]. Every TypeDefinition with a PathSegment
+//     gets its own collection of GET/POST/PUT/DELETE routes, all backed by the
+//     generic EntityService gRPC methods.
+func agencyRoutes() []types.RouteInfo {
+	static := []types.RouteInfo{
+		// POST /agency/{agencyId} — replace (or create) the full agency document.
 		{
 			Method:     "POST",
 			Pattern:    "/agency/{agencyId}",
 			Capability: "set_agency_details",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/SetAgencyDetails",
 		},
-		// GET /agency/{agencyId} — retrieve the single agency for this database.
+		// GET /agency/{agencyId} — retrieve the agency.
 		{
 			Method:     "GET",
 			Pattern:    "/agency/{agencyId}",
 			Capability: "get_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/GetAgency",
 		},
-		// PUT /agency/{agencyId} — apply incremental field edits with lifecycle validation.
+		// PUT /agency/{agencyId} — apply incremental field edits.
 		{
 			Method:     "PUT",
 			Pattern:    "/agency/{agencyId}",
 			Capability: "update_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/UpdateAgency",
 		},
-		// POST /agency/{agencyId}/publish — create an immutable versioned publication of the current agency.
+		// POST /agency/{agencyId}/publish — create an immutable versioned publication.
 		{
 			Method:     "POST",
 			Pattern:    "/agency/{agencyId}/publish",
 			Capability: "publish_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/PublishAgency",
 		},
-		// GET /agency/{agencyId}/publications — list all publications in ascending version order.
+		// GET /agency/{agencyId}/publications — list all publications.
 		{
 			Method:     "GET",
 			Pattern:    "/agency/{agencyId}/publications",
 			Capability: "list_publications",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/ListPublications",
 		},
-		// GET /agency/{agencyId}/publications/{version} — retrieve a specific publication by version.
+		// GET /agency/{agencyId}/publications/{version} — get a specific publication.
 		{
 			Method:     "GET",
 			Pattern:    "/agency/{agencyId}/publications/{version}",
 			Capability: "get_publication",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/GetPublication",
-			PathBindings: []*crossv1.PathBinding{
-				{UrlParam: "version", Field: "version"},
+			PathBindings: []types.PathBinding{
+				{URLParam: "version", Field: "version"},
+			},
+		},
+		// PUT /agency/{agencyId}/publications/{version}/status — update publication lifecycle status.
+		{
+			Method:     "PUT",
+			Pattern:    "/agency/{agencyId}/publications/{version}/status",
+			Capability: "update_publication_status",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/UpdatePublicationStatus",
+			PathBindings: []types.PathBinding{
+				{URLParam: "version", Field: "version"},
 			},
 		},
 	}
+
+	// Dynamic routes derived directly from the schema: one CRUD set per
+	// TypeDefinition, one list/create/delete set per RelationshipDefinition.
+	// All route by "/agency/{agencyId}" prefix and back the generic
+	// EntityService gRPC methods.
+	dynamic := schemaroutes.RoutesFromSchema(
+		codevaldagency.DefaultAgencySchema(),
+		"/agency/{agencyId}",
+		"agencyId",
+		"/codevaldagency.v1.EntityService",
+	)
+
+	return append(static, dynamic...)
 }

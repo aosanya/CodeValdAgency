@@ -374,9 +374,9 @@ func TestArangoDB_ListRelationships_ByAgency(t *testing.T) {
 	}
 }
 
-// ── SetSchema / GetSchema round-trip ─────────────────────────────────────────
+// ── SetSchema / GetSchema draft round-trip ────────────────────────────────────
 
-func TestArangoDB_SetSchema_GetSchema_RoundTrip(t *testing.T) {
+func TestArangoDB_SetSchema_GetSchema_DraftRoundTrip(t *testing.T) {
 	b, _ := openTestBackend(t)
 	ctx := context.Background()
 
@@ -398,12 +398,9 @@ func TestArangoDB_SetSchema_GetSchema_RoundTrip(t *testing.T) {
 		t.Fatalf("SetSchema: %v", err)
 	}
 
-	got, err := b.GetSchema(ctx, agencyID, 1)
+	got, err := b.GetSchema(ctx, agencyID)
 	if err != nil {
-		t.Fatalf("GetSchema v1: %v", err)
-	}
-	if got.Version != 1 {
-		t.Errorf("Version: want 1, got %d", got.Version)
+		t.Fatalf("GetSchema: %v", err)
 	}
 	if got.Tag != "v1" {
 		t.Errorf("Tag: want %q, got %q", "v1", got.Tag)
@@ -411,49 +408,146 @@ func TestArangoDB_SetSchema_GetSchema_RoundTrip(t *testing.T) {
 	if len(got.Types) != 1 {
 		t.Errorf("Types: want 1 type, got %d", len(got.Types))
 	}
+	if got.AgencyID != agencyID {
+		t.Errorf("AgencyID: want %q, got %q", agencyID, got.AgencyID)
+	}
 }
 
-// ── SetSchema increments version on second call ───────────────────────────────
+// ── Publish creates version 1 ─────────────────────────────────────────────────
 
-func TestArangoDB_SetSchema_IncrementsVersion(t *testing.T) {
+func TestArangoDB_Publish_CreatesVersion1(t *testing.T) {
 	b, _ := openTestBackend(t)
 	ctx := context.Background()
 
 	agencyID := uniqueID("agency")
-	base := types.Schema{AgencyID: agencyID}
-
-	if err := b.SetSchema(ctx, base); err != nil {
-		t.Fatalf("first SetSchema: %v", err)
+	if err := b.SetSchema(ctx, types.Schema{AgencyID: agencyID, Tag: "v1"}); err != nil {
+		t.Fatalf("SetSchema: %v", err)
 	}
-	if err := b.SetSchema(ctx, base); err != nil {
-		t.Fatalf("second SetSchema: %v", err)
+	if err := b.Publish(ctx, agencyID); err != nil {
+		t.Fatalf("Publish: %v", err)
 	}
 
-	versions, err := b.ListSchemaVersions(ctx, agencyID)
+	versions, err := b.ListVersions(ctx, agencyID)
 	if err != nil {
-		t.Fatalf("ListSchemaVersions: %v", err)
+		t.Fatalf("ListVersions: %v", err)
 	}
-	if len(versions) != 2 {
-		t.Fatalf("expected 2 versions, got %d", len(versions))
+	if len(versions) != 1 {
+		t.Fatalf("expected 1 version, got %d", len(versions))
 	}
 	if versions[0].Version != 1 {
-		t.Errorf("first version: want 1, got %d", versions[0].Version)
+		t.Errorf("Version: want 1, got %d", versions[0].Version)
 	}
-	if versions[1].Version != 2 {
-		t.Errorf("second version: want 2, got %d", versions[1].Version)
+	if versions[0].Active {
+		t.Error("newly published version should not be active yet")
 	}
 }
 
-// ── GetSchema not found returns an error ──────────────────────────────────────
+// ── Activate makes GetActive work ─────────────────────────────────────────────
 
-func TestArangoDB_GetSchema_NotFound(t *testing.T) {
+func TestArangoDB_Activate_MakesGetActiveWork(t *testing.T) {
 	b, _ := openTestBackend(t)
 	ctx := context.Background()
 
 	agencyID := uniqueID("agency")
-	_, err := b.GetSchema(ctx, agencyID, 99)
+	if err := b.SetSchema(ctx, types.Schema{AgencyID: agencyID, Tag: "v1"}); err != nil {
+		t.Fatalf("SetSchema: %v", err)
+	}
+	if err := b.Publish(ctx, agencyID); err != nil {
+		t.Fatalf("Publish: %v", err)
+	}
+	if err := b.Activate(ctx, agencyID, 1); err != nil {
+		t.Fatalf("Activate: %v", err)
+	}
+
+	active, err := b.GetActive(ctx, agencyID)
+	if err != nil {
+		t.Fatalf("GetActive: %v", err)
+	}
+	if active.Version != 1 {
+		t.Errorf("Version: want 1, got %d", active.Version)
+	}
+	if !active.Active {
+		t.Error("expected Active=true on the activated version")
+	}
+}
+
+// ── GetVersion returns the correct specific version ────────────────────────────
+
+func TestArangoDB_GetVersion_ReturnsCorrectVersion(t *testing.T) {
+	b, _ := openTestBackend(t)
+	ctx := context.Background()
+
+	agencyID := uniqueID("agency")
+	if err := b.SetSchema(ctx, types.Schema{AgencyID: agencyID, Tag: "first"}); err != nil {
+		t.Fatalf("SetSchema first: %v", err)
+	}
+	if err := b.Publish(ctx, agencyID); err != nil {
+		t.Fatalf("Publish first: %v", err)
+	}
+
+	if err := b.SetSchema(ctx, types.Schema{AgencyID: agencyID, Tag: "second"}); err != nil {
+		t.Fatalf("SetSchema second: %v", err)
+	}
+	if err := b.Publish(ctx, agencyID); err != nil {
+		t.Fatalf("Publish second: %v", err)
+	}
+
+	v1, err := b.GetVersion(ctx, agencyID, 1)
+	if err != nil {
+		t.Fatalf("GetVersion 1: %v", err)
+	}
+	if v1.Tag != "first" {
+		t.Errorf("v1 Tag: want %q, got %q", "first", v1.Tag)
+	}
+	v2, err := b.GetVersion(ctx, agencyID, 2)
+	if err != nil {
+		t.Fatalf("GetVersion 2: %v", err)
+	}
+	if v2.Tag != "second" {
+		t.Errorf("v2 Tag: want %q, got %q", "second", v2.Tag)
+	}
+}
+
+// ── ListVersions returns ascending order ──────────────────────────────────────
+
+func TestArangoDB_ListVersions_AscendingOrder(t *testing.T) {
+	b, _ := openTestBackend(t)
+	ctx := context.Background()
+
+	agencyID := uniqueID("agency")
+	for i := 0; i < 3; i++ {
+		if err := b.SetSchema(ctx, types.Schema{AgencyID: agencyID, Tag: fmt.Sprintf("v%d", i+1)}); err != nil {
+			t.Fatalf("SetSchema %d: %v", i+1, err)
+		}
+		if err := b.Publish(ctx, agencyID); err != nil {
+			t.Fatalf("Publish %d: %v", i+1, err)
+		}
+	}
+
+	versions, err := b.ListVersions(ctx, agencyID)
+	if err != nil {
+		t.Fatalf("ListVersions: %v", err)
+	}
+	if len(versions) != 3 {
+		t.Fatalf("expected 3 versions, got %d", len(versions))
+	}
+	for i, v := range versions {
+		if v.Version != i+1 {
+			t.Errorf("versions[%d].Version: want %d, got %d", i, i+1, v.Version)
+		}
+	}
+}
+
+// ── GetActive returns ErrSchemaNotFound when none active ─────────────────────
+
+func TestArangoDB_GetActive_ReturnsErrSchemaNotFound(t *testing.T) {
+	b, _ := openTestBackend(t)
+	ctx := context.Background()
+
+	agencyID := uniqueID("agency")
+	_, err := b.GetActive(ctx, agencyID)
 	if err == nil {
-		t.Fatal("expected error for missing schema, got nil")
+		t.Fatal("expected error for agency with no active schema, got nil")
 	}
 }
 

@@ -22,6 +22,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -36,6 +37,7 @@ import (
 	"github.com/aosanya/CodeValdAgency/internal/registrar"
 	"github.com/aosanya/CodeValdAgency/internal/server"
 	arangodb "github.com/aosanya/CodeValdAgency/storage/arangodb"
+	"github.com/aosanya/CodeValdSharedLib/entitygraph"
 	healthpb "github.com/aosanya/CodeValdSharedLib/gen/go/codevaldhealth/v1"
 	"github.com/aosanya/CodeValdSharedLib/health"
 	"github.com/aosanya/CodeValdSharedLib/serverutil"
@@ -98,6 +100,7 @@ func main() {
 
 	grpcServer, _ := serverutil.NewGRPCServer()
 	pb.RegisterAgencyServiceServer(grpcServer, server.New(mgr))
+	pb.RegisterEntityServiceServer(grpcServer, server.NewEntityServer(backend))
 	healthpb.RegisterHealthServiceServer(grpcServer, health.New("codevaldagency"))
 
 	quit := make(chan os.Signal, 1)
@@ -113,19 +116,27 @@ func main() {
 }
 
 // seedSchemaIfNeeded seeds the pre-delivered agency schema idempotently on
-// startup. It is a no-op if any schema version already exists for the agency.
+// startup. It is a no-op if an active schema version already exists.
+// On first run it calls SetSchema, Publish, then Activate(1) to make the
+// default schema live.
 func seedSchemaIfNeeded(ctx context.Context, sm codevaldagency.AgencySchemaManager, agencyID string) error {
-	versions, err := sm.ListSchemaVersions(ctx, agencyID)
-	if err != nil {
-		return fmt.Errorf("seedSchemaIfNeeded %s: list versions: %w", agencyID, err)
+	_, err := sm.GetActive(ctx, agencyID)
+	if err == nil {
+		return nil // already active — idempotent
 	}
-	if len(versions) > 0 {
-		return nil // already seeded — idempotent
+	if !errors.Is(err, entitygraph.ErrSchemaNotFound) {
+		return fmt.Errorf("seedSchemaIfNeeded %s: check active: %w", agencyID, err)
 	}
 	schema := codevaldagency.DefaultAgencySchema()
 	schema.AgencyID = agencyID
 	if err := sm.SetSchema(ctx, schema); err != nil {
 		return fmt.Errorf("seedSchemaIfNeeded %s: set schema: %w", agencyID, err)
+	}
+	if err := sm.Publish(ctx, agencyID); err != nil {
+		return fmt.Errorf("seedSchemaIfNeeded %s: publish: %w", agencyID, err)
+	}
+	if err := sm.Activate(ctx, agencyID, 1); err != nil {
+		return fmt.Errorf("seedSchemaIfNeeded %s: activate: %w", agencyID, err)
 	}
 	log.Printf("codevaldagency: schema seeded for agency %s", agencyID)
 	return nil

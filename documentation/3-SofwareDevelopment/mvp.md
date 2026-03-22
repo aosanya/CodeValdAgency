@@ -38,6 +38,7 @@ The MVP delivers:
 | MVP-AGENCY-008-E | Proto + gRPC handlers (`GetGoals`, `GetWorkflows`, `GetConfiguredRoles`) | ✅ Done | MVP-AGENCY-008-C |
 | MVP-AGENCY-008-F | `cmd/main.go` wiring — inject DataManager, seed schema on startup | ✅ Done | MVP-AGENCY-008-D, MVP-AGENCY-008-E |
 | MVP-AGENCY-008-G | Test rewrite — `fakeDataManager` replacing `fakeBackend` | ✅ Done | MVP-AGENCY-008-D |
+| MVP-AGENCY-008-H | Type-specific URL params — `EntityIDParam` on all schema types; adopt `schemaroutes.RoutesFromSchema` in registrar | ✅ Done | MVP-AGENCY-008-B, ~~SHAREDLIB-011~~ 🚀 |
 
 ---
 

@@ -114,13 +114,10 @@ func (s *Server) GetConfiguredRoles(ctx context.Context, _ *pb.GetConfiguredRole
 
 func protoToUpdateRequest(req *pb.UpdateAgencyRequest) codevaldagency.UpdateAgencyRequest {
 	return codevaldagency.UpdateAgencyRequest{
-		Name:            req.GetName(),
-		Mission:         req.GetMission(),
-		Vision:          req.GetVision(),
-		Status:          protoToLifecycle(req.GetStatus()),
-		Goals:           protoToGoals(req.GetGoals()),
-		Workflows:       protoToWorkflows(req.GetWorkflows()),
-		ConfiguredRoles: protoToConfiguredRoles(req.GetConfiguredRoles()),
+		Name:    req.GetName(),
+		Mission: req.GetMission(),
+		Vision:  req.GetVision(),
+		Status:  protoToLifecycle(req.GetStatus()),
 	}
 }
 
@@ -137,99 +134,17 @@ func protoToLifecycle(l pb.AgencyLifecycle) codevaldagency.AgencyLifecycle {
 	}
 }
 
-func protoToGoals(pgs []*pb.Goal) []codevaldagency.Goal {
-	if len(pgs) == 0 {
-		return nil
-	}
-	goals := make([]codevaldagency.Goal, len(pgs))
-	for i, pg := range pgs {
-		goals[i] = codevaldagency.Goal{
-			ID:          pg.GetId(),
-			Title:       pg.GetTitle(),
-			Description: pg.GetDescription(),
-			Ordinality:  int(pg.GetOrdinality()),
-		}
-	}
-	return goals
-}
-
-func protoToWorkflows(pws []*pb.Workflow) []codevaldagency.Workflow {
-	if len(pws) == 0 {
-		return nil
-	}
-	wfs := make([]codevaldagency.Workflow, len(pws))
-	for i, pw := range pws {
-		wfs[i] = codevaldagency.Workflow{
-			ID:        pw.GetId(),
-			Name:      pw.GetName(),
-			WorkItems: protoToWorkItems(pw.GetWorkItems()),
-		}
-	}
-	return wfs
-}
-
-func protoToWorkItems(pwis []*pb.WorkItem) []codevaldagency.WorkItem {
-	if len(pwis) == 0 {
-		return nil
-	}
-	items := make([]codevaldagency.WorkItem, len(pwis))
-	for i, pwi := range pwis {
-		items[i] = codevaldagency.WorkItem{
-			ID:          pwi.GetId(),
-			Title:       pwi.GetTitle(),
-			Description: pwi.GetDescription(),
-			Order:       int(pwi.GetOrder()),
-			Parallel:    pwi.GetParallel(),
-			GoalIDs:     pwi.GetGoalIds(),
-			Assignments: protoToAssignments(pwi.GetAssignments()),
-		}
-	}
-	return items
-}
-
-func protoToAssignments(pas []*pb.RoleAssignment) []codevaldagency.RoleAssignment {
-	if len(pas) == 0 {
-		return nil
-	}
-	assignments := make([]codevaldagency.RoleAssignment, len(pas))
-	for i, pa := range pas {
-		assignments[i] = codevaldagency.RoleAssignment{
-			Role: codevaldagency.AgencyRole(pa.GetRole()),
-			RACI: protoToRACILabel(pa.GetRaci()),
-		}
-	}
-	return assignments
-}
-
-func protoToRACILabel(r pb.RACILabel) codevaldagency.RACILabel {
-	switch r {
-	case pb.RACILabel_RACI_LABEL_RESPONSIBLE:
-		return codevaldagency.RACIResponsible
-	case pb.RACILabel_RACI_LABEL_ACCOUNTABLE:
-		return codevaldagency.RACIAccountable
-	case pb.RACILabel_RACI_LABEL_CONSULTED:
-		return codevaldagency.RACIConsulted
-	case pb.RACILabel_RACI_LABEL_INFORMED:
-		return codevaldagency.RACIInformed
-	default:
-		return ""
-	}
-}
-
 // ── Domain → Proto converters ─────────────────────────────────────────────────
 
 func agencyToProto(a codevaldagency.Agency) *pb.Agency {
 	return &pb.Agency{
-		Id:              a.ID,
-		Name:            a.Name,
-		Mission:         a.Mission,
-		Vision:          a.Vision,
-		Status:          lifecycleToProto(a.Status),
-		Goals:           goalsToProto(a.Goals),
-		Workflows:       workflowsToProto(a.Workflows),
-		ConfiguredRoles: configuredRolesToProto(a.ConfiguredRoles),
-		CreatedAt:       timeToProto(a.CreatedAt),
-		UpdatedAt:       timeToProto(a.UpdatedAt),
+		Id:        a.ID,
+		Name:      a.Name,
+		Mission:   a.Mission,
+		Vision:    a.Vision,
+		Status:    lifecycleToProto(a.Status),
+		CreatedAt: timeToProto(a.CreatedAt),
+		UpdatedAt: timeToProto(a.UpdatedAt),
 	}
 }
 
@@ -269,100 +184,24 @@ func workflowsToProto(workflows []codevaldagency.Workflow) []*pb.Workflow {
 	pws := make([]*pb.Workflow, len(workflows))
 	for i, w := range workflows {
 		pws[i] = &pb.Workflow{
-			Id:        w.ID,
-			Name:      w.Name,
-			WorkItems: workItemsToProto(w.WorkItems),
+			Id:   w.ID,
+			Name: w.Name,
 		}
 	}
 	return pws
-}
-
-func workItemsToProto(items []codevaldagency.WorkItem) []*pb.WorkItem {
-	if len(items) == 0 {
-		return nil
-	}
-	pwis := make([]*pb.WorkItem, len(items))
-	for i, wi := range items {
-		pwis[i] = &pb.WorkItem{
-			Id:          wi.ID,
-			Title:       wi.Title,
-			Description: wi.Description,
-			Order:       int32(wi.Order),
-			Parallel:    wi.Parallel,
-			GoalIds:     wi.GoalIDs,
-			Assignments: assignmentsToProto(wi.Assignments),
-		}
-	}
-	return pwis
-}
-
-func assignmentsToProto(assignments []codevaldagency.RoleAssignment) []*pb.RoleAssignment {
-	if len(assignments) == 0 {
-		return nil
-	}
-	pas := make([]*pb.RoleAssignment, len(assignments))
-	for i, a := range assignments {
-		pas[i] = &pb.RoleAssignment{
-			Role: string(a.Role),
-			Raci: raciLabelToProto(a.RACI),
-		}
-	}
-	return pas
-}
-
-func raciLabelToProto(r codevaldagency.RACILabel) pb.RACILabel {
-	switch r {
-	case codevaldagency.RACIResponsible:
-		return pb.RACILabel_RACI_LABEL_RESPONSIBLE
-	case codevaldagency.RACIAccountable:
-		return pb.RACILabel_RACI_LABEL_ACCOUNTABLE
-	case codevaldagency.RACIConsulted:
-		return pb.RACILabel_RACI_LABEL_CONSULTED
-	case codevaldagency.RACIInformed:
-		return pb.RACILabel_RACI_LABEL_INFORMED
-	default:
-		return pb.RACILabel_RACI_LABEL_UNSPECIFIED
-	}
-}
-
-func protoToActorType(a pb.ActorType) codevaldagency.ActorType {
-	switch a {
-	case pb.ActorType_ACTOR_TYPE_HUMAN:
-		return codevaldagency.ActorTypeHuman
-	case pb.ActorType_ACTOR_TYPE_AI:
-		return codevaldagency.ActorTypeAI
-	case pb.ActorType_ACTOR_TYPE_EITHER:
-		return codevaldagency.ActorTypeEither
-	default:
-		return ""
-	}
 }
 
 func actorTypeToProto(a codevaldagency.ActorType) pb.ActorType {
 	switch a {
 	case codevaldagency.ActorTypeHuman:
 		return pb.ActorType_ACTOR_TYPE_HUMAN
-	case codevaldagency.ActorTypeAI:
+	case codevaldagency.ActorTypeAIAgent:
 		return pb.ActorType_ACTOR_TYPE_AI
-	case codevaldagency.ActorTypeEither:
+	case codevaldagency.ActorTypeComputeAgent:
 		return pb.ActorType_ACTOR_TYPE_EITHER
 	default:
 		return pb.ActorType_ACTOR_TYPE_UNSPECIFIED
 	}
-}
-
-func protoToConfiguredRoles(prs []*pb.ConfiguredRole) []codevaldagency.ConfiguredRole {
-	if len(prs) == 0 {
-		return nil
-	}
-	out := make([]codevaldagency.ConfiguredRole, len(prs))
-	for i, pr := range prs {
-		out[i] = codevaldagency.ConfiguredRole{
-			Role:      codevaldagency.AgencyRole(pr.GetRole()),
-			ActorType: protoToActorType(pr.GetActorType()),
-		}
-	}
-	return out
 }
 
 func configuredRolesToProto(roles []codevaldagency.ConfiguredRole) []*pb.ConfiguredRole {
@@ -372,7 +211,7 @@ func configuredRolesToProto(roles []codevaldagency.ConfiguredRole) []*pb.Configu
 	out := make([]*pb.ConfiguredRole, len(roles))
 	for i, r := range roles {
 		out[i] = &pb.ConfiguredRole{
-			Role:      string(r.Role),
+			Role:      r.Name,
 			ActorType: actorTypeToProto(r.ActorType),
 		}
 	}
@@ -389,7 +228,6 @@ func timeToProto(t time.Time) *timestamppb.Timestamp {
 func publicationToProto(p codevaldagency.AgencyPublication) *pb.AgencyPublication {
 	return &pb.AgencyPublication{
 		Id:          p.ID,
-		Agency:      agencyToProto(p.Agency),
 		Version:     int32(p.Version),
 		Tag:         p.Tag,
 		PublishedAt: timeToProto(p.PublishedAt),

@@ -57,6 +57,9 @@ func (m *mockManager) getPublicationErr() error                               { 
 func (m *mockManager) ListPublications(_ context.Context) ([]codevaldagency.AgencyPublication, error) {
 	return m.listPubResult, m.listPubErr
 }
+func (m *mockManager) UpdatePublicationStatus(_ context.Context, _ int, _ string) (codevaldagency.AgencyPublication, error) {
+	return codevaldagency.AgencyPublication{}, nil
+}
 func (m *mockManager) GetGoals(_ context.Context) ([]codevaldagency.Goal, error) {
 	return m.goalsResult, m.goalsErr
 }
@@ -183,13 +186,12 @@ func TestServer_UpdateAgency_NotFound(t *testing.T) {
 
 func TestServer_PublishAgency_OK(t *testing.T) {
 	t.Parallel()
-	agency := codevaldagency.Agency{ID: "a1", Name: "Alpha", Status: codevaldagency.LifecycleDraft}
 	mgr := &mockManager{
 		publishResult: codevaldagency.AgencyPublication{
-			ID:      "pub-1",
-			Agency:  agency,
-			Version: 1,
-			Tag:     "v1",
+			ID:       "pub-1",
+			AgencyID: "a1",
+			Version:  1,
+			Tag:      "v1",
 		},
 	}
 	srv := server.New(mgr)
@@ -202,9 +204,6 @@ func TestServer_PublishAgency_OK(t *testing.T) {
 	}
 	if got.GetTag() != "v1" {
 		t.Errorf("Tag: want %q, got %q", "v1", got.GetTag())
-	}
-	if got.GetAgency().GetId() != "a1" {
-		t.Errorf("Agency.ID: want %q, got %q", "a1", got.GetAgency().GetId())
 	}
 }
 
@@ -220,13 +219,12 @@ func TestServer_PublishAgency_NotFound_ReturnsNotFound(t *testing.T) {
 
 func TestServer_GetPublication_OK(t *testing.T) {
 	t.Parallel()
-	agency := codevaldagency.Agency{ID: "a1", Name: "Alpha", Status: codevaldagency.LifecycleDraft}
 	mgr := &mockManager{
 		getPubResult: codevaldagency.AgencyPublication{
-			ID:      "pub-1",
-			Agency:  agency,
-			Version: 1,
-			Tag:     "v1",
+			ID:       "pub-1",
+			AgencyID: "a1",
+			Version:  1,
+			Tag:      "v1",
 		},
 	}
 	srv := server.New(mgr)
@@ -251,11 +249,10 @@ func TestServer_GetPublication_NotFound_ReturnsNotFound(t *testing.T) {
 
 func TestServer_ListPublications_OK(t *testing.T) {
 	t.Parallel()
-	agency := codevaldagency.Agency{ID: "a1", Name: "Alpha"}
 	mgr := &mockManager{
 		listPubResult: []codevaldagency.AgencyPublication{
-			{ID: "pub-1", Agency: agency, Version: 1, Tag: "v1"},
-			{ID: "pub-2", Agency: agency, Version: 2, Tag: "v2"},
+			{ID: "pub-1", AgencyID: "a1", Version: 1, Tag: "v1"},
+			{ID: "pub-2", AgencyID: "a1", Version: 2, Tag: "v2"},
 		},
 	}
 	srv := server.New(mgr)
@@ -337,9 +334,6 @@ func TestServer_GetWorkflows_OK(t *testing.T) {
 			{
 				ID:   "wf1",
 				Name: "Workflow One",
-				WorkItems: []codevaldagency.WorkItem{
-					{ID: "wi1", Title: "Item One", Order: 1},
-				},
 			},
 		},
 	}
@@ -353,9 +347,6 @@ func TestServer_GetWorkflows_OK(t *testing.T) {
 	}
 	if got.GetWorkflows()[0].GetId() != "wf1" {
 		t.Errorf("Workflow[0].ID: want %q, got %q", "wf1", got.GetWorkflows()[0].GetId())
-	}
-	if len(got.GetWorkflows()[0].GetWorkItems()) != 1 {
-		t.Errorf("expected 1 work item, got %d", len(got.GetWorkflows()[0].GetWorkItems()))
 	}
 }
 
@@ -386,8 +377,8 @@ func TestServer_GetConfiguredRoles_OK(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{
 		rolesResult: []codevaldagency.ConfiguredRole{
-			{Role: "analyst", ActorType: codevaldagency.ActorTypeHuman},
-			{Role: "reviewer", ActorType: codevaldagency.ActorTypeAI},
+			{Name: "analyst", ActorType: codevaldagency.ActorTypeHuman},
+			{Name: "reviewer", ActorType: codevaldagency.ActorTypeAIAgent},
 		},
 	}
 	srv := server.New(mgr)

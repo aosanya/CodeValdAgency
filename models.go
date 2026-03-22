@@ -2,48 +2,19 @@ package codevaldagency
 
 import "time"
 
-// RACILabel is the RACI designation for a role assignment on a Work Item edge.
-type RACILabel string
-
-const (
-	// RACIResponsible is assigned to the actor who performs the work.
-	RACIResponsible RACILabel = "R"
-	// RACIAccountable is assigned to the actor who owns the outcome.
-	RACIAccountable RACILabel = "A"
-	// RACIConsulted is assigned to the actor whose input is sought.
-	RACIConsulted RACILabel = "C"
-	// RACIInformed is assigned to the actor who receives status updates.
-	RACIInformed RACILabel = "I"
-)
-
-// AgencyRole is the name of a configured role within an agency (e.g. "domain_expert").
-type AgencyRole string
-
-// ActorType constrains whether a [ConfiguredRole] is fulfilled by a human,
-// an AI agent, or either.
+// ActorType constrains who may fill a [ConfiguredRole].
 type ActorType string
 
 const (
 	// ActorTypeHuman restricts the role to human actors only.
 	ActorTypeHuman ActorType = "human"
 
-	// ActorTypeAI restricts the role to AI agent actors only.
-	ActorTypeAI ActorType = "ai"
+	// ActorTypeAIAgent restricts the role to LLM-backed AI agent actors.
+	ActorTypeAIAgent ActorType = "ai_agent"
 
-	// ActorTypeEither allows the role to be fulfilled by either a human or an
-	// AI agent.
-	ActorTypeEither ActorType = "either"
+	// ActorTypeComputeAgent restricts the role to deterministic compute agents.
+	ActorTypeComputeAgent ActorType = "compute_agent"
 )
-
-// RoleAssignment pairs a [ConfiguredRole] name with a [RACILabel] on a
-// [WorkItem]. It is stored as metadata on an assigned_role edge.
-type RoleAssignment struct {
-	// Role is the name of the configured role.
-	Role AgencyRole
-
-	// RACI is the responsibility designation for this assignment.
-	RACI RACILabel
-}
 
 // AgencyLifecycle is the progression state of an [Agency].
 // Transitions are strictly forward-only; see [AgencyLifecycle.CanTransitionTo].
@@ -84,7 +55,8 @@ func (l AgencyLifecycle) CanTransitionTo(next AgencyLifecycle) bool {
 
 // Agency is the root entity of an agency graph. One Agency entity exists per
 // database. Sub-resources (Goals, Workflows, WorkItems, ConfiguredRoles) are
-// separate entities linked via edges in the entity graph.
+// separate entities linked via edges in the entity graph and are fetched via
+// dedicated AgencyManager methods.
 type Agency struct {
 	// ID is the unique identifier for this agency.
 	ID string
@@ -100,15 +72,6 @@ type Agency struct {
 
 	// Status is the current lifecycle state of the agency.
 	Status AgencyLifecycle
-
-	// Goals is the list of strategic objectives defined for this agency.
-	Goals []Goal
-
-	// Workflows is the ordered list of workflows defined for this agency.
-	Workflows []Workflow
-
-	// ConfiguredRoles is the list of roles configured for this agency.
-	ConfiguredRoles []ConfiguredRole
 
 	// CreatedAt is the time at which the agency was first persisted.
 	CreatedAt time.Time
@@ -142,14 +105,16 @@ type Workflow struct {
 	// Name is a human-readable label for the workflow.
 	Name string
 
-	// WorkItems is the ordered list of work items in this workflow.
-	// Populated by AgencyManager.GetWorkflows; empty in raw entity reads.
-	WorkItems []WorkItem
+	// Description provides context about the purpose of this workflow.
+	Description string
+
+	// Ordinality controls the execution order among Workflows on this Agency.
+	// Lower values run first; equal values run in parallel.
+	Ordinality int
 }
 
 // WorkItem is a single unit of work within a [Workflow], linked via a
-// has_work_item edge. Relationships to Goals and ConfiguredRoles are stored as
-// advances_goal and assigned_role edges respectively.
+// has_work_item edge.
 type WorkItem struct {
 	// ID is the unique identifier for this work item.
 	ID string
@@ -160,29 +125,35 @@ type WorkItem struct {
 	// Description provides additional context about what must be done.
 	Description string
 
-	// Order is the explicit execution sequence within the workflow.
-	Order int
+	// Ordinality controls the execution order within the Workflow.
+	// Items with the same value run in parallel; higher values run after lower.
+	Ordinality int
 
-	// Parallel indicates that this item may run concurrently with adjacent
-	// items that share the same Order value.
-	Parallel bool
-
-	// GoalIDs is the list of [Goal] IDs that this work item advances.
-	GoalIDs []string
-
-	// Assignments is the list of role assignments on this work item.
-	Assignments []RoleAssignment
+	// Prompt is the task-specific input sent to the actor at dispatch time.
+	// For ai_agent: the LLM prompt. For compute_agent: the function input.
+	// For human: the task brief shown in the UI.
+	Prompt string
 }
 
 // ConfiguredRole is a named role entity defined by an agency beyond the
 // built-in roles. It is linked to the Agency and may be referenced via
 // assigned_role edges on WorkItems.
 type ConfiguredRole struct {
-	// Role is the name of the configured role (e.g. "domain_expert").
-	Role AgencyRole
+	// ID is the unique identifier for this configured role.
+	ID string
 
-	// ActorType constrains who may fill this role — human, AI, or either.
+	// Name is the human-readable label for this role (e.g. "domain_expert").
+	Name string
+
+	// Description is the role brief — responsibilities, boundaries, and
+	// context shown to a human or injected into an AI agent's system prompt.
+	Description string
+
+	// ActorType constrains who may fill this role.
 	ActorType ActorType
+
+	// Ordinality controls the sort order among ConfiguredRoles on this Agency.
+	Ordinality int
 }
 
 // AgencySnapshot is an immutable point-in-time record captured at the
@@ -194,37 +165,18 @@ type AgencySnapshot struct {
 	// AgencyID is the identifier of the agency this snapshot belongs to.
 	AgencyID string
 
-	// Name is the agency name at the time of the snapshot.
-	Name string
-
-	// Mission is the agency mission at the time of the snapshot.
-	Mission string
-
-	// Vision is the agency vision at the time of the snapshot.
-	Vision string
-
-	// Goals is the list of goals at the time of the snapshot.
-	Goals []Goal
-
-	// Workflows is the list of workflows at the time of the snapshot.
-	Workflows []Workflow
-
-	// ConfiguredRoles is the list of configured roles at the time of the snapshot.
-	ConfiguredRoles []ConfiguredRole
-
 	// SnapshotAt is the exact time the draft → active transition occurred.
 	SnapshotAt time.Time
 }
 
 // AgencyPublication is an immutable, versioned snapshot created by an explicit
-// publish action. The agency lifecycle Status is never changed by publishing.
-// Publications are written once and never modified.
+// publish action. Written once, never modified.
 type AgencyPublication struct {
 	// ID is the unique identifier for this publication.
 	ID string
 
-	// Agency is the full snapshot of the agency at the time of publication.
-	Agency Agency
+	// AgencyID is the identifier of the agency this publication belongs to.
+	AgencyID string
 
 	// Version is the auto-incrementing publication number (1, 2, 3, …).
 	Version int
@@ -234,17 +186,83 @@ type AgencyPublication struct {
 
 	// PublishedAt is the exact time this publication was created.
 	PublishedAt time.Time
+
+	// Status is the lifecycle state of this publication.
+	// Valid values: "draft", "active", "archived".
+	Status string
 }
 
-// UpdateAgencyRequest carries the mutable fields of an existing agency.
-// Set only the fields you want to change; the manager validates lifecycle
-// transitions before delegating to the storage backend.
+// Instruction is an ordered rule or constraint attached to a Workflow or
+// WorkItem. Uses the multi-parent pattern — the parent is whichever
+// belongs_to_* relationship was set at creation. Mutable.
+type Instruction struct {
+	// ID is the unique identifier for this instruction.
+	ID string
+
+	// Content is the rule or constraint text delivered to the actor.
+	Content string
+
+	// Ordinality controls the sort order among Instructions on the parent.
+	Ordinality int
+}
+
+// Deliverable is the specification of an expected output for a WorkItem.
+// It is the spec entity — [DeliverableResult] is the corresponding instance.
+// Mutable.
+type Deliverable struct {
+	// ID is the unique identifier for this deliverable.
+	ID string
+
+	// Title names the expected output (e.g. "Analysis Report").
+	Title string
+
+	// Description defines what the output must contain or satisfy.
+	Description string
+
+	// Ordinality controls the sort order among Deliverables on the WorkItem.
+	Ordinality int
+
+	// Blocking indicates that a rejected result halts the Workflow from
+	// advancing past this WorkItem until a reviewer_role actor waives it.
+	Blocking bool
+}
+
+// DeliverableResult is an immutable record of a single submission against a
+// [Deliverable]. Multiple results may exist per Deliverable (full audit trail).
+// ProducedAt is server-stamped at creation — callers do not set it.
+//
+// Status lifecycle: pending → completed | rejected → waived
+type DeliverableResult struct {
+	// ID is the unique identifier for this result.
+	ID string
+
+	// Status is the current state of this result.
+	// Valid values: "pending", "completed", "rejected", "waived".
+	Status string
+
+	// ProducedAt is the server-stamped time this result was persisted.
+	ProducedAt time.Time
+}
+
+// ContentRef is an immutable pointer to a single artifact path in CodeValdGit.
+// Uses the multi-parent pattern — attachable to a [DeliverableResult],
+// an [Instruction], or a [WorkItem].
+type ContentRef struct {
+	// ID is the unique identifier for this content reference.
+	ID string
+
+	// Path is the relative path within the CodeValdGit repo for this agency
+	// (e.g. "output/report.md").
+	Path string
+}
+
+// UpdateAgencyRequest carries the scalar fields of an existing Agency that
+// may be changed via UpdateAgency. Sub-resources (Goals, Workflows,
+// ConfiguredRoles) are managed through their own dedicated manager methods
+// and are not part of an agency update.
 type UpdateAgencyRequest struct {
-	Name            string
-	Mission         string
-	Vision          string
-	Status          AgencyLifecycle
-	Goals           []Goal
-	Workflows       []Workflow
-	ConfiguredRoles []ConfiguredRole
+	Name    string
+	Mission string
+	Vision  string
+	Status  AgencyLifecycle
 }

@@ -470,9 +470,6 @@ func TestGetWorkflows_ReturnsWorkflowsWithItems(t *testing.T) {
 	if len(wfs) != 1 || wfs[0].ID != "wf-001" {
 		t.Errorf("unexpected workflows: %+v", wfs)
 	}
-	if len(wfs[0].WorkItems) != 1 || wfs[0].WorkItems[0].ID != "wi-001" {
-		t.Errorf("unexpected work items: %+v", wfs[0].WorkItems)
-	}
 }
 
 func TestGetConfiguredRoles_ReturnsRoles(t *testing.T) {
@@ -486,7 +483,7 @@ func TestGetConfiguredRoles_ReturnsRoles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetConfiguredRoles: %v", err)
 	}
-	if len(roles) != 1 || roles[0].Role != "domain_expert" {
+	if len(roles) != 1 || roles[0].Name != "domain_expert" {
 		t.Errorf("unexpected roles: %+v", roles)
 	}
 }
@@ -505,7 +502,7 @@ func TestPublishAgency_NoAgency_ReturnsErrAgencyNotFound(t *testing.T) {
 func TestPublishAgency_FirstPublish_VersionIsOne(t *testing.T) {
 	t.Parallel()
 	mgr, fdm := mustNewManager(t)
-	set := mustSetupAgency(t, mgr, "agency-001", "Alpha")
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
 
 	pub, err := mgr.PublishAgency(context.Background())
 	if err != nil {
@@ -523,8 +520,8 @@ func TestPublishAgency_FirstPublish_VersionIsOne(t *testing.T) {
 	if pub.PublishedAt.IsZero() {
 		t.Error("PublishedAt must not be zero")
 	}
-	if pub.Agency.ID != set.ID {
-		t.Errorf("Agency.ID: want %q, got %q", set.ID, pub.Agency.ID)
+	if pub.AgencyID != testAgencyID {
+		t.Errorf("AgencyID: want %q, got %q", testAgencyID, pub.AgencyID)
 	}
 	if pubs := fdm.entitiesByType("AgencyPublication"); len(pubs) != 1 {
 		t.Fatalf("expected 1 stored publication entity, got %d", len(pubs))
@@ -618,8 +615,8 @@ func TestGetPublication_RoundTrip(t *testing.T) {
 	if got.Tag != pub.Tag {
 		t.Errorf("Tag: want %q, got %q", pub.Tag, got.Tag)
 	}
-	if got.Agency.ID != pub.Agency.ID {
-		t.Errorf("Agency.ID: want %q, got %q", pub.Agency.ID, got.Agency.ID)
+	if got.AgencyID != pub.AgencyID {
+		t.Errorf("AgencyID: want %q, got %q", pub.AgencyID, got.AgencyID)
 	}
 }
 

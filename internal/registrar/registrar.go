@@ -123,6 +123,14 @@ func agencyRoutes() []types.RouteInfo {
 			Capability: "publish_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/PublishAgency",
 		},
+		// POST /agency/{agencyId}/import — parse a raw agency.yaml body and
+		// idempotently populate a draft in one shot.
+		{
+			Method:     "POST",
+			Pattern:    "/agency/{agencyId}/import",
+			Capability: "import_draft",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/ImportDraft",
+		},
 		// GET /agency/{agencyId}/publications — list all publications.
 		{
 			Method:     "GET",

@@ -9,6 +9,7 @@ import (
 
 	codevaldagency "github.com/aosanya/CodeValdAgency"
 	pb "github.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1"
+	"github.com/aosanya/CodeValdSharedLib/entitygraph"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -18,11 +19,14 @@ import (
 type Server struct {
 	pb.UnimplementedAgencyServiceServer
 	mgr codevaldagency.AgencyManager
+	dm  entitygraph.DataManager
 }
 
-// New constructs a Server backed by the given AgencyManager.
-func New(mgr codevaldagency.AgencyManager) *Server {
-	return &Server{mgr: mgr}
+// New constructs a Server backed by the given AgencyManager and DataManager.
+// dm is used by ImportDraft to write draft sub-entities directly without an
+// HTTP round-trip back through CodeValdCross.
+func New(mgr codevaldagency.AgencyManager, dm entitygraph.DataManager) *Server {
+	return &Server{mgr: mgr, dm: dm}
 }
 
 // GetAgency implements pb.AgencyServiceServer.

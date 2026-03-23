@@ -33,6 +33,7 @@ const (
 	AgencyService_UpdateDraftDescription_FullMethodName = "/codevaldagency.v1.AgencyService/UpdateDraftDescription"
 	AgencyService_PromoteDraft_FullMethodName           = "/codevaldagency.v1.AgencyService/PromoteDraft"
 	AgencyService_ArchiveDraft_FullMethodName           = "/codevaldagency.v1.AgencyService/ArchiveDraft"
+	AgencyService_ImportDraft_FullMethodName            = "/codevaldagency.v1.AgencyService/ImportDraft"
 )
 
 // AgencyServiceClient is the client API for AgencyService service.
@@ -88,6 +89,14 @@ type AgencyServiceClient interface {
 	// Error: NOT_FOUND if the draft does not exist.
 	// Error: FAILED_PRECONDITION if the draft is not open.
 	ArchiveDraft(ctx context.Context, in *ArchiveDraftRequest, opts ...grpc.CallOption) (*AgencyDraft, error)
+	// ImportDraft parses a raw agency.yaml (or agency.json) body, sets the agency
+	// details, creates or reuses an open draft, and idempotently upserts all
+	// sub-entities (DraftConfiguredRole, DraftGoal, DraftWorkflow, DraftWorkItem,
+	// DraftInstruction, DraftDeliverable) in one shot.
+	// The body field must contain the raw file content — CodeValdCross wraps the
+	// HTTP request body into this field automatically.
+	// Error: INVALID_ARGUMENT if the body cannot be parsed.
+	ImportDraft(ctx context.Context, in *ImportDraftRequest, opts ...grpc.CallOption) (*ImportDraftResponse, error)
 }
 
 type agencyServiceClient struct {
@@ -238,6 +247,16 @@ func (c *agencyServiceClient) ArchiveDraft(ctx context.Context, in *ArchiveDraft
 	return out, nil
 }
 
+func (c *agencyServiceClient) ImportDraft(ctx context.Context, in *ImportDraftRequest, opts ...grpc.CallOption) (*ImportDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ImportDraftResponse)
+	err := c.cc.Invoke(ctx, AgencyService_ImportDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgencyServiceServer is the server API for AgencyService service.
 // All implementations must embed UnimplementedAgencyServiceServer
 // for forward compatibility.
@@ -291,6 +310,14 @@ type AgencyServiceServer interface {
 	// Error: NOT_FOUND if the draft does not exist.
 	// Error: FAILED_PRECONDITION if the draft is not open.
 	ArchiveDraft(context.Context, *ArchiveDraftRequest) (*AgencyDraft, error)
+	// ImportDraft parses a raw agency.yaml (or agency.json) body, sets the agency
+	// details, creates or reuses an open draft, and idempotently upserts all
+	// sub-entities (DraftConfiguredRole, DraftGoal, DraftWorkflow, DraftWorkItem,
+	// DraftInstruction, DraftDeliverable) in one shot.
+	// The body field must contain the raw file content — CodeValdCross wraps the
+	// HTTP request body into this field automatically.
+	// Error: INVALID_ARGUMENT if the body cannot be parsed.
+	ImportDraft(context.Context, *ImportDraftRequest) (*ImportDraftResponse, error)
 	mustEmbedUnimplementedAgencyServiceServer()
 }
 
@@ -342,6 +369,9 @@ func (UnimplementedAgencyServiceServer) PromoteDraft(context.Context, *PromoteDr
 }
 func (UnimplementedAgencyServiceServer) ArchiveDraft(context.Context, *ArchiveDraftRequest) (*AgencyDraft, error) {
 	return nil, status.Error(codes.Unimplemented, "method ArchiveDraft not implemented")
+}
+func (UnimplementedAgencyServiceServer) ImportDraft(context.Context, *ImportDraftRequest) (*ImportDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ImportDraft not implemented")
 }
 func (UnimplementedAgencyServiceServer) mustEmbedUnimplementedAgencyServiceServer() {}
 func (UnimplementedAgencyServiceServer) testEmbeddedByValue()                       {}
@@ -616,6 +646,24 @@ func _AgencyService_ArchiveDraft_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgencyService_ImportDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).ImportDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_ImportDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).ImportDraft(ctx, req.(*ImportDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgencyService_ServiceDesc is the grpc.ServiceDesc for AgencyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -678,6 +726,10 @@ var AgencyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ArchiveDraft",
 			Handler:    _AgencyService_ArchiveDraft_Handler,
+		},
+		{
+			MethodName: "ImportDraft",
+			Handler:    _AgencyService_ImportDraft_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

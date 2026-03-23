@@ -1640,6 +1640,109 @@ func (x *ArchiveDraftRequest) GetDraftId() string {
 	return ""
 }
 
+// ImportDraftRequest carries the raw YAML (or JSON) body of an agency.yaml file.
+// CodeValdCross wraps the raw request body into the body field automatically —
+// HTTP callers send the file content as the raw request body.
+type ImportDraftRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// body contains the raw agency.yaml (or agency.json) file content.
+	Body          string `protobuf:"bytes,1,opt,name=body,proto3" json:"body,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ImportDraftRequest) Reset() {
+	*x = ImportDraftRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImportDraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImportDraftRequest) ProtoMessage() {}
+
+func (x *ImportDraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImportDraftRequest.ProtoReflect.Descriptor instead.
+func (*ImportDraftRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ImportDraftRequest) GetBody() string {
+	if x != nil {
+		return x.Body
+	}
+	return ""
+}
+
+// ImportDraftResponse is returned on a successful import.
+type ImportDraftResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// agency_id is the code value from the YAML agency.code field.
+	AgencyId string `protobuf:"bytes,1,opt,name=agency_id,json=agencyId,proto3" json:"agency_id,omitempty"`
+	// draft_id is the server-assigned UUID of the open AgencyDraft entity.
+	DraftId       string `protobuf:"bytes,2,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ImportDraftResponse) Reset() {
+	*x = ImportDraftResponse{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImportDraftResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImportDraftResponse) ProtoMessage() {}
+
+func (x *ImportDraftResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImportDraftResponse.ProtoReflect.Descriptor instead.
+func (*ImportDraftResponse) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ImportDraftResponse) GetAgencyId() string {
+	if x != nil {
+		return x.AgencyId
+	}
+	return ""
+}
+
+func (x *ImportDraftResponse) GetDraftId() string {
+	if x != nil {
+		return x.DraftId
+	}
+	return ""
+}
+
 // EntityItem is a generic entity document as managed by EntityService.
 // Properties are represented as an arbitrary JSON object.
 type EntityItem struct {
@@ -1656,7 +1759,7 @@ type EntityItem struct {
 
 func (x *EntityItem) Reset() {
 	*x = EntityItem{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[27]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1668,7 +1771,7 @@ func (x *EntityItem) String() string {
 func (*EntityItem) ProtoMessage() {}
 
 func (x *EntityItem) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[27]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1681,7 +1784,7 @@ func (x *EntityItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityItem.ProtoReflect.Descriptor instead.
 func (*EntityItem) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{27}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *EntityItem) GetId() string {
@@ -1742,7 +1845,7 @@ type RelationshipItem struct {
 
 func (x *RelationshipItem) Reset() {
 	*x = RelationshipItem{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[28]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1754,7 +1857,7 @@ func (x *RelationshipItem) String() string {
 func (*RelationshipItem) ProtoMessage() {}
 
 func (x *RelationshipItem) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[28]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1767,7 +1870,7 @@ func (x *RelationshipItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RelationshipItem.ProtoReflect.Descriptor instead.
 func (*RelationshipItem) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{28}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *RelationshipItem) GetId() string {
@@ -1839,7 +1942,7 @@ type ListEntitiesRequest struct {
 
 func (x *ListEntitiesRequest) Reset() {
 	*x = ListEntitiesRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[29]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1851,7 +1954,7 @@ func (x *ListEntitiesRequest) String() string {
 func (*ListEntitiesRequest) ProtoMessage() {}
 
 func (x *ListEntitiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[29]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1864,7 +1967,7 @@ func (x *ListEntitiesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEntitiesRequest.ProtoReflect.Descriptor instead.
 func (*ListEntitiesRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{29}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ListEntitiesRequest) GetAgencyId() string {
@@ -1898,7 +2001,7 @@ type ListEntitiesResponse struct {
 
 func (x *ListEntitiesResponse) Reset() {
 	*x = ListEntitiesResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[30]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1910,7 +2013,7 @@ func (x *ListEntitiesResponse) String() string {
 func (*ListEntitiesResponse) ProtoMessage() {}
 
 func (x *ListEntitiesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[30]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1923,7 +2026,7 @@ func (x *ListEntitiesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEntitiesResponse.ProtoReflect.Descriptor instead.
 func (*ListEntitiesResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{30}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ListEntitiesResponse) GetEntities() []*EntityItem {
@@ -1946,7 +2049,7 @@ type CreateEntityRequest struct {
 
 func (x *CreateEntityRequest) Reset() {
 	*x = CreateEntityRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[31]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1958,7 +2061,7 @@ func (x *CreateEntityRequest) String() string {
 func (*CreateEntityRequest) ProtoMessage() {}
 
 func (x *CreateEntityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[31]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1971,7 +2074,7 @@ func (x *CreateEntityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateEntityRequest.ProtoReflect.Descriptor instead.
 func (*CreateEntityRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{31}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *CreateEntityRequest) GetAgencyId() string {
@@ -2008,7 +2111,7 @@ type GetEntityRequest struct {
 
 func (x *GetEntityRequest) Reset() {
 	*x = GetEntityRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[32]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2020,7 +2123,7 @@ func (x *GetEntityRequest) String() string {
 func (*GetEntityRequest) ProtoMessage() {}
 
 func (x *GetEntityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[32]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2033,7 +2136,7 @@ func (x *GetEntityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEntityRequest.ProtoReflect.Descriptor instead.
 func (*GetEntityRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{32}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *GetEntityRequest) GetAgencyId() string {
@@ -2071,7 +2174,7 @@ type UpdateEntityRequest struct {
 
 func (x *UpdateEntityRequest) Reset() {
 	*x = UpdateEntityRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[33]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2083,7 +2186,7 @@ func (x *UpdateEntityRequest) String() string {
 func (*UpdateEntityRequest) ProtoMessage() {}
 
 func (x *UpdateEntityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[33]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2096,7 +2199,7 @@ func (x *UpdateEntityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateEntityRequest.ProtoReflect.Descriptor instead.
 func (*UpdateEntityRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{33}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *UpdateEntityRequest) GetAgencyId() string {
@@ -2138,7 +2241,7 @@ type DeleteEntityRequest struct {
 
 func (x *DeleteEntityRequest) Reset() {
 	*x = DeleteEntityRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[34]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2150,7 +2253,7 @@ func (x *DeleteEntityRequest) String() string {
 func (*DeleteEntityRequest) ProtoMessage() {}
 
 func (x *DeleteEntityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[34]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2163,7 +2266,7 @@ func (x *DeleteEntityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteEntityRequest.ProtoReflect.Descriptor instead.
 func (*DeleteEntityRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{34}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *DeleteEntityRequest) GetAgencyId() string {
@@ -2189,7 +2292,7 @@ type DeleteEntityResponse struct {
 
 func (x *DeleteEntityResponse) Reset() {
 	*x = DeleteEntityResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[35]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2201,7 +2304,7 @@ func (x *DeleteEntityResponse) String() string {
 func (*DeleteEntityResponse) ProtoMessage() {}
 
 func (x *DeleteEntityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[35]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2214,7 +2317,7 @@ func (x *DeleteEntityResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteEntityResponse.ProtoReflect.Descriptor instead.
 func (*DeleteEntityResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{35}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{37}
 }
 
 // ListRelationshipsRequest selects all outbound edges from a source entity
@@ -2231,7 +2334,7 @@ type ListRelationshipsRequest struct {
 
 func (x *ListRelationshipsRequest) Reset() {
 	*x = ListRelationshipsRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[36]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2243,7 +2346,7 @@ func (x *ListRelationshipsRequest) String() string {
 func (*ListRelationshipsRequest) ProtoMessage() {}
 
 func (x *ListRelationshipsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[36]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2256,7 +2359,7 @@ func (x *ListRelationshipsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRelationshipsRequest.ProtoReflect.Descriptor instead.
 func (*ListRelationshipsRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{36}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ListRelationshipsRequest) GetAgencyId() string {
@@ -2290,7 +2393,7 @@ type ListRelationshipsResponse struct {
 
 func (x *ListRelationshipsResponse) Reset() {
 	*x = ListRelationshipsResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[37]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2302,7 +2405,7 @@ func (x *ListRelationshipsResponse) String() string {
 func (*ListRelationshipsResponse) ProtoMessage() {}
 
 func (x *ListRelationshipsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[37]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2315,7 +2418,7 @@ func (x *ListRelationshipsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRelationshipsResponse.ProtoReflect.Descriptor instead.
 func (*ListRelationshipsResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{37}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ListRelationshipsResponse) GetRelationships() []*RelationshipItem {
@@ -2340,7 +2443,7 @@ type CreateRelationshipRequest struct {
 
 func (x *CreateRelationshipRequest) Reset() {
 	*x = CreateRelationshipRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[38]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2352,7 +2455,7 @@ func (x *CreateRelationshipRequest) String() string {
 func (*CreateRelationshipRequest) ProtoMessage() {}
 
 func (x *CreateRelationshipRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[38]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2365,7 +2468,7 @@ func (x *CreateRelationshipRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRelationshipRequest.ProtoReflect.Descriptor instead.
 func (*CreateRelationshipRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{38}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *CreateRelationshipRequest) GetAgencyId() string {
@@ -2415,7 +2518,7 @@ type DeleteRelationshipRequest struct {
 
 func (x *DeleteRelationshipRequest) Reset() {
 	*x = DeleteRelationshipRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[39]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2427,7 +2530,7 @@ func (x *DeleteRelationshipRequest) String() string {
 func (*DeleteRelationshipRequest) ProtoMessage() {}
 
 func (x *DeleteRelationshipRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[39]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2440,7 +2543,7 @@ func (x *DeleteRelationshipRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRelationshipRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRelationshipRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{39}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *DeleteRelationshipRequest) GetAgencyId() string {
@@ -2473,7 +2576,7 @@ type DeleteRelationshipResponse struct {
 
 func (x *DeleteRelationshipResponse) Reset() {
 	*x = DeleteRelationshipResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[40]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2485,7 +2588,7 @@ func (x *DeleteRelationshipResponse) String() string {
 func (*DeleteRelationshipResponse) ProtoMessage() {}
 
 func (x *DeleteRelationshipResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[40]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2498,7 +2601,7 @@ func (x *DeleteRelationshipResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRelationshipResponse.ProtoReflect.Descriptor instead.
 func (*DeleteRelationshipResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{40}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{42}
 }
 
 var File_codevaldagency_v1_agency_proto protoreflect.FileDescriptor
@@ -2597,7 +2700,12 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x13PromoteDraftRequest\x12\x19\n" +
 	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"0\n" +
 	"\x13ArchiveDraftRequest\x12\x19\n" +
-	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"\x81\x02\n" +
+	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"(\n" +
+	"\x12ImportDraftRequest\x12\x12\n" +
+	"\x04body\x18\x01 \x01(\tR\x04body\"M\n" +
+	"\x13ImportDraftResponse\x12\x1b\n" +
+	"\tagency_id\x18\x01 \x01(\tR\bagencyId\x12\x19\n" +
+	"\bdraft_id\x18\x02 \x01(\tR\adraftId\"\x81\x02\n" +
 	"\n" +
 	"EntityItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
@@ -2684,8 +2792,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x16ACTOR_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10ACTOR_TYPE_HUMAN\x10\x01\x12\x11\n" +
 	"\rACTOR_TYPE_AI\x10\x02\x12\x15\n" +
-	"\x11ACTOR_TYPE_EITHER\x10\x032\xa7\n" +
-	"\n" +
+	"\x11ACTOR_TYPE_EITHER\x10\x032\x85\v\n" +
 	"\rAgencyService\x12Y\n" +
 	"\x10SetAgencyDetails\x12*.codevaldagency.v1.SetAgencyDetailsRequest\x1a\x19.codevaldagency.v1.Agency\x12K\n" +
 	"\tGetAgency\x12#.codevaldagency.v1.GetAgencyRequest\x1a\x19.codevaldagency.v1.Agency\x12^\n" +
@@ -2701,7 +2808,8 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"ListDrafts\x12$.codevaldagency.v1.ListDraftsRequest\x1a%.codevaldagency.v1.ListDraftsResponse\x12j\n" +
 	"\x16UpdateDraftDescription\x120.codevaldagency.v1.UpdateDraftDescriptionRequest\x1a\x1e.codevaldagency.v1.AgencyDraft\x12Q\n" +
 	"\fPromoteDraft\x12&.codevaldagency.v1.PromoteDraftRequest\x1a\x19.codevaldagency.v1.Agency\x12V\n" +
-	"\fArchiveDraft\x12&.codevaldagency.v1.ArchiveDraftRequest\x1a\x1e.codevaldagency.v1.AgencyDraft2\x9c\x06\n" +
+	"\fArchiveDraft\x12&.codevaldagency.v1.ArchiveDraftRequest\x1a\x1e.codevaldagency.v1.AgencyDraft\x12\\\n" +
+	"\vImportDraft\x12%.codevaldagency.v1.ImportDraftRequest\x1a&.codevaldagency.v1.ImportDraftResponse2\x9c\x06\n" +
 	"\rEntityService\x12_\n" +
 	"\fListEntities\x12&.codevaldagency.v1.ListEntitiesRequest\x1a'.codevaldagency.v1.ListEntitiesResponse\x12U\n" +
 	"\fCreateEntity\x12&.codevaldagency.v1.CreateEntityRequest\x1a\x1d.codevaldagency.v1.EntityItem\x12O\n" +
@@ -2725,7 +2833,7 @@ func file_codevaldagency_v1_agency_proto_rawDescGZIP() []byte {
 }
 
 var file_codevaldagency_v1_agency_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_codevaldagency_v1_agency_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
+var file_codevaldagency_v1_agency_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
 var file_codevaldagency_v1_agency_proto_goTypes = []any{
 	(AgencyDraftStatus)(0),                // 0: codevaldagency.v1.AgencyDraftStatus
 	(RACILabel)(0),                        // 1: codevaldagency.v1.RACILabel
@@ -2757,22 +2865,24 @@ var file_codevaldagency_v1_agency_proto_goTypes = []any{
 	(*UpdateDraftDescriptionRequest)(nil), // 27: codevaldagency.v1.UpdateDraftDescriptionRequest
 	(*PromoteDraftRequest)(nil),           // 28: codevaldagency.v1.PromoteDraftRequest
 	(*ArchiveDraftRequest)(nil),           // 29: codevaldagency.v1.ArchiveDraftRequest
-	(*EntityItem)(nil),                    // 30: codevaldagency.v1.EntityItem
-	(*RelationshipItem)(nil),              // 31: codevaldagency.v1.RelationshipItem
-	(*ListEntitiesRequest)(nil),           // 32: codevaldagency.v1.ListEntitiesRequest
-	(*ListEntitiesResponse)(nil),          // 33: codevaldagency.v1.ListEntitiesResponse
-	(*CreateEntityRequest)(nil),           // 34: codevaldagency.v1.CreateEntityRequest
-	(*GetEntityRequest)(nil),              // 35: codevaldagency.v1.GetEntityRequest
-	(*UpdateEntityRequest)(nil),           // 36: codevaldagency.v1.UpdateEntityRequest
-	(*DeleteEntityRequest)(nil),           // 37: codevaldagency.v1.DeleteEntityRequest
-	(*DeleteEntityResponse)(nil),          // 38: codevaldagency.v1.DeleteEntityResponse
-	(*ListRelationshipsRequest)(nil),      // 39: codevaldagency.v1.ListRelationshipsRequest
-	(*ListRelationshipsResponse)(nil),     // 40: codevaldagency.v1.ListRelationshipsResponse
-	(*CreateRelationshipRequest)(nil),     // 41: codevaldagency.v1.CreateRelationshipRequest
-	(*DeleteRelationshipRequest)(nil),     // 42: codevaldagency.v1.DeleteRelationshipRequest
-	(*DeleteRelationshipResponse)(nil),    // 43: codevaldagency.v1.DeleteRelationshipResponse
-	(*timestamppb.Timestamp)(nil),         // 44: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),               // 45: google.protobuf.Struct
+	(*ImportDraftRequest)(nil),            // 30: codevaldagency.v1.ImportDraftRequest
+	(*ImportDraftResponse)(nil),           // 31: codevaldagency.v1.ImportDraftResponse
+	(*EntityItem)(nil),                    // 32: codevaldagency.v1.EntityItem
+	(*RelationshipItem)(nil),              // 33: codevaldagency.v1.RelationshipItem
+	(*ListEntitiesRequest)(nil),           // 34: codevaldagency.v1.ListEntitiesRequest
+	(*ListEntitiesResponse)(nil),          // 35: codevaldagency.v1.ListEntitiesResponse
+	(*CreateEntityRequest)(nil),           // 36: codevaldagency.v1.CreateEntityRequest
+	(*GetEntityRequest)(nil),              // 37: codevaldagency.v1.GetEntityRequest
+	(*UpdateEntityRequest)(nil),           // 38: codevaldagency.v1.UpdateEntityRequest
+	(*DeleteEntityRequest)(nil),           // 39: codevaldagency.v1.DeleteEntityRequest
+	(*DeleteEntityResponse)(nil),          // 40: codevaldagency.v1.DeleteEntityResponse
+	(*ListRelationshipsRequest)(nil),      // 41: codevaldagency.v1.ListRelationshipsRequest
+	(*ListRelationshipsResponse)(nil),     // 42: codevaldagency.v1.ListRelationshipsResponse
+	(*CreateRelationshipRequest)(nil),     // 43: codevaldagency.v1.CreateRelationshipRequest
+	(*DeleteRelationshipRequest)(nil),     // 44: codevaldagency.v1.DeleteRelationshipRequest
+	(*DeleteRelationshipResponse)(nil),    // 45: codevaldagency.v1.DeleteRelationshipResponse
+	(*timestamppb.Timestamp)(nil),         // 46: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),               // 47: google.protobuf.Struct
 }
 var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	1,  // 0: codevaldagency.v1.RoleAssignment.raci:type_name -> codevaldagency.v1.RACILabel
@@ -2782,29 +2892,29 @@ var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	7,  // 4: codevaldagency.v1.Agency.goals:type_name -> codevaldagency.v1.Goal
 	6,  // 5: codevaldagency.v1.Agency.workflows:type_name -> codevaldagency.v1.Workflow
 	4,  // 6: codevaldagency.v1.Agency.configured_roles:type_name -> codevaldagency.v1.ConfiguredRole
-	44, // 7: codevaldagency.v1.Agency.created_at:type_name -> google.protobuf.Timestamp
-	44, // 8: codevaldagency.v1.Agency.updated_at:type_name -> google.protobuf.Timestamp
+	46, // 7: codevaldagency.v1.Agency.created_at:type_name -> google.protobuf.Timestamp
+	46, // 8: codevaldagency.v1.Agency.updated_at:type_name -> google.protobuf.Timestamp
 	8,  // 9: codevaldagency.v1.AgencyPublication.agency:type_name -> codevaldagency.v1.Agency
-	44, // 10: codevaldagency.v1.AgencyPublication.published_at:type_name -> google.protobuf.Timestamp
+	46, // 10: codevaldagency.v1.AgencyPublication.published_at:type_name -> google.protobuf.Timestamp
 	11, // 11: codevaldagency.v1.ListPublicationsResponse.publications:type_name -> codevaldagency.v1.AgencyPublication
 	7,  // 12: codevaldagency.v1.GetGoalsResponse.goals:type_name -> codevaldagency.v1.Goal
 	6,  // 13: codevaldagency.v1.GetWorkflowsResponse.workflows:type_name -> codevaldagency.v1.Workflow
 	4,  // 14: codevaldagency.v1.GetConfiguredRolesResponse.configured_roles:type_name -> codevaldagency.v1.ConfiguredRole
 	0,  // 15: codevaldagency.v1.AgencyDraft.status:type_name -> codevaldagency.v1.AgencyDraftStatus
-	44, // 16: codevaldagency.v1.AgencyDraft.created_at:type_name -> google.protobuf.Timestamp
-	44, // 17: codevaldagency.v1.AgencyDraft.updated_at:type_name -> google.protobuf.Timestamp
+	46, // 16: codevaldagency.v1.AgencyDraft.created_at:type_name -> google.protobuf.Timestamp
+	46, // 17: codevaldagency.v1.AgencyDraft.updated_at:type_name -> google.protobuf.Timestamp
 	22, // 18: codevaldagency.v1.ListDraftsResponse.drafts:type_name -> codevaldagency.v1.AgencyDraft
-	45, // 19: codevaldagency.v1.EntityItem.properties:type_name -> google.protobuf.Struct
-	44, // 20: codevaldagency.v1.EntityItem.created_at:type_name -> google.protobuf.Timestamp
-	44, // 21: codevaldagency.v1.EntityItem.updated_at:type_name -> google.protobuf.Timestamp
-	45, // 22: codevaldagency.v1.RelationshipItem.properties:type_name -> google.protobuf.Struct
-	44, // 23: codevaldagency.v1.RelationshipItem.created_at:type_name -> google.protobuf.Timestamp
-	45, // 24: codevaldagency.v1.ListEntitiesRequest.properties:type_name -> google.protobuf.Struct
-	30, // 25: codevaldagency.v1.ListEntitiesResponse.entities:type_name -> codevaldagency.v1.EntityItem
-	45, // 26: codevaldagency.v1.CreateEntityRequest.properties:type_name -> google.protobuf.Struct
-	45, // 27: codevaldagency.v1.UpdateEntityRequest.properties:type_name -> google.protobuf.Struct
-	31, // 28: codevaldagency.v1.ListRelationshipsResponse.relationships:type_name -> codevaldagency.v1.RelationshipItem
-	45, // 29: codevaldagency.v1.CreateRelationshipRequest.properties:type_name -> google.protobuf.Struct
+	47, // 19: codevaldagency.v1.EntityItem.properties:type_name -> google.protobuf.Struct
+	46, // 20: codevaldagency.v1.EntityItem.created_at:type_name -> google.protobuf.Timestamp
+	46, // 21: codevaldagency.v1.EntityItem.updated_at:type_name -> google.protobuf.Timestamp
+	47, // 22: codevaldagency.v1.RelationshipItem.properties:type_name -> google.protobuf.Struct
+	46, // 23: codevaldagency.v1.RelationshipItem.created_at:type_name -> google.protobuf.Timestamp
+	47, // 24: codevaldagency.v1.ListEntitiesRequest.properties:type_name -> google.protobuf.Struct
+	32, // 25: codevaldagency.v1.ListEntitiesResponse.entities:type_name -> codevaldagency.v1.EntityItem
+	47, // 26: codevaldagency.v1.CreateEntityRequest.properties:type_name -> google.protobuf.Struct
+	47, // 27: codevaldagency.v1.UpdateEntityRequest.properties:type_name -> google.protobuf.Struct
+	33, // 28: codevaldagency.v1.ListRelationshipsResponse.relationships:type_name -> codevaldagency.v1.RelationshipItem
+	47, // 29: codevaldagency.v1.CreateRelationshipRequest.properties:type_name -> google.protobuf.Struct
 	10, // 30: codevaldagency.v1.AgencyService.SetAgencyDetails:input_type -> codevaldagency.v1.SetAgencyDetailsRequest
 	9,  // 31: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
 	12, // 32: codevaldagency.v1.AgencyService.PublishAgency:input_type -> codevaldagency.v1.PublishAgencyRequest
@@ -2819,38 +2929,40 @@ var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	27, // 41: codevaldagency.v1.AgencyService.UpdateDraftDescription:input_type -> codevaldagency.v1.UpdateDraftDescriptionRequest
 	28, // 42: codevaldagency.v1.AgencyService.PromoteDraft:input_type -> codevaldagency.v1.PromoteDraftRequest
 	29, // 43: codevaldagency.v1.AgencyService.ArchiveDraft:input_type -> codevaldagency.v1.ArchiveDraftRequest
-	32, // 44: codevaldagency.v1.EntityService.ListEntities:input_type -> codevaldagency.v1.ListEntitiesRequest
-	34, // 45: codevaldagency.v1.EntityService.CreateEntity:input_type -> codevaldagency.v1.CreateEntityRequest
-	35, // 46: codevaldagency.v1.EntityService.GetEntity:input_type -> codevaldagency.v1.GetEntityRequest
-	36, // 47: codevaldagency.v1.EntityService.UpdateEntity:input_type -> codevaldagency.v1.UpdateEntityRequest
-	37, // 48: codevaldagency.v1.EntityService.DeleteEntity:input_type -> codevaldagency.v1.DeleteEntityRequest
-	39, // 49: codevaldagency.v1.EntityService.ListRelationships:input_type -> codevaldagency.v1.ListRelationshipsRequest
-	41, // 50: codevaldagency.v1.EntityService.CreateRelationship:input_type -> codevaldagency.v1.CreateRelationshipRequest
-	42, // 51: codevaldagency.v1.EntityService.DeleteRelationship:input_type -> codevaldagency.v1.DeleteRelationshipRequest
-	8,  // 52: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
-	8,  // 53: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
-	11, // 54: codevaldagency.v1.AgencyService.PublishAgency:output_type -> codevaldagency.v1.AgencyPublication
-	11, // 55: codevaldagency.v1.AgencyService.GetPublication:output_type -> codevaldagency.v1.AgencyPublication
-	15, // 56: codevaldagency.v1.AgencyService.ListPublications:output_type -> codevaldagency.v1.ListPublicationsResponse
-	17, // 57: codevaldagency.v1.AgencyService.GetGoals:output_type -> codevaldagency.v1.GetGoalsResponse
-	19, // 58: codevaldagency.v1.AgencyService.GetWorkflows:output_type -> codevaldagency.v1.GetWorkflowsResponse
-	21, // 59: codevaldagency.v1.AgencyService.GetConfiguredRoles:output_type -> codevaldagency.v1.GetConfiguredRolesResponse
-	22, // 60: codevaldagency.v1.AgencyService.CreateDraft:output_type -> codevaldagency.v1.AgencyDraft
-	22, // 61: codevaldagency.v1.AgencyService.GetDraft:output_type -> codevaldagency.v1.AgencyDraft
-	26, // 62: codevaldagency.v1.AgencyService.ListDrafts:output_type -> codevaldagency.v1.ListDraftsResponse
-	22, // 63: codevaldagency.v1.AgencyService.UpdateDraftDescription:output_type -> codevaldagency.v1.AgencyDraft
-	8,  // 64: codevaldagency.v1.AgencyService.PromoteDraft:output_type -> codevaldagency.v1.Agency
-	22, // 65: codevaldagency.v1.AgencyService.ArchiveDraft:output_type -> codevaldagency.v1.AgencyDraft
-	33, // 66: codevaldagency.v1.EntityService.ListEntities:output_type -> codevaldagency.v1.ListEntitiesResponse
-	30, // 67: codevaldagency.v1.EntityService.CreateEntity:output_type -> codevaldagency.v1.EntityItem
-	30, // 68: codevaldagency.v1.EntityService.GetEntity:output_type -> codevaldagency.v1.EntityItem
-	30, // 69: codevaldagency.v1.EntityService.UpdateEntity:output_type -> codevaldagency.v1.EntityItem
-	38, // 70: codevaldagency.v1.EntityService.DeleteEntity:output_type -> codevaldagency.v1.DeleteEntityResponse
-	40, // 71: codevaldagency.v1.EntityService.ListRelationships:output_type -> codevaldagency.v1.ListRelationshipsResponse
-	31, // 72: codevaldagency.v1.EntityService.CreateRelationship:output_type -> codevaldagency.v1.RelationshipItem
-	43, // 73: codevaldagency.v1.EntityService.DeleteRelationship:output_type -> codevaldagency.v1.DeleteRelationshipResponse
-	52, // [52:74] is the sub-list for method output_type
-	30, // [30:52] is the sub-list for method input_type
+	30, // 44: codevaldagency.v1.AgencyService.ImportDraft:input_type -> codevaldagency.v1.ImportDraftRequest
+	34, // 45: codevaldagency.v1.EntityService.ListEntities:input_type -> codevaldagency.v1.ListEntitiesRequest
+	36, // 46: codevaldagency.v1.EntityService.CreateEntity:input_type -> codevaldagency.v1.CreateEntityRequest
+	37, // 47: codevaldagency.v1.EntityService.GetEntity:input_type -> codevaldagency.v1.GetEntityRequest
+	38, // 48: codevaldagency.v1.EntityService.UpdateEntity:input_type -> codevaldagency.v1.UpdateEntityRequest
+	39, // 49: codevaldagency.v1.EntityService.DeleteEntity:input_type -> codevaldagency.v1.DeleteEntityRequest
+	41, // 50: codevaldagency.v1.EntityService.ListRelationships:input_type -> codevaldagency.v1.ListRelationshipsRequest
+	43, // 51: codevaldagency.v1.EntityService.CreateRelationship:input_type -> codevaldagency.v1.CreateRelationshipRequest
+	44, // 52: codevaldagency.v1.EntityService.DeleteRelationship:input_type -> codevaldagency.v1.DeleteRelationshipRequest
+	8,  // 53: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
+	8,  // 54: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
+	11, // 55: codevaldagency.v1.AgencyService.PublishAgency:output_type -> codevaldagency.v1.AgencyPublication
+	11, // 56: codevaldagency.v1.AgencyService.GetPublication:output_type -> codevaldagency.v1.AgencyPublication
+	15, // 57: codevaldagency.v1.AgencyService.ListPublications:output_type -> codevaldagency.v1.ListPublicationsResponse
+	17, // 58: codevaldagency.v1.AgencyService.GetGoals:output_type -> codevaldagency.v1.GetGoalsResponse
+	19, // 59: codevaldagency.v1.AgencyService.GetWorkflows:output_type -> codevaldagency.v1.GetWorkflowsResponse
+	21, // 60: codevaldagency.v1.AgencyService.GetConfiguredRoles:output_type -> codevaldagency.v1.GetConfiguredRolesResponse
+	22, // 61: codevaldagency.v1.AgencyService.CreateDraft:output_type -> codevaldagency.v1.AgencyDraft
+	22, // 62: codevaldagency.v1.AgencyService.GetDraft:output_type -> codevaldagency.v1.AgencyDraft
+	26, // 63: codevaldagency.v1.AgencyService.ListDrafts:output_type -> codevaldagency.v1.ListDraftsResponse
+	22, // 64: codevaldagency.v1.AgencyService.UpdateDraftDescription:output_type -> codevaldagency.v1.AgencyDraft
+	8,  // 65: codevaldagency.v1.AgencyService.PromoteDraft:output_type -> codevaldagency.v1.Agency
+	22, // 66: codevaldagency.v1.AgencyService.ArchiveDraft:output_type -> codevaldagency.v1.AgencyDraft
+	31, // 67: codevaldagency.v1.AgencyService.ImportDraft:output_type -> codevaldagency.v1.ImportDraftResponse
+	35, // 68: codevaldagency.v1.EntityService.ListEntities:output_type -> codevaldagency.v1.ListEntitiesResponse
+	32, // 69: codevaldagency.v1.EntityService.CreateEntity:output_type -> codevaldagency.v1.EntityItem
+	32, // 70: codevaldagency.v1.EntityService.GetEntity:output_type -> codevaldagency.v1.EntityItem
+	32, // 71: codevaldagency.v1.EntityService.UpdateEntity:output_type -> codevaldagency.v1.EntityItem
+	40, // 72: codevaldagency.v1.EntityService.DeleteEntity:output_type -> codevaldagency.v1.DeleteEntityResponse
+	42, // 73: codevaldagency.v1.EntityService.ListRelationships:output_type -> codevaldagency.v1.ListRelationshipsResponse
+	33, // 74: codevaldagency.v1.EntityService.CreateRelationship:output_type -> codevaldagency.v1.RelationshipItem
+	45, // 75: codevaldagency.v1.EntityService.DeleteRelationship:output_type -> codevaldagency.v1.DeleteRelationshipResponse
+	53, // [53:76] is the sub-list for method output_type
+	30, // [30:53] is the sub-list for method input_type
 	30, // [30:30] is the sub-list for extension type_name
 	30, // [30:30] is the sub-list for extension extendee
 	0,  // [0:30] is the sub-list for field type_name
@@ -2867,7 +2979,7 @@ func file_codevaldagency_v1_agency_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_codevaldagency_v1_agency_proto_rawDesc), len(file_codevaldagency_v1_agency_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   41,
+			NumMessages:   43,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

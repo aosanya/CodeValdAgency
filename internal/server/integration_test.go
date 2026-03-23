@@ -101,7 +101,7 @@ func openIntegrationEnv(t *testing.T) (pb.AgencyServiceClient, driver.Database, 
 		t.Fatalf("net.Listen: %v", err)
 	}
 	grpcSrv := grpc.NewServer()
-	pb.RegisterAgencyServiceServer(grpcSrv, server.New(mgr))
+	pb.RegisterAgencyServiceServer(grpcSrv, server.New(mgr, nil))
 	go func() { _ = grpcSrv.Serve(lis) }()
 
 	// Dial a gRPC client.

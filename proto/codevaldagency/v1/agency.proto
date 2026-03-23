@@ -209,6 +209,23 @@ message ArchiveDraftRequest {
   string draft_id = 1;
 }
 
+// ── Import messages ─────────────────────────────────────────────────────────
+
+// ImportDraftRequest carries the raw YAML (or JSON) body of an agency.yaml file.
+// CodeValdCross wraps the raw request body into the body field automatically —
+// HTTP callers send the file content as the raw request body.
+message ImportDraftRequest {
+  // body contains the raw agency.yaml (or agency.json) file content.
+  string body = 1;
+}
+
+// ImportDraftResponse is returned on a successful import.
+message ImportDraftResponse {
+  // agency_id is the code value from the YAML agency.code field.
+  string agency_id = 1;
+  // draft_id is the server-assigned UUID of the open AgencyDraft entity.
+  string draft_id  = 2;
+}
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
@@ -274,6 +291,15 @@ service AgencyService {
   // Error: NOT_FOUND if the draft does not exist.
   // Error: FAILED_PRECONDITION if the draft is not open.
   rpc ArchiveDraft(ArchiveDraftRequest) returns (AgencyDraft);
+
+  // ImportDraft parses a raw agency.yaml (or agency.json) body, sets the agency
+  // details, creates or reuses an open draft, and idempotently upserts all
+  // sub-entities (DraftConfiguredRole, DraftGoal, DraftWorkflow, DraftWorkItem,
+  // DraftInstruction, DraftDeliverable) in one shot.
+  // The body field must contain the raw file content — CodeValdCross wraps the
+  // HTTP request body into this field automatically.
+  // Error: INVALID_ARGUMENT if the body cannot be parsed.
+  rpc ImportDraft(ImportDraftRequest) returns (ImportDraftResponse);
 }
 
 // ── EntityService ─────────────────────────────────────────────────────────────────────────────

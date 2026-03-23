@@ -111,6 +111,7 @@ func DefaultAgencySchema() types.Schema {
 				DisplayName: "Agency",
 				PathSegment: "",
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "mission", Type: types.PropertyTypeString, Required: false},
 					{Name: "vision", Type: types.PropertyTypeString, Required: false},
@@ -134,7 +135,9 @@ func DefaultAgencySchema() types.Schema {
 				DisplayName:   "Goal",
 				PathSegment:   "goals",
 				EntityIDParam: "goalId",
+				UniqueKey:     []string{"code"},
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
@@ -153,7 +156,9 @@ func DefaultAgencySchema() types.Schema {
 				DisplayName:   "Workflow",
 				PathSegment:   "workflows",
 				EntityIDParam: "workflowId",
+				UniqueKey:     []string{"code"},
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
@@ -174,7 +179,9 @@ func DefaultAgencySchema() types.Schema {
 				DisplayName:   "Work Item",
 				PathSegment:   "work-items",
 				EntityIDParam: "workItemId",
+				UniqueKey:     []string{"code"},
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					// WorkItems with the same ordinality value run in parallel.
@@ -205,7 +212,9 @@ func DefaultAgencySchema() types.Schema {
 				DisplayName:   "Instruction",
 				PathSegment:   "instructions",
 				EntityIDParam: "instructionId",
+				UniqueKey:     []string{"code"},
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// content is the rule or constraint text delivered to the actor.
 					{Name: "content", Type: types.PropertyTypeString, Required: true},
 					// ordinality controls the order in which instructions are applied.
@@ -225,7 +234,9 @@ func DefaultAgencySchema() types.Schema {
 				DisplayName:   "Deliverable",
 				PathSegment:   "deliverables",
 				EntityIDParam: "deliverableId",
+				UniqueKey:     []string{"code"},
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// title names the expected output (e.g. "Analysis Report", "Migration Script").
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					// description defines what the output must contain or satisfy.
@@ -255,6 +266,7 @@ func DefaultAgencySchema() types.Schema {
 				EntityIDParam: "resultId",
 				Immutable:     true,
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// status valid values: "pending", "completed", "rejected", "waived"
 					//   pending   — submitted by the actor; awaiting review
 					//   completed — accepted by the reviewer (or auto-accepted when blocking=false)
@@ -279,6 +291,7 @@ func DefaultAgencySchema() types.Schema {
 				EntityIDParam: "contentRefId",
 				Immutable:     true,
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// path is the location of the artifact in CodeValdGit (e.g. "output/report.md").
 					{Name: "path", Type: types.PropertyTypeString, Required: true},
 				},
@@ -298,7 +311,9 @@ func DefaultAgencySchema() types.Schema {
 				DisplayName:   "Configured Role",
 				PathSegment:   "configured-roles",
 				EntityIDParam: "configuredRoleId",
+				UniqueKey:     []string{"code"},
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					// description is the role brief — responsibilities, boundaries, and context
 					// shown to a human or injected into an AI agent's system prompt at dispatch.
@@ -333,7 +348,9 @@ func DefaultAgencySchema() types.Schema {
 				PathSegment:       "drafts",
 				EntityIDParam:     "draftId",
 				StorageCollection: "agency_drafts",
+				UniqueKey:         []string{"code"},
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					// status valid values: "open", "promoted", "archived"
 					//   open     — actively being edited
@@ -360,8 +377,10 @@ func DefaultAgencySchema() types.Schema {
 				Name:              "DraftGoal",
 				DisplayName:       "Draft Goal",
 				StorageCollection: "agency_draft_entities",
+				UniqueKey:         []string{"draft_id", "code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
@@ -371,8 +390,10 @@ func DefaultAgencySchema() types.Schema {
 				Name:              "DraftWorkflow",
 				DisplayName:       "Draft Workflow",
 				StorageCollection: "agency_draft_entities",
+				UniqueKey:         []string{"draft_id", "code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
@@ -382,8 +403,10 @@ func DefaultAgencySchema() types.Schema {
 				Name:              "DraftWorkItem",
 				DisplayName:       "Draft Work Item",
 				StorageCollection: "agency_draft_entities",
+				UniqueKey:         []string{"draft_id", "code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// draft_workflow_id references the parent DraftWorkflow entity ID.
 					{Name: "draft_workflow_id", Type: types.PropertyTypeString, Required: false},
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
@@ -396,8 +419,10 @@ func DefaultAgencySchema() types.Schema {
 				Name:              "DraftConfiguredRole",
 				DisplayName:       "Draft Configured Role",
 				StorageCollection: "agency_draft_entities",
+				UniqueKey:         []string{"draft_id", "code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "actor_type", Type: types.PropertyTypeOption, Required: true},
@@ -408,8 +433,10 @@ func DefaultAgencySchema() types.Schema {
 				Name:              "DraftInstruction",
 				DisplayName:       "Draft Instruction",
 				StorageCollection: "agency_draft_entities",
+				UniqueKey:         []string{"draft_id", "code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// draft_workflow_id or draft_work_item_id — whichever parent applies.
 					{Name: "draft_workflow_id", Type: types.PropertyTypeString, Required: false},
 					{Name: "draft_work_item_id", Type: types.PropertyTypeString, Required: false},
@@ -421,8 +448,10 @@ func DefaultAgencySchema() types.Schema {
 				Name:              "DraftDeliverable",
 				DisplayName:       "Draft Deliverable",
 				StorageCollection: "agency_draft_entities",
+				UniqueKey:         []string{"draft_id", "code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// draft_work_item_id references the parent DraftWorkItem entity ID.
 					{Name: "draft_work_item_id", Type: types.PropertyTypeString, Required: false},
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
@@ -438,6 +467,7 @@ func DefaultAgencySchema() types.Schema {
 				EntityIDParam: "snapshotId",
 				Immutable:     true,
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "snapshot_at", Type: types.PropertyTypeDatetime, Required: true},
 				},
 				Relationships: []types.RelationshipDefinition{
@@ -453,6 +483,7 @@ func DefaultAgencySchema() types.Schema {
 				EntityIDParam: "publicationId",
 				Immutable:     true,
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "version", Type: types.PropertyTypeInteger, Required: true},
 					{Name: "tag", Type: types.PropertyTypeString, Required: true},
 					{Name: "published_at", Type: types.PropertyTypeDatetime, Required: true},
@@ -475,7 +506,9 @@ func DefaultAgencySchema() types.Schema {
 				DisplayName:   "Agency Publication Status",
 				PathSegment:   "publication-statuses",
 				EntityIDParam: "publicationStatusId",
+				UniqueKey:     []string{"code"},
 				Properties: []types.PropertyDefinition{
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// status valid values: "draft", "active", "archived"
 					{Name: "status", Type: types.PropertyTypeOption, Required: true},
 				},

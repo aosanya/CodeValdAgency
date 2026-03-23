@@ -158,6 +158,54 @@ func (f *fakeDataManager) TraverseGraph(_ context.Context, _ entitygraph.Travers
 	return entitygraph.TraverseGraphResult{}, nil
 }
 
+// UpsertEntity finds a non-deleted entity matching the request's UniqueKey
+// property values and merges properties onto it, or creates a new one.
+// The schema is not available in the fake, so UniqueKey fields are identified
+// by intersecting req.Properties keys with what is already stored.
+// For test simplicity, a match is found when ALL properties in req.Properties
+// exist on an existing entity with equal values for the first property supplied.
+func (f *fakeDataManager) UpsertEntity(_ context.Context, req entitygraph.CreateEntityRequest) (entitygraph.Entity, error) {
+	now := time.Now().UTC()
+	// Scan for an existing non-deleted entity of the same type/agency whose
+	// properties contain at least one overlapping key+value from the request.
+	for id, e := range f.entities {
+		if e.Deleted || e.AgencyID != req.AgencyID || e.TypeID != req.TypeID {
+			continue
+		}
+		// Check every request property for a match — first full overlap wins.
+		match := true
+		for k, v := range req.Properties {
+			if existing, ok := e.Properties[k]; !ok || existing != v {
+				match = false
+				break
+			}
+		}
+		if !match {
+			continue
+		}
+		// Merge.
+		if e.Properties == nil {
+			e.Properties = make(map[string]any)
+		}
+		for k, v := range req.Properties {
+			e.Properties[k] = v
+		}
+		e.UpdatedAt = now
+		f.entities[id] = e
+		return e, nil
+	}
+	// No match — insert.
+	e := entitygraph.Entity{
+		ID: f.nextID(), AgencyID: req.AgencyID, TypeID: req.TypeID,
+		Properties: req.Properties, CreatedAt: now, UpdatedAt: now,
+	}
+	if e.Properties == nil {
+		e.Properties = make(map[string]any)
+	}
+	f.entities[e.ID] = e
+	return e, nil
+}
+
 // fakePublisher records every Publish call so tests can assert events.
 type fakePublisher struct {
 	events []struct{ topic, id string }

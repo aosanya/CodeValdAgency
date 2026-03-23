@@ -28,8 +28,9 @@ func NewEntityServer(dm entitygraph.DataManager) *EntityServer {
 // type_id is injected by CodeValdCross via ConstantBinding at dispatch time.
 func (s *EntityServer) ListEntities(ctx context.Context, req *pb.ListEntitiesRequest) (*pb.ListEntitiesResponse, error) {
 	entities, err := s.dm.ListEntities(ctx, entitygraph.EntityFilter{
-		AgencyID: req.GetAgencyId(),
-		TypeID:   req.GetTypeId(),
+		AgencyID:   req.GetAgencyId(),
+		TypeID:     req.GetTypeId(),
+		Properties: structToMap(req.GetProperties()),
 	})
 	if err != nil {
 		return nil, toEntityGRPCError(err)

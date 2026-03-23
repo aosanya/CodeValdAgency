@@ -165,6 +165,15 @@ func (b *Backend) ListEntities(
 		conditions = append(conditions, "doc.type_id == @typeID")
 		bindVars["typeID"] = filter.TypeID
 	}
+	// Property filters: each key-value pair in filter.Properties must match
+	// the corresponding value in the stored document's properties map.
+	// Used to scope Draft* sub-types by draft_id (and similar) when multiple
+	// drafts share the same collection.
+	for k, v := range filter.Properties {
+		paramName := "prop_" + k
+		conditions = append(conditions, fmt.Sprintf("doc.properties.`%s` == @%s", k, paramName))
+		bindVars[paramName] = v
+	}
 	where := strings.Join(conditions, " AND ")
 
 	// Determine which collection(s) to query based on the TypeID filter.

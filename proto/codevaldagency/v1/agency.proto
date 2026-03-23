@@ -306,6 +306,13 @@ message RelationshipItem {
 message ListEntitiesRequest {
   string agency_id = 1;
   string type_id   = 2;
+  // properties is an optional property-level filter. When set, only entities
+  // whose stored properties contain all of the specified key-value pairs are
+  // returned. The primary use-case is scoping Draft* sub-types by draft_id
+  // when multiple drafts share the same collection.
+  // Injected at dispatch time from the URL path (e.g. {draftId} → draft_id)
+  // via PathBinding — HTTP callers do not need to set this field manually.
+  google.protobuf.Struct properties = 3;
 }
 
 // ListEntitiesResponse wraps the result slice.

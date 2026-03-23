@@ -1823,9 +1823,16 @@ func (x *RelationshipItem) GetCreatedAt() *timestamppb.Timestamp {
 // type_id is injected at dispatch time via ConstantBinding — HTTP callers never
 // set it explicitly.
 type ListEntitiesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgencyId      string                 `protobuf:"bytes,1,opt,name=agency_id,json=agencyId,proto3" json:"agency_id,omitempty"`
-	TypeId        string                 `protobuf:"bytes,2,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	AgencyId string                 `protobuf:"bytes,1,opt,name=agency_id,json=agencyId,proto3" json:"agency_id,omitempty"`
+	TypeId   string                 `protobuf:"bytes,2,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	// properties is an optional property-level filter. When set, only entities
+	// whose stored properties contain all of the specified key-value pairs are
+	// returned. The primary use-case is scoping Draft* sub-types by draft_id
+	// when multiple drafts share the same collection.
+	// Injected at dispatch time from the URL path (e.g. {draftId} → draft_id)
+	// via PathBinding — HTTP callers do not need to set this field manually.
+	Properties    *structpb.Struct `protobuf:"bytes,3,opt,name=properties,proto3" json:"properties,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1872,6 +1879,13 @@ func (x *ListEntitiesRequest) GetTypeId() string {
 		return x.TypeId
 	}
 	return ""
+}
+
+func (x *ListEntitiesRequest) GetProperties() *structpb.Struct {
+	if x != nil {
+		return x.Properties
+	}
+	return nil
 }
 
 // ListEntitiesResponse wraps the result slice.
@@ -2606,10 +2620,13 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"properties\x18\x06 \x01(\v2\x17.google.protobuf.StructR\n" +
 	"properties\x129\n" +
 	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"K\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x84\x01\n" +
 	"\x13ListEntitiesRequest\x12\x1b\n" +
 	"\tagency_id\x18\x01 \x01(\tR\bagencyId\x12\x17\n" +
-	"\atype_id\x18\x02 \x01(\tR\x06typeId\"Q\n" +
+	"\atype_id\x18\x02 \x01(\tR\x06typeId\x127\n" +
+	"\n" +
+	"properties\x18\x03 \x01(\v2\x17.google.protobuf.StructR\n" +
+	"properties\"Q\n" +
 	"\x14ListEntitiesResponse\x129\n" +
 	"\bentities\x18\x01 \x03(\v2\x1d.codevaldagency.v1.EntityItemR\bentities\"\x84\x01\n" +
 	"\x13CreateEntityRequest\x12\x1b\n" +
@@ -2782,60 +2799,61 @@ var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	44, // 21: codevaldagency.v1.EntityItem.updated_at:type_name -> google.protobuf.Timestamp
 	45, // 22: codevaldagency.v1.RelationshipItem.properties:type_name -> google.protobuf.Struct
 	44, // 23: codevaldagency.v1.RelationshipItem.created_at:type_name -> google.protobuf.Timestamp
-	30, // 24: codevaldagency.v1.ListEntitiesResponse.entities:type_name -> codevaldagency.v1.EntityItem
-	45, // 25: codevaldagency.v1.CreateEntityRequest.properties:type_name -> google.protobuf.Struct
-	45, // 26: codevaldagency.v1.UpdateEntityRequest.properties:type_name -> google.protobuf.Struct
-	31, // 27: codevaldagency.v1.ListRelationshipsResponse.relationships:type_name -> codevaldagency.v1.RelationshipItem
-	45, // 28: codevaldagency.v1.CreateRelationshipRequest.properties:type_name -> google.protobuf.Struct
-	10, // 29: codevaldagency.v1.AgencyService.SetAgencyDetails:input_type -> codevaldagency.v1.SetAgencyDetailsRequest
-	9,  // 30: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
-	12, // 31: codevaldagency.v1.AgencyService.PublishAgency:input_type -> codevaldagency.v1.PublishAgencyRequest
-	13, // 32: codevaldagency.v1.AgencyService.GetPublication:input_type -> codevaldagency.v1.GetPublicationRequest
-	14, // 33: codevaldagency.v1.AgencyService.ListPublications:input_type -> codevaldagency.v1.ListPublicationsRequest
-	16, // 34: codevaldagency.v1.AgencyService.GetGoals:input_type -> codevaldagency.v1.GetGoalsRequest
-	18, // 35: codevaldagency.v1.AgencyService.GetWorkflows:input_type -> codevaldagency.v1.GetWorkflowsRequest
-	20, // 36: codevaldagency.v1.AgencyService.GetConfiguredRoles:input_type -> codevaldagency.v1.GetConfiguredRolesRequest
-	23, // 37: codevaldagency.v1.AgencyService.CreateDraft:input_type -> codevaldagency.v1.CreateDraftRequest
-	24, // 38: codevaldagency.v1.AgencyService.GetDraft:input_type -> codevaldagency.v1.GetDraftRequest
-	25, // 39: codevaldagency.v1.AgencyService.ListDrafts:input_type -> codevaldagency.v1.ListDraftsRequest
-	27, // 40: codevaldagency.v1.AgencyService.UpdateDraftDescription:input_type -> codevaldagency.v1.UpdateDraftDescriptionRequest
-	28, // 41: codevaldagency.v1.AgencyService.PromoteDraft:input_type -> codevaldagency.v1.PromoteDraftRequest
-	29, // 42: codevaldagency.v1.AgencyService.ArchiveDraft:input_type -> codevaldagency.v1.ArchiveDraftRequest
-	32, // 43: codevaldagency.v1.EntityService.ListEntities:input_type -> codevaldagency.v1.ListEntitiesRequest
-	34, // 44: codevaldagency.v1.EntityService.CreateEntity:input_type -> codevaldagency.v1.CreateEntityRequest
-	35, // 45: codevaldagency.v1.EntityService.GetEntity:input_type -> codevaldagency.v1.GetEntityRequest
-	36, // 46: codevaldagency.v1.EntityService.UpdateEntity:input_type -> codevaldagency.v1.UpdateEntityRequest
-	37, // 47: codevaldagency.v1.EntityService.DeleteEntity:input_type -> codevaldagency.v1.DeleteEntityRequest
-	39, // 48: codevaldagency.v1.EntityService.ListRelationships:input_type -> codevaldagency.v1.ListRelationshipsRequest
-	41, // 49: codevaldagency.v1.EntityService.CreateRelationship:input_type -> codevaldagency.v1.CreateRelationshipRequest
-	42, // 50: codevaldagency.v1.EntityService.DeleteRelationship:input_type -> codevaldagency.v1.DeleteRelationshipRequest
-	8,  // 51: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
-	8,  // 52: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
-	11, // 53: codevaldagency.v1.AgencyService.PublishAgency:output_type -> codevaldagency.v1.AgencyPublication
-	11, // 54: codevaldagency.v1.AgencyService.GetPublication:output_type -> codevaldagency.v1.AgencyPublication
-	15, // 55: codevaldagency.v1.AgencyService.ListPublications:output_type -> codevaldagency.v1.ListPublicationsResponse
-	17, // 56: codevaldagency.v1.AgencyService.GetGoals:output_type -> codevaldagency.v1.GetGoalsResponse
-	19, // 57: codevaldagency.v1.AgencyService.GetWorkflows:output_type -> codevaldagency.v1.GetWorkflowsResponse
-	21, // 58: codevaldagency.v1.AgencyService.GetConfiguredRoles:output_type -> codevaldagency.v1.GetConfiguredRolesResponse
-	22, // 59: codevaldagency.v1.AgencyService.CreateDraft:output_type -> codevaldagency.v1.AgencyDraft
-	22, // 60: codevaldagency.v1.AgencyService.GetDraft:output_type -> codevaldagency.v1.AgencyDraft
-	26, // 61: codevaldagency.v1.AgencyService.ListDrafts:output_type -> codevaldagency.v1.ListDraftsResponse
-	22, // 62: codevaldagency.v1.AgencyService.UpdateDraftDescription:output_type -> codevaldagency.v1.AgencyDraft
-	8,  // 63: codevaldagency.v1.AgencyService.PromoteDraft:output_type -> codevaldagency.v1.Agency
-	22, // 64: codevaldagency.v1.AgencyService.ArchiveDraft:output_type -> codevaldagency.v1.AgencyDraft
-	33, // 65: codevaldagency.v1.EntityService.ListEntities:output_type -> codevaldagency.v1.ListEntitiesResponse
-	30, // 66: codevaldagency.v1.EntityService.CreateEntity:output_type -> codevaldagency.v1.EntityItem
-	30, // 67: codevaldagency.v1.EntityService.GetEntity:output_type -> codevaldagency.v1.EntityItem
-	30, // 68: codevaldagency.v1.EntityService.UpdateEntity:output_type -> codevaldagency.v1.EntityItem
-	38, // 69: codevaldagency.v1.EntityService.DeleteEntity:output_type -> codevaldagency.v1.DeleteEntityResponse
-	40, // 70: codevaldagency.v1.EntityService.ListRelationships:output_type -> codevaldagency.v1.ListRelationshipsResponse
-	31, // 71: codevaldagency.v1.EntityService.CreateRelationship:output_type -> codevaldagency.v1.RelationshipItem
-	43, // 72: codevaldagency.v1.EntityService.DeleteRelationship:output_type -> codevaldagency.v1.DeleteRelationshipResponse
-	51, // [51:73] is the sub-list for method output_type
-	29, // [29:51] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	45, // 24: codevaldagency.v1.ListEntitiesRequest.properties:type_name -> google.protobuf.Struct
+	30, // 25: codevaldagency.v1.ListEntitiesResponse.entities:type_name -> codevaldagency.v1.EntityItem
+	45, // 26: codevaldagency.v1.CreateEntityRequest.properties:type_name -> google.protobuf.Struct
+	45, // 27: codevaldagency.v1.UpdateEntityRequest.properties:type_name -> google.protobuf.Struct
+	31, // 28: codevaldagency.v1.ListRelationshipsResponse.relationships:type_name -> codevaldagency.v1.RelationshipItem
+	45, // 29: codevaldagency.v1.CreateRelationshipRequest.properties:type_name -> google.protobuf.Struct
+	10, // 30: codevaldagency.v1.AgencyService.SetAgencyDetails:input_type -> codevaldagency.v1.SetAgencyDetailsRequest
+	9,  // 31: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
+	12, // 32: codevaldagency.v1.AgencyService.PublishAgency:input_type -> codevaldagency.v1.PublishAgencyRequest
+	13, // 33: codevaldagency.v1.AgencyService.GetPublication:input_type -> codevaldagency.v1.GetPublicationRequest
+	14, // 34: codevaldagency.v1.AgencyService.ListPublications:input_type -> codevaldagency.v1.ListPublicationsRequest
+	16, // 35: codevaldagency.v1.AgencyService.GetGoals:input_type -> codevaldagency.v1.GetGoalsRequest
+	18, // 36: codevaldagency.v1.AgencyService.GetWorkflows:input_type -> codevaldagency.v1.GetWorkflowsRequest
+	20, // 37: codevaldagency.v1.AgencyService.GetConfiguredRoles:input_type -> codevaldagency.v1.GetConfiguredRolesRequest
+	23, // 38: codevaldagency.v1.AgencyService.CreateDraft:input_type -> codevaldagency.v1.CreateDraftRequest
+	24, // 39: codevaldagency.v1.AgencyService.GetDraft:input_type -> codevaldagency.v1.GetDraftRequest
+	25, // 40: codevaldagency.v1.AgencyService.ListDrafts:input_type -> codevaldagency.v1.ListDraftsRequest
+	27, // 41: codevaldagency.v1.AgencyService.UpdateDraftDescription:input_type -> codevaldagency.v1.UpdateDraftDescriptionRequest
+	28, // 42: codevaldagency.v1.AgencyService.PromoteDraft:input_type -> codevaldagency.v1.PromoteDraftRequest
+	29, // 43: codevaldagency.v1.AgencyService.ArchiveDraft:input_type -> codevaldagency.v1.ArchiveDraftRequest
+	32, // 44: codevaldagency.v1.EntityService.ListEntities:input_type -> codevaldagency.v1.ListEntitiesRequest
+	34, // 45: codevaldagency.v1.EntityService.CreateEntity:input_type -> codevaldagency.v1.CreateEntityRequest
+	35, // 46: codevaldagency.v1.EntityService.GetEntity:input_type -> codevaldagency.v1.GetEntityRequest
+	36, // 47: codevaldagency.v1.EntityService.UpdateEntity:input_type -> codevaldagency.v1.UpdateEntityRequest
+	37, // 48: codevaldagency.v1.EntityService.DeleteEntity:input_type -> codevaldagency.v1.DeleteEntityRequest
+	39, // 49: codevaldagency.v1.EntityService.ListRelationships:input_type -> codevaldagency.v1.ListRelationshipsRequest
+	41, // 50: codevaldagency.v1.EntityService.CreateRelationship:input_type -> codevaldagency.v1.CreateRelationshipRequest
+	42, // 51: codevaldagency.v1.EntityService.DeleteRelationship:input_type -> codevaldagency.v1.DeleteRelationshipRequest
+	8,  // 52: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
+	8,  // 53: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
+	11, // 54: codevaldagency.v1.AgencyService.PublishAgency:output_type -> codevaldagency.v1.AgencyPublication
+	11, // 55: codevaldagency.v1.AgencyService.GetPublication:output_type -> codevaldagency.v1.AgencyPublication
+	15, // 56: codevaldagency.v1.AgencyService.ListPublications:output_type -> codevaldagency.v1.ListPublicationsResponse
+	17, // 57: codevaldagency.v1.AgencyService.GetGoals:output_type -> codevaldagency.v1.GetGoalsResponse
+	19, // 58: codevaldagency.v1.AgencyService.GetWorkflows:output_type -> codevaldagency.v1.GetWorkflowsResponse
+	21, // 59: codevaldagency.v1.AgencyService.GetConfiguredRoles:output_type -> codevaldagency.v1.GetConfiguredRolesResponse
+	22, // 60: codevaldagency.v1.AgencyService.CreateDraft:output_type -> codevaldagency.v1.AgencyDraft
+	22, // 61: codevaldagency.v1.AgencyService.GetDraft:output_type -> codevaldagency.v1.AgencyDraft
+	26, // 62: codevaldagency.v1.AgencyService.ListDrafts:output_type -> codevaldagency.v1.ListDraftsResponse
+	22, // 63: codevaldagency.v1.AgencyService.UpdateDraftDescription:output_type -> codevaldagency.v1.AgencyDraft
+	8,  // 64: codevaldagency.v1.AgencyService.PromoteDraft:output_type -> codevaldagency.v1.Agency
+	22, // 65: codevaldagency.v1.AgencyService.ArchiveDraft:output_type -> codevaldagency.v1.AgencyDraft
+	33, // 66: codevaldagency.v1.EntityService.ListEntities:output_type -> codevaldagency.v1.ListEntitiesResponse
+	30, // 67: codevaldagency.v1.EntityService.CreateEntity:output_type -> codevaldagency.v1.EntityItem
+	30, // 68: codevaldagency.v1.EntityService.GetEntity:output_type -> codevaldagency.v1.EntityItem
+	30, // 69: codevaldagency.v1.EntityService.UpdateEntity:output_type -> codevaldagency.v1.EntityItem
+	38, // 70: codevaldagency.v1.EntityService.DeleteEntity:output_type -> codevaldagency.v1.DeleteEntityResponse
+	40, // 71: codevaldagency.v1.EntityService.ListRelationships:output_type -> codevaldagency.v1.ListRelationshipsResponse
+	31, // 72: codevaldagency.v1.EntityService.CreateRelationship:output_type -> codevaldagency.v1.RelationshipItem
+	43, // 73: codevaldagency.v1.EntityService.DeleteRelationship:output_type -> codevaldagency.v1.DeleteRelationshipResponse
+	52, // [52:74] is the sub-list for method output_type
+	30, // [30:52] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_codevaldagency_v1_agency_proto_init() }

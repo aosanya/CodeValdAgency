@@ -4,7 +4,7 @@
 // [types.Schema] for CodeValdAgency. cmd/main.go seeds this schema
 // idempotently on startup via AgencySchemaManager.SetSchema.
 //
-// The schema declares nineteen TypeDefinitions:
+// The schema declares twenty TypeDefinitions:
 //   - Agency                    — root entity (mutable)
 //   - Goal                      — strategic objective (mutable)
 //   - Workflow                  — ordered container of WorkItems (mutable)
@@ -21,6 +21,7 @@
 //   - DraftConfiguredRole       — copy of ConfiguredRole inside a draft, stored in agency_draft_entities (mutable)
 //   - DraftInstruction          — copy of Instruction inside a draft, stored in agency_draft_entities (mutable)
 //   - DraftDeliverable          — copy of Deliverable inside a draft, stored in agency_draft_entities (mutable)
+//   - DraftDeliverableResult    — copy of DeliverableResult inside a draft, stored in agency_draft_entities (mutable)
 //   - AgencySnapshot            — immutable activation record (draft → active)
 //   - AgencyPublication         — immutable versioned publication snapshot
 //   - AgencyPublicationStatus   — mutable status node for a publication (draft → active → archived)
@@ -131,11 +132,12 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "Goal",
-				DisplayName:   "Goal",
-				PathSegment:   "goals",
-				EntityIDParam: "goalId",
-				UniqueKey:     []string{"code"},
+				Name:        "Goal",
+				DisplayName: "Goal",
+				// PathSegment is intentionally empty — live Goals are created by PromoteDraft,
+				// not via direct HTTP CRUD. CRUD routes exist only for DraftGoal, scoped under
+				// /agency/{agencyId}/drafts/{draftId}/goals.
+				UniqueKey: []string{"code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
@@ -152,11 +154,12 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "Workflow",
-				DisplayName:   "Workflow",
-				PathSegment:   "workflows",
-				EntityIDParam: "workflowId",
-				UniqueKey:     []string{"code"},
+				Name:        "Workflow",
+				DisplayName: "Workflow",
+				// PathSegment is intentionally empty — live Workflows are created by PromoteDraft,
+				// not via direct HTTP CRUD. CRUD routes exist only for DraftWorkflow, scoped under
+				// /agency/{agencyId}/drafts/{draftId}/workflows.
+				UniqueKey: []string{"code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
@@ -175,11 +178,12 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "WorkItem",
-				DisplayName:   "Work Item",
-				PathSegment:   "work-items",
-				EntityIDParam: "workItemId",
-				UniqueKey:     []string{"code"},
+				Name:        "WorkItem",
+				DisplayName: "Work Item",
+				// PathSegment is intentionally empty — live WorkItems are created by PromoteDraft,
+				// not via direct HTTP CRUD. CRUD routes exist only for DraftWorkItem, scoped under
+				// /agency/{agencyId}/drafts/{draftId}/work-items.
+				UniqueKey: []string{"code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
@@ -208,11 +212,12 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "Instruction",
-				DisplayName:   "Instruction",
-				PathSegment:   "instructions",
-				EntityIDParam: "instructionId",
-				UniqueKey:     []string{"code"},
+				Name:        "Instruction",
+				DisplayName: "Instruction",
+				// PathSegment is intentionally empty — live Instructions are created by PromoteDraft,
+				// not via direct HTTP CRUD. CRUD routes exist only for DraftInstruction, scoped under
+				// /agency/{agencyId}/drafts/{draftId}/instructions.
+				UniqueKey: []string{"code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// content is the rule or constraint text delivered to the actor.
@@ -230,11 +235,12 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "Deliverable",
-				DisplayName:   "Deliverable",
-				PathSegment:   "deliverables",
-				EntityIDParam: "deliverableId",
-				UniqueKey:     []string{"code"},
+				Name:        "Deliverable",
+				DisplayName: "Deliverable",
+				// PathSegment is intentionally empty — live Deliverables are created by PromoteDraft,
+				// not via direct HTTP CRUD. CRUD routes exist only for DraftDeliverable, scoped under
+				// /agency/{agencyId}/drafts/{draftId}/deliverables.
+				UniqueKey: []string{"code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// title names the expected output (e.g. "Analysis Report", "Migration Script").
@@ -307,11 +313,12 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "ConfiguredRole",
-				DisplayName:   "Configured Role",
-				PathSegment:   "configured-roles",
-				EntityIDParam: "configuredRoleId",
-				UniqueKey:     []string{"code"},
+				Name:        "ConfiguredRole",
+				DisplayName: "Configured Role",
+				// PathSegment is intentionally empty — live ConfiguredRoles are created by PromoteDraft,
+				// not via direct HTTP CRUD. CRUD routes exist only for DraftConfiguredRole, scoped under
+				// /agency/{agencyId}/drafts/{draftId}/configured-roles.
+				UniqueKey: []string{"code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
@@ -370,12 +377,15 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			// Draft sub-entity types — stored in agency_draft_entities.
-			// These are internal copies of the live sub-entity types created by
-			// CreateDraft. They carry a draft_id property for scoping.
-			// PathSegment is intentionally empty — no HTTP routes are generated.
+			// These are editable copies of the live sub-entity types created by
+			// CreateDraft. They carry a draft_id property for scoping. Each type
+			// has a PathSegment so the registrar can generate CRUD routes scoped
+			// under /agency/{agencyId}/drafts/{draftId}/...
 			{
 				Name:              "DraftGoal",
 				DisplayName:       "Draft Goal",
+				PathSegment:       "drafts/{draftId}/goals",
+				EntityIDParam:     "goalId",
 				StorageCollection: "agency_draft_entities",
 				UniqueKey:         []string{"draft_id", "code"},
 				Properties: []types.PropertyDefinition{
@@ -389,6 +399,8 @@ func DefaultAgencySchema() types.Schema {
 			{
 				Name:              "DraftWorkflow",
 				DisplayName:       "Draft Workflow",
+				PathSegment:       "drafts/{draftId}/workflows",
+				EntityIDParam:     "workflowId",
 				StorageCollection: "agency_draft_entities",
 				UniqueKey:         []string{"draft_id", "code"},
 				Properties: []types.PropertyDefinition{
@@ -402,6 +414,8 @@ func DefaultAgencySchema() types.Schema {
 			{
 				Name:              "DraftWorkItem",
 				DisplayName:       "Draft Work Item",
+				PathSegment:       "drafts/{draftId}/work-items",
+				EntityIDParam:     "workItemId",
 				StorageCollection: "agency_draft_entities",
 				UniqueKey:         []string{"draft_id", "code"},
 				Properties: []types.PropertyDefinition{
@@ -418,6 +432,8 @@ func DefaultAgencySchema() types.Schema {
 			{
 				Name:              "DraftConfiguredRole",
 				DisplayName:       "Draft Configured Role",
+				PathSegment:       "drafts/{draftId}/configured-roles",
+				EntityIDParam:     "configuredRoleId",
 				StorageCollection: "agency_draft_entities",
 				UniqueKey:         []string{"draft_id", "code"},
 				Properties: []types.PropertyDefinition{
@@ -432,6 +448,8 @@ func DefaultAgencySchema() types.Schema {
 			{
 				Name:              "DraftInstruction",
 				DisplayName:       "Draft Instruction",
+				PathSegment:       "drafts/{draftId}/instructions",
+				EntityIDParam:     "instructionId",
 				StorageCollection: "agency_draft_entities",
 				UniqueKey:         []string{"draft_id", "code"},
 				Properties: []types.PropertyDefinition{
@@ -447,6 +465,8 @@ func DefaultAgencySchema() types.Schema {
 			{
 				Name:              "DraftDeliverable",
 				DisplayName:       "Draft Deliverable",
+				PathSegment:       "drafts/{draftId}/deliverables",
+				EntityIDParam:     "deliverableId",
 				StorageCollection: "agency_draft_entities",
 				UniqueKey:         []string{"draft_id", "code"},
 				Properties: []types.PropertyDefinition{
@@ -458,6 +478,23 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
 					{Name: "blocking", Type: types.PropertyTypeBoolean, Required: true},
+				},
+			},
+			{
+				Name:              "DraftDeliverableResult",
+				DisplayName:       "Draft Deliverable Result",
+				PathSegment:       "drafts/{draftId}/results",
+				EntityIDParam:     "resultId",
+				StorageCollection: "agency_draft_entities",
+				UniqueKey:         []string{"draft_id", "code"},
+				Properties: []types.PropertyDefinition{
+					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
+					// draft_deliverable_id references the parent DraftDeliverable entity ID.
+					{Name: "draft_deliverable_id", Type: types.PropertyTypeString, Required: false},
+					// status valid values: "pending", "completed", "rejected", "waived"
+					{Name: "status", Type: types.PropertyTypeOption, Required: true},
+					{Name: "produced_at", Type: types.PropertyTypeDatetime, Required: false},
 				},
 			},
 			{

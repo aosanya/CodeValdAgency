@@ -1,0 +1,53 @@
+# CodeValdAgency — local environment configuration.
+# This file is gitignored and must never be committed.
+# See documentation/README.md for details on each variable.
+
+# -------------------------------------------------------------------
+# CodeValdCross integration
+# -------------------------------------------------------------------
+
+# gRPC address of the CodeValdCross orchestrator.
+# When set, CodeValdAgency calls Register on startup to announce itself.
+# Leave unset to run CodeValdAgency in standalone mode (no registration).
+CROSS_GRPC_ADDR=:50051
+
+# How often CodeValdAgency re-registers with CodeValdCross (heartbeat).
+# Accepts Go duration strings (e.g. 30s, 1m). Set to 0 to disable.
+CROSS_PING_INTERVAL=20s
+
+# Agency ID this service instance is scoped to.
+# Must match the agency ID used in ArangoDB and reported to CodeValdCross.
+CODEVALDAGENCY_AGENCY_ID=codevald_demo
+
+# Address that CodeValdCross will use to dial back into this service.
+# Defaults to ":${CODEVALDAGENCY_GRPC_PORT}" when unset.
+# AGENCY_GRPC_ADVERTISE_ADDR=:50054
+
+# -------------------------------------------------------------------
+# Inbound gRPC server
+# -------------------------------------------------------------------
+
+# TCP port the CodeValdAgency gRPC server listens on.
+CODEVALDAGENCY_GRPC_PORT=50054
+
+# -------------------------------------------------------------------
+# ArangoDB backend
+# -------------------------------------------------------------------
+
+# ArangoDB server endpoint.
+AGENCY_ARANGO_ENDPOINT=http://host.docker.internal:8529
+
+# Database name that holds the agency collections
+# (agencies, agency_snapshots).
+AGENCY_ARANGO_DATABASE=codevald_demo
+
+# Database used exclusively by integration tests (go test ./...).
+# A single persistent database is shared across all test runs; tests use
+# unique agency IDs per run to avoid inter-test data pollution.
+AGENCY_ARANGO_DATABASE_TEST=codevald_tests
+
+# ArangoDB credentials.
+AGENCY_ARANGO_USER=root
+AGENCY_ARANGO_PASSWORD=rootpassword
+
+CROSS_DEBUG=true

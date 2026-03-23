@@ -21,8 +21,6 @@ type mockManager struct {
 	setDetailsErr    error
 	getResult        codevaldagency.Agency
 	getErr           error
-	updateResult     codevaldagency.Agency
-	updateErr        error
 	publishResult    codevaldagency.AgencyPublication
 	publishErr       error
 	getPubResult     codevaldagency.AgencyPublication
@@ -35,6 +33,19 @@ type mockManager struct {
 	workflowsErr     error
 	rolesResult      []codevaldagency.ConfiguredRole
 	rolesErr         error
+
+	createDraftResult     codevaldagency.AgencyDraft
+	createDraftErr        error
+	getDraftResult        codevaldagency.AgencyDraft
+	getDraftErr           error
+	listDraftsResult      []codevaldagency.AgencyDraft
+	listDraftsErr         error
+	updateDraftDescResult codevaldagency.AgencyDraft
+	updateDraftDescErr    error
+	promoteDraftResult    codevaldagency.Agency
+	promoteDraftErr       error
+	archiveDraftResult    codevaldagency.AgencyDraft
+	archiveDraftErr       error
 }
 
 func (m *mockManager) SetAgencyDetails(_ context.Context, _ string) (codevaldagency.Agency, error) {
@@ -43,8 +54,23 @@ func (m *mockManager) SetAgencyDetails(_ context.Context, _ string) (codevaldage
 func (m *mockManager) GetAgency(_ context.Context) (codevaldagency.Agency, error) {
 	return m.getResult, m.getErr
 }
-func (m *mockManager) UpdateAgency(_ context.Context, _ codevaldagency.UpdateAgencyRequest) (codevaldagency.Agency, error) {
-	return m.updateResult, m.updateErr
+func (m *mockManager) CreateDraft(_ context.Context, _, _, _ string) (codevaldagency.AgencyDraft, error) {
+	return m.createDraftResult, m.createDraftErr
+}
+func (m *mockManager) GetDraft(_ context.Context, _ string) (codevaldagency.AgencyDraft, error) {
+	return m.getDraftResult, m.getDraftErr
+}
+func (m *mockManager) ListDrafts(_ context.Context) ([]codevaldagency.AgencyDraft, error) {
+	return m.listDraftsResult, m.listDraftsErr
+}
+func (m *mockManager) UpdateDraftDescription(_ context.Context, _, _ string) (codevaldagency.AgencyDraft, error) {
+	return m.updateDraftDescResult, m.updateDraftDescErr
+}
+func (m *mockManager) PromoteDraft(_ context.Context, _ string) (codevaldagency.Agency, error) {
+	return m.promoteDraftResult, m.promoteDraftErr
+}
+func (m *mockManager) ArchiveDraft(_ context.Context, _ string) (codevaldagency.AgencyDraft, error) {
+	return m.archiveDraftResult, m.archiveDraftErr
 }
 func (m *mockManager) PublishAgency(_ context.Context) (codevaldagency.AgencyPublication, error) {
 	return m.publishResult, m.publishErr
@@ -144,42 +170,164 @@ func TestServer_GetAgency_NotFound(t *testing.T) {
 	requireCode(t, err, codes.NotFound)
 }
 
-// ── UpdateAgency ───────────────────────────────────────────────────────────────────────────
+// ── Draft handlers ───────────────────────────────────────────────────────────────────────
 
-func TestServer_UpdateAgency_OK(t *testing.T) {
+func TestServer_CreateDraft_OK(t *testing.T) {
 	t.Parallel()
-	mgr := &mockManager{updateResult: codevaldagency.Agency{
-		ID:     "a3",
-		Status: codevaldagency.LifecycleActive,
-	}}
+	mgr := &mockManager{
+		createDraftResult: codevaldagency.AgencyDraft{
+			ID:          "d1",
+			AgencyID:    "a1",
+			Description: "Draft one",
+			Status:      codevaldagency.DraftStatusOpen,
+		},
+	}
 	srv := server.New(mgr)
-	got, err := srv.UpdateAgency(context.Background(), &pb.UpdateAgencyRequest{
-		Status: pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE,
+	got, err := srv.CreateDraft(context.Background(), &pb.CreateDraftRequest{
+		Description: "Draft one",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got.GetStatus() != pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE {
-		t.Errorf("Status: want ACTIVE, got %v", got.GetStatus())
+	if got.GetId() != "d1" {
+		t.Errorf("ID: want %q, got %q", "d1", got.GetId())
+	}
+	if got.GetStatus() != pb.AgencyDraftStatus_AGENCY_DRAFT_STATUS_OPEN {
+		t.Errorf("Status: want OPEN, got %v", got.GetStatus())
 	}
 }
 
-func TestServer_UpdateAgency_InvalidTransition_ReturnsFailedPrecondition(t *testing.T) {
+func TestServer_CreateDraft_AgencyNotFound_ReturnsNotFound(t *testing.T) {
 	t.Parallel()
-	mgr := &mockManager{updateErr: codevaldagency.ErrInvalidLifecycleTransition}
+	mgr := &mockManager{createDraftErr: codevaldagency.ErrAgencyNotFound}
 	srv := server.New(mgr)
-	_, err := srv.UpdateAgency(context.Background(), &pb.UpdateAgencyRequest{
-		Status: pb.AgencyLifecycle_AGENCY_LIFECYCLE_DRAFT,
+	_, err := srv.CreateDraft(context.Background(), &pb.CreateDraftRequest{})
+	requireCode(t, err, codes.NotFound)
+}
+
+func TestServer_GetDraft_OK(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		getDraftResult: codevaldagency.AgencyDraft{
+			ID:     "d1",
+			Status: codevaldagency.DraftStatusOpen,
+		},
+	}
+	srv := server.New(mgr)
+	got, err := srv.GetDraft(context.Background(), &pb.GetDraftRequest{DraftId: "d1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.GetId() != "d1" {
+		t.Errorf("ID: want %q, got %q", "d1", got.GetId())
+	}
+}
+
+func TestServer_GetDraft_NotFound_ReturnsNotFound(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{getDraftErr: codevaldagency.ErrDraftNotFound}
+	srv := server.New(mgr)
+	_, err := srv.GetDraft(context.Background(), &pb.GetDraftRequest{DraftId: "nonexistent"})
+	requireCode(t, err, codes.NotFound)
+}
+
+func TestServer_ListDrafts_OK(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		listDraftsResult: []codevaldagency.AgencyDraft{
+			{ID: "d1", Status: codevaldagency.DraftStatusOpen},
+			{ID: "d2", Status: codevaldagency.DraftStatusArchived},
+		},
+	}
+	srv := server.New(mgr)
+	got, err := srv.ListDrafts(context.Background(), &pb.ListDraftsRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.GetDrafts()) != 2 {
+		t.Fatalf("expected 2 drafts, got %d", len(got.GetDrafts()))
+	}
+}
+
+func TestServer_UpdateDraftDescription_OK(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		updateDraftDescResult: codevaldagency.AgencyDraft{
+			ID:          "d1",
+			Description: "Updated",
+			Status:      codevaldagency.DraftStatusOpen,
+		},
+	}
+	srv := server.New(mgr)
+	got, err := srv.UpdateDraftDescription(context.Background(), &pb.UpdateDraftDescriptionRequest{
+		DraftId:     "d1",
+		Description: "Updated",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.GetDescription() != "Updated" {
+		t.Errorf("Description: want %q, got %q", "Updated", got.GetDescription())
+	}
+}
+
+func TestServer_UpdateDraftDescription_NotOpen_ReturnsFailedPrecondition(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{updateDraftDescErr: codevaldagency.ErrDraftNotOpen}
+	srv := server.New(mgr)
+	_, err := srv.UpdateDraftDescription(context.Background(), &pb.UpdateDraftDescriptionRequest{
+		DraftId: "d1",
 	})
 	requireCode(t, err, codes.FailedPrecondition)
 }
 
-func TestServer_UpdateAgency_NotFound(t *testing.T) {
+func TestServer_PromoteDraft_OK(t *testing.T) {
 	t.Parallel()
-	mgr := &mockManager{updateErr: codevaldagency.ErrAgencyNotFound}
+	mgr := &mockManager{
+		promoteDraftResult: codevaldagency.Agency{ID: "a1", Enabled: true},
+	}
 	srv := server.New(mgr)
-	_, err := srv.UpdateAgency(context.Background(), &pb.UpdateAgencyRequest{})
-	requireCode(t, err, codes.NotFound)
+	got, err := srv.PromoteDraft(context.Background(), &pb.PromoteDraftRequest{DraftId: "d1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !got.GetEnabled() {
+		t.Error("expected Enabled=true after PromoteDraft")
+	}
+}
+
+func TestServer_PromoteDraft_NotOpen_ReturnsFailedPrecondition(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{promoteDraftErr: codevaldagency.ErrDraftNotOpen}
+	srv := server.New(mgr)
+	_, err := srv.PromoteDraft(context.Background(), &pb.PromoteDraftRequest{DraftId: "d1"})
+	requireCode(t, err, codes.FailedPrecondition)
+}
+
+func TestServer_ArchiveDraft_OK(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		archiveDraftResult: codevaldagency.AgencyDraft{
+			ID:     "d1",
+			Status: codevaldagency.DraftStatusArchived,
+		},
+	}
+	srv := server.New(mgr)
+	got, err := srv.ArchiveDraft(context.Background(), &pb.ArchiveDraftRequest{DraftId: "d1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.GetStatus() != pb.AgencyDraftStatus_AGENCY_DRAFT_STATUS_ARCHIVED {
+		t.Errorf("Status: want ARCHIVED, got %v", got.GetStatus())
+	}
+}
+
+func TestServer_ArchiveDraft_NotOpen_ReturnsFailedPrecondition(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{archiveDraftErr: codevaldagency.ErrDraftNotOpen}
+	srv := server.New(mgr)
+	_, err := srv.ArchiveDraft(context.Background(), &pb.ArchiveDraftRequest{DraftId: "d1"})
+	requireCode(t, err, codes.FailedPrecondition)
 }
 
 // ── PublishAgency ───────────────────────────────────────────────────────────────────────

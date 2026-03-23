@@ -4,7 +4,7 @@
 // [types.Schema] for CodeValdAgency. cmd/main.go seeds this schema
 // idempotently on startup via AgencySchemaManager.SetSchema.
 //
-// The schema declares twelve TypeDefinitions:
+// The schema declares nineteen TypeDefinitions:
 //   - Agency                    — root entity (mutable)
 //   - Goal                      — strategic objective (mutable)
 //   - Workflow                  — ordered container of WorkItems (mutable)
@@ -14,9 +14,47 @@
 //   - DeliverableResult         — instance: actual output submitted against a Deliverable spec (immutable)
 //   - ContentRef                — path to a single artifact in CodeValdGit; attachable to DeliverableResult, Instruction, or WorkItem (immutable)
 //   - ConfiguredRole            — custom role beyond super_admin/admin (mutable)
+//   - AgencyDraft               — parallel editable copy of the agency graph, stored in agency_drafts (mutable)
+//   - DraftGoal                 — copy of Goal inside a draft, stored in agency_draft_entities (mutable)
+//   - DraftWorkflow             — copy of Workflow inside a draft, stored in agency_draft_entities (mutable)
+//   - DraftWorkItem             — copy of WorkItem inside a draft, stored in agency_draft_entities (mutable)
+//   - DraftConfiguredRole       — copy of ConfiguredRole inside a draft, stored in agency_draft_entities (mutable)
+//   - DraftInstruction          — copy of Instruction inside a draft, stored in agency_draft_entities (mutable)
+//   - DraftDeliverable          — copy of Deliverable inside a draft, stored in agency_draft_entities (mutable)
 //   - AgencySnapshot            — immutable activation record (draft → active)
 //   - AgencyPublication         — immutable versioned publication snapshot
 //   - AgencyPublicationStatus   — mutable status node for a publication (draft → active → archived)
+//
+// Relationship graph:
+//
+//	Agency ──has_goal──────────────► Goal
+//	       ──has_workflow──────────► Workflow ──has_work_item──────► WorkItem
+//	       ──has_configured_role──► ConfiguredRole                        │
+//	       ──has_draft─────────────► AgencyDraft                          ├──has_instruction──► Instruction
+//	       ──has_snapshot─────────► AgencySnapshot   (Immutable)          └──has_deliverable──► Deliverable
+//	       ──has_publication──────► AgencyPublication (Immutable)                                    │
+//	                                    │                                                            ├──has_result──► DeliverableResult ──has_content_ref──► ContentRef
+//	                                    ├──has_status──────────────► AgencyPublicationStatus (mutable)
+//	                                    └──has_instruction──► Instruction ──has_content_ref──► ContentRef
+//	                                    WorkItem ──has_content_ref──► ContentRef
+//
+//	Deliverable ──reviewer_role──► ConfiguredRole  (waiver authority)
+//
+//	Goal                  ──belongs_to_agency──────────►   Agency            (ToMany=false, inverse)
+//	Goal                  ──belongs_to_draft──────────►   AgencyDraft        (ToMany=false, inverse, optional)
+//	Workflow              ──belongs_to_agency──────────►   Agency            (ToMany=false, inverse)
+//	Workflow              ──belongs_to_draft──────────►   AgencyDraft        (ToMany=false, inverse, optional)
+//	WorkItem              ──belongs_to_workflow──────────► Workflow          (ToMany=false, inverse)
+//	Instruction           ──belongs_to_workflow──────────► Workflow          (ToMany=false, inverse, optional)
+//	Instruction           ──belongs_to_work_item──────────► WorkItem         (ToMany=false, inverse, optional)
+//	Deliverable           ──belongs_to_work_item──────────► WorkItem         (ToMany=false, inverse)
+//	DeliverableResult     ──belongs_to_deliverable──────►   Deliverable      (ToMany=false, inverse)
+//	ConfiguredRole        ──belongs_to_agency──────────►   Agency            (ToMany=false, inverse)
+//	ConfiguredRole        ──belongs_to_draft──────────►   AgencyDraft        (ToMany=false, inverse, optional)
+//	AgencyDraft           ──belongs_to_agency──────────►   Agency            (ToMany=false, inverse)
+//	AgencySnapshot        ──belongs_to_agency──────────►   Agency            (ToMany=false, inverse)
+//	AgencyPublication     ──belongs_to_agency──────────►   Agency            (ToMany=false, inverse)
+//	AgencyPublicationStatus ──belongs_to_publication──► AgencyPublication   (ToMany=false, inverse)
 //
 // Relationship graph:
 //
@@ -69,29 +107,33 @@ func DefaultAgencySchema() types.Schema {
 		Tag:     "v1",
 		Types: []types.TypeDefinition{
 			{
-				Name:              "Agency",
-				DisplayName:       "Agency",
-				PathSegment:       "", // no top-level routes — Agency IS the agency context
-				StorageCollection: "agencies",
+				Name:        "Agency",
+				DisplayName: "Agency",
+				PathSegment: "",
 				Properties: []types.PropertyDefinition{
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "mission", Type: types.PropertyTypeString, Required: false},
 					{Name: "vision", Type: types.PropertyTypeString, Required: false},
+					// enabled is false until the first PromoteDraft call succeeds,
+					// at which point it is set to true. Set to false to disable the agency.
+					{Name: "enabled", Type: types.PropertyTypeBoolean, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
 					{Name: "has_goal", Label: "Goals", PathSegment: "goals", ToType: "Goal", ToMany: true, Inverse: "belongs_to_agency"},
 					{Name: "has_workflow", Label: "Workflows", PathSegment: "workflows", ToType: "Workflow", ToMany: true, Inverse: "belongs_to_agency"},
 					{Name: "has_configured_role", Label: "Configured Roles", PathSegment: "configured-roles", ToType: "ConfiguredRole", ToMany: true, Inverse: "belongs_to_agency"},
+					// ToMany=true: an agency may have many open, promoted, or archived drafts.
+					// Inverse of AgencyDraft.belongs_to_agency.
+					{Name: "has_draft", Label: "Drafts", PathSegment: "drafts", ToType: "AgencyDraft", ToMany: true, Inverse: "belongs_to_agency"},
 					{Name: "has_snapshot", Label: "Snapshots", PathSegment: "snapshots", ToType: "AgencySnapshot", ToMany: true, Inverse: "belongs_to_agency"},
 					{Name: "has_publication", Label: "Publications", PathSegment: "publications", ToType: "AgencyPublication", ToMany: true, Inverse: "belongs_to_agency"},
 				},
 			},
 			{
-				Name:              "Goal",
-				DisplayName:       "Goal",
-				PathSegment:       "goals",
-				EntityIDParam:     "goalId",
-				StorageCollection: "agency_goals",
+				Name:          "Goal",
+				DisplayName:   "Goal",
+				PathSegment:   "goals",
+				EntityIDParam: "goalId",
 				Properties: []types.PropertyDefinition{
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
@@ -101,14 +143,16 @@ func DefaultAgencySchema() types.Schema {
 					// ToMany=false, Required=true: a Goal must belong to exactly one Agency.
 					// Inverse of Agency.has_goal — auto-created by CreateRelationship.
 					{Name: "belongs_to_agency", Label: "Agency", PathSegment: "agency", ToType: "Agency", ToMany: false, Required: true},
+					// ToMany=false, optional: set when this Goal is a draft copy.
+					// Inverse of AgencyDraft.has_goal — written atomically by CreateDraft.
+					{Name: "belongs_to_draft", Label: "Draft", PathSegment: "draft", ToType: "AgencyDraft", ToMany: false},
 				},
 			},
 			{
-				Name:              "Workflow",
-				DisplayName:       "Workflow",
-				PathSegment:       "workflows",
-				EntityIDParam:     "workflowId",
-				StorageCollection: "agency_workflows",
+				Name:          "Workflow",
+				DisplayName:   "Workflow",
+				PathSegment:   "workflows",
+				EntityIDParam: "workflowId",
 				Properties: []types.PropertyDefinition{
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
@@ -120,14 +164,16 @@ func DefaultAgencySchema() types.Schema {
 					// ToMany=false, Required=true: a Workflow must belong to exactly one Agency.
 					// Inverse of Agency.has_workflow — auto-created by CreateRelationship.
 					{Name: "belongs_to_agency", Label: "Agency", PathSegment: "agency", ToType: "Agency", ToMany: false, Required: true},
+					// ToMany=false, optional: set when this Workflow is a draft copy.
+					// Inverse of AgencyDraft.has_workflow — written atomically by CreateDraft.
+					{Name: "belongs_to_draft", Label: "Draft", PathSegment: "draft", ToType: "AgencyDraft", ToMany: false},
 				},
 			},
 			{
-				Name:              "WorkItem",
-				DisplayName:       "Work Item",
-				PathSegment:       "work-items",
-				EntityIDParam:     "workItemId",
-				StorageCollection: "agency_work_items",
+				Name:          "WorkItem",
+				DisplayName:   "Work Item",
+				PathSegment:   "work-items",
+				EntityIDParam: "workItemId",
 				Properties: []types.PropertyDefinition{
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
@@ -155,11 +201,10 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:              "Instruction",
-				DisplayName:       "Instruction",
-				PathSegment:       "instructions",
-				EntityIDParam:     "instructionId",
-				StorageCollection: "agency_instructions",
+				Name:          "Instruction",
+				DisplayName:   "Instruction",
+				PathSegment:   "instructions",
+				EntityIDParam: "instructionId",
 				Properties: []types.PropertyDefinition{
 					// content is the rule or constraint text delivered to the actor.
 					{Name: "content", Type: types.PropertyTypeString, Required: true},
@@ -176,11 +221,10 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:              "Deliverable",
-				DisplayName:       "Deliverable",
-				PathSegment:       "deliverables",
-				EntityIDParam:     "deliverableId",
-				StorageCollection: "agency_deliverables",
+				Name:          "Deliverable",
+				DisplayName:   "Deliverable",
+				PathSegment:   "deliverables",
+				EntityIDParam: "deliverableId",
 				Properties: []types.PropertyDefinition{
 					// title names the expected output (e.g. "Analysis Report", "Migration Script").
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
@@ -205,12 +249,11 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:              "DeliverableResult",
-				DisplayName:       "Deliverable Result",
-				PathSegment:       "results",
-				EntityIDParam:     "resultId",
-				Immutable:         true,
-				StorageCollection: "deliverable_results",
+				Name:          "DeliverableResult",
+				DisplayName:   "Deliverable Result",
+				PathSegment:   "results",
+				EntityIDParam: "resultId",
+				Immutable:     true,
 				Properties: []types.PropertyDefinition{
 					// status valid values: "pending", "completed", "rejected", "waived"
 					//   pending   — submitted by the actor; awaiting review
@@ -230,12 +273,11 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:              "ContentRef",
-				DisplayName:       "Content Ref",
-				PathSegment:       "content-refs",
-				EntityIDParam:     "contentRefId",
-				Immutable:         true,
-				StorageCollection: "content_refs",
+				Name:          "ContentRef",
+				DisplayName:   "Content Ref",
+				PathSegment:   "content-refs",
+				EntityIDParam: "contentRefId",
+				Immutable:     true,
 				Properties: []types.PropertyDefinition{
 					// path is the location of the artifact in CodeValdGit (e.g. "output/report.md").
 					{Name: "path", Type: types.PropertyTypeString, Required: true},
@@ -252,11 +294,10 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:              "ConfiguredRole",
-				DisplayName:       "Configured Role",
-				PathSegment:       "configured-roles",
-				EntityIDParam:     "configuredRoleId",
-				StorageCollection: "agency_configured_roles",
+				Name:          "ConfiguredRole",
+				DisplayName:   "Configured Role",
+				PathSegment:   "configured-roles",
+				EntityIDParam: "configuredRoleId",
 				Properties: []types.PropertyDefinition{
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					// description is the role brief — responsibilities, boundaries, and context
@@ -277,15 +318,125 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "assigned_work_item", Label: "Work Items", PathSegment: "work-items", ToType: "WorkItem", ToMany: true},
 					// ToMany=true: inverse of Deliverable.reviewer_role — deliverables this role can waive.
 					{Name: "reviews_deliverable", Label: "Reviewed Deliverables", PathSegment: "reviewed-deliverables", ToType: "Deliverable", ToMany: true},
+					// ToMany=false, optional: set when this ConfiguredRole is a draft copy.
+					// Inverse of AgencyDraft.has_configured_role — written atomically by CreateDraft.
+					{Name: "belongs_to_draft", Label: "Draft", PathSegment: "draft", ToType: "AgencyDraft", ToMany: false},
+				},
+			},
+			// AgencyDraft is a parallel, editable copy of the agency sub-graph. It is
+			// stored in the dedicated agency_drafts collection (not agency_entities).
+			// Sub-entities copied into a draft are stored in agency_draft_entities
+			// and queried by TypeID ("DraftGoal", etc.) + draft_id property.
+			{
+				Name:              "AgencyDraft",
+				DisplayName:       "Agency Draft",
+				PathSegment:       "drafts",
+				EntityIDParam:     "draftId",
+				StorageCollection: "agency_drafts",
+				Properties: []types.PropertyDefinition{
+					{Name: "description", Type: types.PropertyTypeString, Required: false},
+					// status valid values: "open", "promoted", "archived"
+					//   open     — actively being edited
+					//   promoted — draft entities copied to live; terminal
+					//   archived — discarded without promotion; terminal
+					{Name: "status", Type: types.PropertyTypeOption, Required: true},
+					// forked_from_id is the Agency ID (forked_from_type=="live") or
+					// AgencyDraft ID (forked_from_type=="draft") this was copied from.
+					{Name: "forked_from_id", Type: types.PropertyTypeString, Required: false},
+					// forked_from_type is either "live" or "draft".
+					{Name: "forked_from_type", Type: types.PropertyTypeString, Required: false},
+				},
+				Relationships: []types.RelationshipDefinition{
+					// ToMany=false, Required=true: a Draft must belong to exactly one Agency.
+					// Inverse of Agency.has_draft — auto-created by CreateRelationship.
+					{Name: "belongs_to_agency", Label: "Agency", PathSegment: "agency", ToType: "Agency", ToMany: false, Required: true},
+				},
+			},
+			// Draft sub-entity types — stored in agency_draft_entities.
+			// These are internal copies of the live sub-entity types created by
+			// CreateDraft. They carry a draft_id property for scoping.
+			// PathSegment is intentionally empty — no HTTP routes are generated.
+			{
+				Name:              "DraftGoal",
+				DisplayName:       "Draft Goal",
+				StorageCollection: "agency_draft_entities",
+				Properties: []types.PropertyDefinition{
+					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "title", Type: types.PropertyTypeString, Required: true},
+					{Name: "description", Type: types.PropertyTypeString, Required: false},
+					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
 				},
 			},
 			{
-				Name:              "AgencySnapshot",
-				DisplayName:       "Agency Snapshot",
-				PathSegment:       "snapshots",
-				EntityIDParam:     "snapshotId",
-				Immutable:         true,
-				StorageCollection: "agency_snapshots",
+				Name:              "DraftWorkflow",
+				DisplayName:       "Draft Workflow",
+				StorageCollection: "agency_draft_entities",
+				Properties: []types.PropertyDefinition{
+					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "name", Type: types.PropertyTypeString, Required: true},
+					{Name: "description", Type: types.PropertyTypeString, Required: false},
+					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
+				},
+			},
+			{
+				Name:              "DraftWorkItem",
+				DisplayName:       "Draft Work Item",
+				StorageCollection: "agency_draft_entities",
+				Properties: []types.PropertyDefinition{
+					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					// draft_workflow_id references the parent DraftWorkflow entity ID.
+					{Name: "draft_workflow_id", Type: types.PropertyTypeString, Required: false},
+					{Name: "title", Type: types.PropertyTypeString, Required: true},
+					{Name: "description", Type: types.PropertyTypeString, Required: false},
+					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
+					{Name: "prompt", Type: types.PropertyTypeString, Required: false},
+				},
+			},
+			{
+				Name:              "DraftConfiguredRole",
+				DisplayName:       "Draft Configured Role",
+				StorageCollection: "agency_draft_entities",
+				Properties: []types.PropertyDefinition{
+					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "name", Type: types.PropertyTypeString, Required: true},
+					{Name: "description", Type: types.PropertyTypeString, Required: false},
+					{Name: "actor_type", Type: types.PropertyTypeOption, Required: true},
+					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
+				},
+			},
+			{
+				Name:              "DraftInstruction",
+				DisplayName:       "Draft Instruction",
+				StorageCollection: "agency_draft_entities",
+				Properties: []types.PropertyDefinition{
+					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					// draft_workflow_id or draft_work_item_id — whichever parent applies.
+					{Name: "draft_workflow_id", Type: types.PropertyTypeString, Required: false},
+					{Name: "draft_work_item_id", Type: types.PropertyTypeString, Required: false},
+					{Name: "content", Type: types.PropertyTypeString, Required: true},
+					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
+				},
+			},
+			{
+				Name:              "DraftDeliverable",
+				DisplayName:       "Draft Deliverable",
+				StorageCollection: "agency_draft_entities",
+				Properties: []types.PropertyDefinition{
+					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					// draft_work_item_id references the parent DraftWorkItem entity ID.
+					{Name: "draft_work_item_id", Type: types.PropertyTypeString, Required: false},
+					{Name: "title", Type: types.PropertyTypeString, Required: true},
+					{Name: "description", Type: types.PropertyTypeString, Required: false},
+					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
+					{Name: "blocking", Type: types.PropertyTypeBoolean, Required: true},
+				},
+			},
+			{
+				Name:          "AgencySnapshot",
+				DisplayName:   "Agency Snapshot",
+				PathSegment:   "snapshots",
+				EntityIDParam: "snapshotId",
+				Immutable:     true,
 				Properties: []types.PropertyDefinition{
 					{Name: "snapshot_at", Type: types.PropertyTypeDatetime, Required: true},
 				},
@@ -296,12 +447,11 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:              "AgencyPublication",
-				DisplayName:       "Agency Publication",
-				PathSegment:       "publications",
-				EntityIDParam:     "publicationId",
-				Immutable:         true,
-				StorageCollection: "agency_publications",
+				Name:          "AgencyPublication",
+				DisplayName:   "Agency Publication",
+				PathSegment:   "publications",
+				EntityIDParam: "publicationId",
+				Immutable:     true,
 				Properties: []types.PropertyDefinition{
 					{Name: "version", Type: types.PropertyTypeInteger, Required: true},
 					{Name: "tag", Type: types.PropertyTypeString, Required: true},
@@ -321,11 +471,10 @@ func DefaultAgencySchema() types.Schema {
 			// (draft → active → archived) so that UpdatePublicationStatus can call
 			// UpdateEntity on this type without hitting ErrImmutableType.
 			{
-				Name:              "AgencyPublicationStatus",
-				DisplayName:       "Agency Publication Status",
-				PathSegment:       "publication-statuses",
-				EntityIDParam:     "publicationStatusId",
-				StorageCollection: "publication_statuses",
+				Name:          "AgencyPublicationStatus",
+				DisplayName:   "Agency Publication Status",
+				PathSegment:   "publication-statuses",
+				EntityIDParam: "publicationStatusId",
 				Properties: []types.PropertyDefinition{
 					// status valid values: "draft", "active", "archived"
 					{Name: "status", Type: types.PropertyTypeOption, Required: true},

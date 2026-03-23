@@ -189,32 +189,11 @@ func mustNewManagerWithPublisher(t *testing.T) (codevaldagency.AgencyManager, *f
 func mustSetupAgency(t *testing.T, mgr codevaldagency.AgencyManager, id, name string) codevaldagency.Agency {
 	t.Helper()
 	agency, err := mgr.SetAgencyDetails(context.Background(),
-		fmt.Sprintf(`{"id":%q,"name":%q,"status":"draft"}`, id, name))
+		fmt.Sprintf(`{"id":%q,"name":%q}`, id, name))
 	if err != nil {
 		t.Fatalf("SetAgencyDetails: %v", err)
 	}
 	return agency
-}
-
-// mustSeedActivationData inserts the minimum Goal + Workflow + WorkItem
-// required to pass the draft -> active activation guard.
-func mustSeedActivationData(fdm *fakeDataManager) {
-	fdm.addEntity(entitygraph.Entity{
-		ID: "seed-goal-001", AgencyID: testAgencyID, TypeID: "Goal",
-		Properties: map[string]any{"title": "Seed Goal", "ordinality": 1},
-	})
-	fdm.addEntity(entitygraph.Entity{
-		ID: "seed-wf-001", AgencyID: testAgencyID, TypeID: "Workflow",
-		Properties: map[string]any{"name": "Seed Workflow"},
-	})
-	fdm.addEntity(entitygraph.Entity{
-		ID: "seed-wi-001", AgencyID: testAgencyID, TypeID: "WorkItem",
-		Properties: map[string]any{"title": "Seed WorkItem", "order": 1},
-	})
-	fdm.addRelationship(entitygraph.Relationship{
-		ID: "seed-rel-001", AgencyID: testAgencyID,
-		Name: "has_work_item", FromID: "seed-wf-001", ToID: "seed-wi-001",
-	})
 }
 
 // NewAgencyManager
@@ -299,131 +278,6 @@ func TestGetAgency_RoundTrip(t *testing.T) {
 	}
 	if got.Name != set.Name {
 		t.Errorf("Name mismatch: want %q, got %q", set.Name, got.Name)
-	}
-}
-
-// UpdateAgency lifecycle transitions
-
-func TestUpdateAgency_DraftToActive_Succeeds_WritesSnapshot(t *testing.T) {
-	t.Parallel()
-	mgr, fdm := mustNewManager(t)
-	mustSetupAgency(t, mgr, "agency-001", "Gamma")
-	mustSeedActivationData(fdm)
-
-	updated, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
-		Status: codevaldagency.LifecycleActive,
-	})
-	if err != nil {
-		t.Fatalf("UpdateAgency draft->active: %v", err)
-	}
-	if updated.Status != codevaldagency.LifecycleActive {
-		t.Errorf("expected Status=active, got %q", updated.Status)
-	}
-	snaps := fdm.entitiesByType("AgencySnapshot")
-	if len(snaps) != 1 {
-		t.Fatalf("expected 1 snapshot entity, got %d", len(snaps))
-	}
-	if snaps[0].ID == "" {
-		t.Error("snapshot entity ID must not be empty")
-	}
-}
-
-func TestUpdateAgency_ActiveToDraft_ReturnsErrInvalidLifecycleTransition(t *testing.T) {
-	t.Parallel()
-	mgr, fdm := mustNewManager(t)
-	mustSetupAgency(t, mgr, "agency-001", "Delta")
-	mustSeedActivationData(fdm)
-
-	if _, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
-		Status: codevaldagency.LifecycleActive,
-	}); err != nil {
-		t.Fatalf("draft->active: %v", err)
-	}
-	_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
-		Status: codevaldagency.LifecycleDraft,
-	})
-	if !errors.Is(err, codevaldagency.ErrInvalidLifecycleTransition) {
-		t.Fatalf("expected ErrInvalidLifecycleTransition, got %v", err)
-	}
-}
-
-func TestUpdateAgency_AchievedToAny_ReturnsErrInvalidLifecycleTransition(t *testing.T) {
-	t.Parallel()
-	mgr, fdm := mustNewManager(t)
-	mustSetupAgency(t, mgr, "agency-001", "Epsilon")
-	mustSeedActivationData(fdm)
-
-	if _, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
-		Status: codevaldagency.LifecycleActive,
-	}); err != nil {
-		t.Fatalf("draft->active: %v", err)
-	}
-	if _, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
-		Status: codevaldagency.LifecycleAchieved,
-	}); err != nil {
-		t.Fatalf("active->achieved: %v", err)
-	}
-
-	for _, next := range []codevaldagency.AgencyLifecycle{
-		codevaldagency.LifecycleDraft,
-		codevaldagency.LifecycleActive,
-		codevaldagency.LifecycleAchieved,
-	} {
-		_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{Status: next})
-		if !errors.Is(err, codevaldagency.ErrInvalidLifecycleTransition) {
-			t.Errorf("achieved->%q: expected ErrInvalidLifecycleTransition, got %v", next, err)
-		}
-	}
-}
-
-func TestUpdateAgency_NoStatusChange_DoesNotWriteSnapshot(t *testing.T) {
-	t.Parallel()
-	mgr, fdm := mustNewManager(t)
-	mustSetupAgency(t, mgr, "agency-001", "Zeta")
-	_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{Name: "Zeta Updated"})
-	if err != nil {
-		t.Fatalf("UpdateAgency: %v", err)
-	}
-	if snaps := fdm.entitiesByType("AgencySnapshot"); len(snaps) != 0 {
-		t.Errorf("expected 0 snapshots for non-lifecycle update, got %d", len(snaps))
-	}
-}
-
-func TestUpdateAgency_DraftToActive_MissingGoal_ReturnsErrInvalidAgency(t *testing.T) {
-	t.Parallel()
-	mgr, _ := mustNewManager(t)
-	mustSetupAgency(t, mgr, "agency-001", "Eta")
-	_, err := mgr.UpdateAgency(context.Background(), codevaldagency.UpdateAgencyRequest{
-		Status: codevaldagency.LifecycleActive,
-	})
-	if !errors.Is(err, codevaldagency.ErrInvalidAgency) {
-		t.Fatalf("expected ErrInvalidAgency (no goals), got %v", err)
-	}
-}
-
-// AgencyLifecycle.CanTransitionTo
-
-func TestAgencyLifecycle_CanTransitionTo(t *testing.T) {
-	tests := []struct {
-		from    codevaldagency.AgencyLifecycle
-		to      codevaldagency.AgencyLifecycle
-		allowed bool
-	}{
-		{codevaldagency.LifecycleDraft, codevaldagency.LifecycleActive, true},
-		{codevaldagency.LifecycleDraft, codevaldagency.LifecycleAchieved, false},
-		{codevaldagency.LifecycleDraft, codevaldagency.LifecycleDraft, false},
-		{codevaldagency.LifecycleActive, codevaldagency.LifecycleAchieved, true},
-		{codevaldagency.LifecycleActive, codevaldagency.LifecycleDraft, false},
-		{codevaldagency.LifecycleActive, codevaldagency.LifecycleActive, false},
-		{codevaldagency.LifecycleAchieved, codevaldagency.LifecycleDraft, false},
-		{codevaldagency.LifecycleAchieved, codevaldagency.LifecycleActive, false},
-		{codevaldagency.LifecycleAchieved, codevaldagency.LifecycleAchieved, false},
-	}
-	for _, tt := range tests {
-		got := tt.from.CanTransitionTo(tt.to)
-		if got != tt.allowed {
-			t.Errorf("%q.CanTransitionTo(%q): got %v, want %v", tt.from, tt.to, got, tt.allowed)
-		}
 	}
 }
 
@@ -548,23 +402,6 @@ func TestPublishAgency_SecondPublish_VersionIsTwo(t *testing.T) {
 	}
 }
 
-func TestPublishAgency_DoesNotChangeAgencyStatus(t *testing.T) {
-	t.Parallel()
-	mgr, _ := mustNewManager(t)
-	mustSetupAgency(t, mgr, "agency-001", "Alpha")
-
-	if _, err := mgr.PublishAgency(context.Background()); err != nil {
-		t.Fatalf("PublishAgency: %v", err)
-	}
-	agency, err := mgr.GetAgency(context.Background())
-	if err != nil {
-		t.Fatalf("GetAgency: %v", err)
-	}
-	if agency.Status != codevaldagency.LifecycleDraft {
-		t.Errorf("Status: want %q (unchanged), got %q", codevaldagency.LifecycleDraft, agency.Status)
-	}
-}
-
 func TestPublishAgency_PublishesEvent(t *testing.T) {
 	t.Parallel()
 	mgr, _, fp := mustNewManagerWithPublisher(t)
@@ -656,5 +493,427 @@ func TestListPublications_AscendingVersionOrder(t *testing.T) {
 		if p.Version != want {
 			t.Errorf("list[%d].Version: want %d, got %d", i, want, p.Version)
 		}
+	}
+}
+
+// AgencyDraftStatus.CanTransitionTo
+
+func TestAgencyDraftStatus_CanTransitionTo(t *testing.T) {
+	tests := []struct {
+		from    codevaldagency.AgencyDraftStatus
+		to      codevaldagency.AgencyDraftStatus
+		allowed bool
+	}{
+		{codevaldagency.DraftStatusOpen, codevaldagency.DraftStatusPromoted, true},
+		{codevaldagency.DraftStatusOpen, codevaldagency.DraftStatusArchived, true},
+		{codevaldagency.DraftStatusOpen, codevaldagency.DraftStatusOpen, false},
+		{codevaldagency.DraftStatusPromoted, codevaldagency.DraftStatusOpen, false},
+		{codevaldagency.DraftStatusPromoted, codevaldagency.DraftStatusArchived, false},
+		{codevaldagency.DraftStatusArchived, codevaldagency.DraftStatusOpen, false},
+		{codevaldagency.DraftStatusArchived, codevaldagency.DraftStatusPromoted, false},
+	}
+	for _, tt := range tests {
+		got := tt.from.CanTransitionTo(tt.to)
+		if got != tt.allowed {
+			t.Errorf("%q.CanTransitionTo(%q): got %v, want %v", tt.from, tt.to, got, tt.allowed)
+		}
+	}
+}
+
+// SetAgencyDetails — ErrAgencyReadOnly
+
+func TestSetAgencyDetails_WhenEnabled_ReturnsErrAgencyReadOnly(t *testing.T) {
+	t.Parallel()
+	mgr, fdm := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+	// Force enabled=true directly on the stored entity so we can test the guard
+	// without needing a full draft→promote flow.
+	for id, e := range fdm.entities {
+		if e.TypeID == "Agency" {
+			if e.Properties == nil {
+				e.Properties = map[string]any{}
+			}
+			e.Properties["enabled"] = true
+			fdm.entities[id] = e
+		}
+	}
+	_, err := mgr.SetAgencyDetails(context.Background(), `{"id":"agency-001","name":"Beta"}`)
+	if !errors.Is(err, codevaldagency.ErrAgencyReadOnly) {
+		t.Fatalf("expected ErrAgencyReadOnly, got %v", err)
+	}
+}
+
+// CreateDraft
+
+func TestCreateDraft_NoAgency_ReturnsErrAgencyNotFound(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	_, err := mgr.CreateDraft(context.Background(), "My draft", "", "live")
+	if !errors.Is(err, codevaldagency.ErrAgencyNotFound) {
+		t.Fatalf("expected ErrAgencyNotFound, got %v", err)
+	}
+}
+
+func TestCreateDraft_FromLive_CreatesOpenDraft(t *testing.T) {
+	t.Parallel()
+	mgr, fdm := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	draft, err := mgr.CreateDraft(context.Background(), "First draft", "", "live")
+	if err != nil {
+		t.Fatalf("CreateDraft: %v", err)
+	}
+	if draft.ID == "" {
+		t.Error("draft ID must not be empty")
+	}
+	if draft.Status != codevaldagency.DraftStatusOpen {
+		t.Errorf("Status: want %q, got %q", codevaldagency.DraftStatusOpen, draft.Status)
+	}
+	if draft.Description != "First draft" {
+		t.Errorf("Description: want %q, got %q", "First draft", draft.Description)
+	}
+	if draft.AgencyID != testAgencyID {
+		t.Errorf("AgencyID: want %q, got %q", testAgencyID, draft.AgencyID)
+	}
+	_ = fdm
+}
+
+func TestCreateDraft_FromLive_CopiesGoals(t *testing.T) {
+	t.Parallel()
+	mgr, fdm := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+	fdm.addEntity(entitygraph.Entity{
+		ID: "g-001", AgencyID: testAgencyID, TypeID: "Goal",
+		Properties: map[string]any{"title": "Reduce costs", "ordinality": 1},
+	})
+
+	draft, err := mgr.CreateDraft(context.Background(), "With goals", "", "live")
+	if err != nil {
+		t.Fatalf("CreateDraft: %v", err)
+	}
+
+	var draftGoals []entitygraph.Entity
+	for _, e := range fdm.entities {
+		if !e.Deleted && e.TypeID == "DraftGoal" && e.Properties["draft_id"] == draft.ID {
+			draftGoals = append(draftGoals, e)
+		}
+	}
+	if len(draftGoals) != 1 {
+		t.Fatalf("expected 1 DraftGoal, got %d", len(draftGoals))
+	}
+	if draftGoals[0].Properties["title"] != "Reduce costs" {
+		t.Errorf("DraftGoal.title: want %q, got %v", "Reduce costs", draftGoals[0].Properties["title"])
+	}
+}
+
+// GetDraft
+
+func TestGetDraft_NotFound_ReturnsErrDraftNotFound(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	_, err := mgr.GetDraft(context.Background(), "nonexistent")
+	if !errors.Is(err, codevaldagency.ErrDraftNotFound) {
+		t.Fatalf("expected ErrDraftNotFound, got %v", err)
+	}
+}
+
+func TestGetDraft_RoundTrip(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	created, err := mgr.CreateDraft(context.Background(), "Round-trip draft", "", "live")
+	if err != nil {
+		t.Fatalf("CreateDraft: %v", err)
+	}
+
+	got, err := mgr.GetDraft(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("GetDraft: %v", err)
+	}
+	if got.ID != created.ID {
+		t.Errorf("ID: want %q, got %q", created.ID, got.ID)
+	}
+	if got.Status != codevaldagency.DraftStatusOpen {
+		t.Errorf("Status: want %q, got %q", codevaldagency.DraftStatusOpen, got.Status)
+	}
+}
+
+// ListDrafts
+
+func TestListDrafts_EmptyBeforeAnyDraft(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	list, err := mgr.ListDrafts(context.Background())
+	if err != nil {
+		t.Fatalf("ListDrafts: %v", err)
+	}
+	if len(list) != 0 {
+		t.Errorf("expected empty list, got %d drafts", len(list))
+	}
+}
+
+func TestListDrafts_ReturnsAllDrafts(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	for i := 0; i < 3; i++ {
+		if _, err := mgr.CreateDraft(context.Background(), fmt.Sprintf("draft-%d", i), "", "live"); err != nil {
+			t.Fatalf("CreateDraft %d: %v", i, err)
+		}
+	}
+
+	list, err := mgr.ListDrafts(context.Background())
+	if err != nil {
+		t.Fatalf("ListDrafts: %v", err)
+	}
+	if len(list) != 3 {
+		t.Fatalf("expected 3 drafts, got %d", len(list))
+	}
+}
+
+// UpdateDraftDescription
+
+func TestUpdateDraftDescription_UpdatesDescription(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	draft, err := mgr.CreateDraft(context.Background(), "Old description", "", "live")
+	if err != nil {
+		t.Fatalf("CreateDraft: %v", err)
+	}
+
+	updated, err := mgr.UpdateDraftDescription(context.Background(), draft.ID, "New description")
+	if err != nil {
+		t.Fatalf("UpdateDraftDescription: %v", err)
+	}
+	if updated.Description != "New description" {
+		t.Errorf("Description: want %q, got %q", "New description", updated.Description)
+	}
+}
+
+func TestUpdateDraftDescription_NotFound_ReturnsErrDraftNotFound(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	_, err := mgr.UpdateDraftDescription(context.Background(), "nonexistent", "desc")
+	if !errors.Is(err, codevaldagency.ErrDraftNotFound) {
+		t.Fatalf("expected ErrDraftNotFound, got %v", err)
+	}
+}
+
+func TestUpdateDraftDescription_PromotedDraft_ReturnsErrDraftNotOpen(t *testing.T) {
+	t.Parallel()
+	mgr, fdm := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	draft, err := mgr.CreateDraft(context.Background(), "desc", "", "live")
+	if err != nil {
+		t.Fatalf("CreateDraft: %v", err)
+	}
+	// Manually mark draft as promoted.
+	e := fdm.entities[draft.ID]
+	e.Properties["status"] = "promoted"
+	fdm.entities[draft.ID] = e
+
+	_, err = mgr.UpdateDraftDescription(context.Background(), draft.ID, "new desc")
+	if !errors.Is(err, codevaldagency.ErrDraftNotOpen) {
+		t.Fatalf("expected ErrDraftNotOpen, got %v", err)
+	}
+}
+
+// PromoteDraft
+
+func TestPromoteDraft_SetsAgencyEnabled(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	draft, err := mgr.CreateDraft(context.Background(), "Promote me", "", "live")
+	if err != nil {
+		t.Fatalf("CreateDraft: %v", err)
+	}
+
+	agency, err := mgr.PromoteDraft(context.Background(), draft.ID)
+	if err != nil {
+		t.Fatalf("PromoteDraft: %v", err)
+	}
+	if !agency.Enabled {
+		t.Error("expected agency.Enabled=true after PromoteDraft")
+	}
+}
+
+func TestPromoteDraft_MarksDraftPromoted(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	draft, err := mgr.CreateDraft(context.Background(), "Promote me", "", "live")
+	if err != nil {
+		t.Fatalf("CreateDraft: %v", err)
+	}
+
+	if _, err := mgr.PromoteDraft(context.Background(), draft.ID); err != nil {
+		t.Fatalf("PromoteDraft: %v", err)
+	}
+
+	got, err := mgr.GetDraft(context.Background(), draft.ID)
+	if err != nil {
+		t.Fatalf("GetDraft after promote: %v", err)
+	}
+	if got.Status != codevaldagency.DraftStatusPromoted {
+		t.Errorf("Status: want %q, got %q", codevaldagency.DraftStatusPromoted, got.Status)
+	}
+}
+
+func TestPromoteDraft_NotFound_ReturnsErrDraftNotFound(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	_, err := mgr.PromoteDraft(context.Background(), "nonexistent")
+	if !errors.Is(err, codevaldagency.ErrDraftNotFound) {
+		t.Fatalf("expected ErrDraftNotFound, got %v", err)
+	}
+}
+
+func TestPromoteDraft_AlreadyPromoted_ReturnsErrDraftNotOpen(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	draft, err := mgr.CreateDraft(context.Background(), "desc", "", "live")
+	if err != nil {
+		t.Fatalf("CreateDraft: %v", err)
+	}
+	if _, err := mgr.PromoteDraft(context.Background(), draft.ID); err != nil {
+		t.Fatalf("first PromoteDraft: %v", err)
+	}
+	_, err = mgr.PromoteDraft(context.Background(), draft.ID)
+	if !errors.Is(err, codevaldagency.ErrDraftNotOpen) {
+		t.Fatalf("expected ErrDraftNotOpen, got %v", err)
+	}
+}
+
+func TestPromoteDraft_CopiesGoalsToLive(t *testing.T) {
+	t.Parallel()
+	mgr, fdm := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	draft, err := mgr.CreateDraft(context.Background(), "with goals", "", "live")
+	if err != nil {
+		t.Fatalf("CreateDraft: %v", err)
+	}
+	// Add a DraftGoal directly to the fake store.
+	fdm.addEntity(entitygraph.Entity{
+		ID: "dg-001", AgencyID: testAgencyID, TypeID: "DraftGoal",
+		Properties: map[string]any{
+			"draft_id":   draft.ID,
+			"title":      "Promoted goal",
+			"ordinality": 1,
+		},
+	})
+
+	if _, err := mgr.PromoteDraft(context.Background(), draft.ID); err != nil {
+		t.Fatalf("PromoteDraft: %v", err)
+	}
+
+	var liveGoals []entitygraph.Entity
+	for _, e := range fdm.entities {
+		if !e.Deleted && e.TypeID == "Goal" && e.AgencyID == testAgencyID {
+			liveGoals = append(liveGoals, e)
+		}
+	}
+	if len(liveGoals) != 1 {
+		t.Fatalf("expected 1 live Goal after promote, got %d", len(liveGoals))
+	}
+	if liveGoals[0].Properties["title"] != "Promoted goal" {
+		t.Errorf("Goal.title: want %q, got %v", "Promoted goal", liveGoals[0].Properties["title"])
+	}
+}
+
+// ArchiveDraft
+
+func TestArchiveDraft_MarksDraftArchived(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	draft, err := mgr.CreateDraft(context.Background(), "Archive me", "", "live")
+	if err != nil {
+		t.Fatalf("CreateDraft: %v", err)
+	}
+
+	archived, err := mgr.ArchiveDraft(context.Background(), draft.ID)
+	if err != nil {
+		t.Fatalf("ArchiveDraft: %v", err)
+	}
+	if archived.Status != codevaldagency.DraftStatusArchived {
+		t.Errorf("Status: want %q, got %q", codevaldagency.DraftStatusArchived, archived.Status)
+	}
+}
+
+func TestArchiveDraft_NotFound_ReturnsErrDraftNotFound(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	_, err := mgr.ArchiveDraft(context.Background(), "nonexistent")
+	if !errors.Is(err, codevaldagency.ErrDraftNotFound) {
+		t.Fatalf("expected ErrDraftNotFound, got %v", err)
+	}
+}
+
+func TestArchiveDraft_AlreadyArchived_ReturnsErrDraftNotOpen(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	draft, err := mgr.CreateDraft(context.Background(), "desc", "", "live")
+	if err != nil {
+		t.Fatalf("CreateDraft: %v", err)
+	}
+	if _, err := mgr.ArchiveDraft(context.Background(), draft.ID); err != nil {
+		t.Fatalf("first ArchiveDraft: %v", err)
+	}
+	_, err = mgr.ArchiveDraft(context.Background(), draft.ID)
+	if !errors.Is(err, codevaldagency.ErrDraftNotOpen) {
+		t.Fatalf("expected ErrDraftNotOpen, got %v", err)
+	}
+}
+
+func TestCreateDraft_FromDraft_CopiesSubEntities(t *testing.T) {
+	t.Parallel()
+	mgr, fdm := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	// Create source draft.
+	src, err := mgr.CreateDraft(context.Background(), "Source draft", "", "live")
+	if err != nil {
+		t.Fatalf("CreateDraft source: %v", err)
+	}
+	// Add a DraftGoal in the source draft.
+	fdm.addEntity(entitygraph.Entity{
+		ID: "dg-src-001", AgencyID: testAgencyID, TypeID: "DraftGoal",
+		Properties: map[string]any{
+			"draft_id": src.ID,
+			"title":    "Source goal",
+		},
+	})
+
+	// Fork from that draft.
+	dst, err := mgr.CreateDraft(context.Background(), "Forked draft", src.ID, "draft")
+	if err != nil {
+		t.Fatalf("CreateDraft fork: %v", err)
+	}
+
+	// Count DraftGoals belonging to the new draft.
+	var forkedGoals int
+	for _, e := range fdm.entities {
+		if !e.Deleted && e.TypeID == "DraftGoal" && e.Properties["draft_id"] == dst.ID {
+			forkedGoals++
+		}
+	}
+	if forkedGoals != 1 {
+		t.Fatalf("expected 1 forked DraftGoal, got %d", forkedGoals)
 	}
 }

@@ -9,12 +9,12 @@ import "google/protobuf/struct.proto";
 
 // ── Enumerations ─────────────────────────────────────────────────────────────
 
-// AgencyLifecycle mirrors the Go AgencyLifecycle type.
-enum AgencyLifecycle {
-  AGENCY_LIFECYCLE_UNSPECIFIED = 0;
-  AGENCY_LIFECYCLE_DRAFT       = 1;
-  AGENCY_LIFECYCLE_ACTIVE      = 2;
-  AGENCY_LIFECYCLE_ACHIEVED    = 3;
+// AgencyDraftStatus mirrors the Go AgencyDraftStatus type.
+enum AgencyDraftStatus {
+  AGENCY_DRAFT_STATUS_UNSPECIFIED = 0;
+  AGENCY_DRAFT_STATUS_OPEN        = 1;
+  AGENCY_DRAFT_STATUS_PROMOTED    = 2;
+  AGENCY_DRAFT_STATUS_ARCHIVED    = 3;
 }
 
 // RACILabel mirrors the Go RACILabel type.
@@ -86,7 +86,7 @@ message Agency {
   string                    name             = 2;
   string                    mission          = 3;
   string                    vision           = 4;
-  AgencyLifecycle           status           = 5;
+  bool                      enabled          = 5;
   repeated Goal             goals            = 6;
   repeated Workflow         workflows        = 7;
   repeated ConfiguredRole   configured_roles = 8;
@@ -103,16 +103,6 @@ message SetAgencyDetailsRequest {
   // json is the full agency document serialised as a JSON string.
   // Must include a non-empty "id" field.
   string json = 1;
-}
-
-message UpdateAgencyRequest {
-  string          name             = 1;
-  string          mission          = 2;
-  string          vision           = 3;
-  AgencyLifecycle status           = 4;
-  repeated Goal     goals            = 5;
-  repeated Workflow workflows        = 6;
-  repeated ConfiguredRole configured_roles = 7;
 }
 
 // ── Publication messages ──────────────────────────────────────────────────────
@@ -171,6 +161,54 @@ message GetConfiguredRolesResponse {
   repeated ConfiguredRole configured_roles = 1;
 }
 
+// ── Draft messages ─────────────────────────────────────────────────────────────
+
+// AgencyDraft is a versioned, editable copy of the agency sub-entity graph
+// created by CreateDraft and promoted to live state by PromoteDraft.
+message AgencyDraft {
+  string                    id               = 1;
+  string                    agency_id        = 2;
+  string                    description      = 3;
+  string                    forked_from_id   = 4;
+  string                    forked_from_type = 5;
+  AgencyDraftStatus         status           = 6;
+  google.protobuf.Timestamp created_at       = 7;
+  google.protobuf.Timestamp updated_at       = 8;
+}
+
+message CreateDraftRequest {
+  // description is a human-readable label for this draft.
+  string description      = 1;
+  // forked_from_id identifies the source entity to fork from.
+  // Set to empty string when forked_from_type is "live".
+  string forked_from_id   = 2;
+  // forked_from_type must be "live" or "draft".
+  string forked_from_type = 3;
+}
+
+message GetDraftRequest {
+  string draft_id = 1;
+}
+
+message ListDraftsRequest {}
+
+message ListDraftsResponse {
+  repeated AgencyDraft drafts = 1;
+}
+
+message UpdateDraftDescriptionRequest {
+  string draft_id     = 1;
+  string description  = 2;
+}
+
+message PromoteDraftRequest {
+  string draft_id = 1;
+}
+
+message ArchiveDraftRequest {
+  string draft_id = 1;
+}
+
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
@@ -179,19 +217,15 @@ message GetConfiguredRolesResponse {
 service AgencyService {
   // SetAgencyDetails replaces the full agency document from a JSON string.
   // Error: INVALID_ARGUMENT if the JSON is malformed or the id field is missing.
+  // Error: FAILED_PRECONDITION if the agency has already been published (Enabled=true).
   rpc SetAgencyDetails(SetAgencyDetailsRequest) returns (Agency);
 
   // GetAgency retrieves the single agency for this database.
   // Error: NOT_FOUND if no agency document exists yet.
   rpc GetAgency(GetAgencyRequest) returns (Agency);
 
-  // UpdateAgency applies incremental field edits with lifecycle validation.
-  // Error: FAILED_PRECONDITION on invalid lifecycle transition.
-  // Error: NOT_FOUND if no agency document exists yet.
-  rpc UpdateAgency(UpdateAgencyRequest) returns (Agency);
-
   // PublishAgency creates an immutable versioned publication of the current
-  // agency state. The agency status is NOT changed.
+  // agency state.
   // Error: NOT_FOUND if no agency document exists yet.
   rpc PublishAgency(PublishAgencyRequest) returns (AgencyPublication);
 
@@ -202,15 +236,44 @@ service AgencyService {
   // ListPublications returns all publications in ascending version order.
   rpc ListPublications(ListPublicationsRequest) returns (ListPublicationsResponse);
 
-  // GetGoals returns all Goal entities linked to the Agency.
+  // GetGoals returns all live Goal entities linked to the Agency.
   rpc GetGoals(GetGoalsRequest) returns (GetGoalsResponse);
 
-  // GetWorkflows returns all Workflow entities linked to the Agency,
-  // each populated with its ordered WorkItems.
+  // GetWorkflows returns all live Workflow entities linked to the Agency.
   rpc GetWorkflows(GetWorkflowsRequest) returns (GetWorkflowsResponse);
 
-  // GetConfiguredRoles returns all ConfiguredRole entities linked to the Agency.
+  // GetConfiguredRoles returns all live ConfiguredRole entities linked to the Agency.
   rpc GetConfiguredRoles(GetConfiguredRolesRequest) returns (GetConfiguredRolesResponse);
+
+  // CreateDraft creates a new editable draft by deep-copying the sub-entity
+  // graph from the nominated source.
+  // Error: NOT_FOUND if no agency document exists.
+  // Error: NOT_FOUND if forked_from_type=="draft" and the source draft does not exist.
+  // Error: FAILED_PRECONDITION if the source draft is not open.
+  rpc CreateDraft(CreateDraftRequest) returns (AgencyDraft);
+
+  // GetDraft retrieves a single draft by its ID.
+  // Error: NOT_FOUND if no draft with that ID exists.
+  rpc GetDraft(GetDraftRequest) returns (AgencyDraft);
+
+  // ListDrafts returns all drafts for this agency in creation order.
+  rpc ListDrafts(ListDraftsRequest) returns (ListDraftsResponse);
+
+  // UpdateDraftDescription replaces the description of an open draft.
+  // Error: NOT_FOUND if the draft does not exist.
+  // Error: FAILED_PRECONDITION if the draft is not open.
+  rpc UpdateDraftDescription(UpdateDraftDescriptionRequest) returns (AgencyDraft);
+
+  // PromoteDraft copies draft sub-entities into the live graph, enables the
+  // agency, marks the draft promoted, and writes a snapshot.
+  // Error: NOT_FOUND if the draft does not exist.
+  // Error: FAILED_PRECONDITION if the draft is not open.
+  rpc PromoteDraft(PromoteDraftRequest) returns (Agency);
+
+  // ArchiveDraft marks an open draft as archived without promoting it.
+  // Error: NOT_FOUND if the draft does not exist.
+  // Error: FAILED_PRECONDITION if the draft is not open.
+  rpc ArchiveDraft(ArchiveDraftRequest) returns (AgencyDraft);
 }
 
 // ── EntityService ─────────────────────────────────────────────────────────────────────────────

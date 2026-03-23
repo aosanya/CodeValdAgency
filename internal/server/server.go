@@ -34,15 +34,6 @@ func (s *Server) GetAgency(ctx context.Context, _ *pb.GetAgencyRequest) (*pb.Age
 	return agencyToProto(agency), nil
 }
 
-// UpdateAgency implements pb.AgencyServiceServer.
-func (s *Server) UpdateAgency(ctx context.Context, req *pb.UpdateAgencyRequest) (*pb.Agency, error) {
-	agency, err := s.mgr.UpdateAgency(ctx, protoToUpdateRequest(req))
-	if err != nil {
-		return nil, toGRPCError(err)
-	}
-	return agencyToProto(agency), nil
-}
-
 // SetAgencyDetails implements pb.AgencyServiceServer.
 func (s *Server) SetAgencyDetails(ctx context.Context, req *pb.SetAgencyDetailsRequest) (*pb.Agency, error) {
 	agency, err := s.mgr.SetAgencyDetails(ctx, req.GetJson())
@@ -110,30 +101,6 @@ func (s *Server) GetConfiguredRoles(ctx context.Context, _ *pb.GetConfiguredRole
 	return &pb.GetConfiguredRolesResponse{ConfiguredRoles: configuredRolesToProto(roles)}, nil
 }
 
-// ── Proto → Domain converters ─────────────────────────────────────────────────
-
-func protoToUpdateRequest(req *pb.UpdateAgencyRequest) codevaldagency.UpdateAgencyRequest {
-	return codevaldagency.UpdateAgencyRequest{
-		Name:    req.GetName(),
-		Mission: req.GetMission(),
-		Vision:  req.GetVision(),
-		Status:  protoToLifecycle(req.GetStatus()),
-	}
-}
-
-func protoToLifecycle(l pb.AgencyLifecycle) codevaldagency.AgencyLifecycle {
-	switch l {
-	case pb.AgencyLifecycle_AGENCY_LIFECYCLE_DRAFT:
-		return codevaldagency.LifecycleDraft
-	case pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE:
-		return codevaldagency.LifecycleActive
-	case pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACHIEVED:
-		return codevaldagency.LifecycleAchieved
-	default:
-		return ""
-	}
-}
-
 // ── Domain → Proto converters ─────────────────────────────────────────────────
 
 func agencyToProto(a codevaldagency.Agency) *pb.Agency {
@@ -142,22 +109,9 @@ func agencyToProto(a codevaldagency.Agency) *pb.Agency {
 		Name:      a.Name,
 		Mission:   a.Mission,
 		Vision:    a.Vision,
-		Status:    lifecycleToProto(a.Status),
+		Enabled:   a.Enabled,
 		CreatedAt: timeToProto(a.CreatedAt),
 		UpdatedAt: timeToProto(a.UpdatedAt),
-	}
-}
-
-func lifecycleToProto(l codevaldagency.AgencyLifecycle) pb.AgencyLifecycle {
-	switch l {
-	case codevaldagency.LifecycleDraft:
-		return pb.AgencyLifecycle_AGENCY_LIFECYCLE_DRAFT
-	case codevaldagency.LifecycleActive:
-		return pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE
-	case codevaldagency.LifecycleAchieved:
-		return pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACHIEVED
-	default:
-		return pb.AgencyLifecycle_AGENCY_LIFECYCLE_UNSPECIFIED
 	}
 }
 
@@ -232,4 +186,90 @@ func publicationToProto(p codevaldagency.AgencyPublication) *pb.AgencyPublicatio
 		Tag:         p.Tag,
 		PublishedAt: timeToProto(p.PublishedAt),
 	}
+}
+
+func draftToProto(d codevaldagency.AgencyDraft) *pb.AgencyDraft {
+	return &pb.AgencyDraft{
+		Id:             d.ID,
+		AgencyId:       d.AgencyID,
+		Description:    d.Description,
+		ForkedFromId:   d.ForkedFromID,
+		ForkedFromType: d.ForkedFromType,
+		Status:         draftStatusToProto(d.Status),
+		CreatedAt:      timeToProto(d.CreatedAt),
+		UpdatedAt:      timeToProto(d.UpdatedAt),
+	}
+}
+
+func draftStatusToProto(s codevaldagency.AgencyDraftStatus) pb.AgencyDraftStatus {
+	switch s {
+	case codevaldagency.DraftStatusOpen:
+		return pb.AgencyDraftStatus_AGENCY_DRAFT_STATUS_OPEN
+	case codevaldagency.DraftStatusPromoted:
+		return pb.AgencyDraftStatus_AGENCY_DRAFT_STATUS_PROMOTED
+	case codevaldagency.DraftStatusArchived:
+		return pb.AgencyDraftStatus_AGENCY_DRAFT_STATUS_ARCHIVED
+	default:
+		return pb.AgencyDraftStatus_AGENCY_DRAFT_STATUS_UNSPECIFIED
+	}
+}
+
+// ── Draft RPC handlers ────────────────────────────────────────────────────────
+
+// CreateDraft implements pb.AgencyServiceServer.
+func (s *Server) CreateDraft(ctx context.Context, req *pb.CreateDraftRequest) (*pb.AgencyDraft, error) {
+	draft, err := s.mgr.CreateDraft(ctx, req.GetDescription(), req.GetForkedFromId(), req.GetForkedFromType())
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return draftToProto(draft), nil
+}
+
+// GetDraft implements pb.AgencyServiceServer.
+func (s *Server) GetDraft(ctx context.Context, req *pb.GetDraftRequest) (*pb.AgencyDraft, error) {
+	draft, err := s.mgr.GetDraft(ctx, req.GetDraftId())
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return draftToProto(draft), nil
+}
+
+// ListDrafts implements pb.AgencyServiceServer.
+func (s *Server) ListDrafts(ctx context.Context, _ *pb.ListDraftsRequest) (*pb.ListDraftsResponse, error) {
+	drafts, err := s.mgr.ListDrafts(ctx)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	out := make([]*pb.AgencyDraft, len(drafts))
+	for i, d := range drafts {
+		out[i] = draftToProto(d)
+	}
+	return &pb.ListDraftsResponse{Drafts: out}, nil
+}
+
+// UpdateDraftDescription implements pb.AgencyServiceServer.
+func (s *Server) UpdateDraftDescription(ctx context.Context, req *pb.UpdateDraftDescriptionRequest) (*pb.AgencyDraft, error) {
+	draft, err := s.mgr.UpdateDraftDescription(ctx, req.GetDraftId(), req.GetDescription())
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return draftToProto(draft), nil
+}
+
+// PromoteDraft implements pb.AgencyServiceServer.
+func (s *Server) PromoteDraft(ctx context.Context, req *pb.PromoteDraftRequest) (*pb.Agency, error) {
+	agency, err := s.mgr.PromoteDraft(ctx, req.GetDraftId())
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return agencyToProto(agency), nil
+}
+
+// ArchiveDraft implements pb.AgencyServiceServer.
+func (s *Server) ArchiveDraft(ctx context.Context, req *pb.ArchiveDraftRequest) (*pb.AgencyDraft, error) {
+	draft, err := s.mgr.ArchiveDraft(ctx, req.GetDraftId())
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return draftToProto(draft), nil
 }

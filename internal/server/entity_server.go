@@ -3,7 +3,6 @@ package server
 
 import (
 	"context"
-	"time"
 
 	pb "github.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1"
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
@@ -181,13 +180,4 @@ func structToMap(s *structpb.Struct) map[string]any {
 		return nil
 	}
 	return s.AsMap()
-}
-
-// optTimestamp returns a *timestamppb.Timestamp from an optional Go time
-// pointer. Returns nil when t is nil.
-func optTimestamp(t *time.Time) *timestamppb.Timestamp {
-	if t == nil {
-		return nil
-	}
-	return timestamppb.New(*t)
 }

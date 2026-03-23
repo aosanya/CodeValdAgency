@@ -4,45 +4,54 @@
 
 ---
 
-## 1. Agency Lifecycle
+## 1. Agency State
 
-Lifecycle progresses **forward only**. No backward transitions are permitted.
+The live `Agency` entity has no lifecycle progression. It carries a single
+`enabled` boolean that can be toggled.
 
-```
-draft ──► active ──► achieved
-```
+| State | Meaning |
+|---|---|
+| `enabled = true` | Agency is active; work may be dispatched |
+| `enabled = false` | Agency is disabled; work dispatch is suppressed |
 
-| State | Meaning | Mutability |
-|---|---|---|
-| `draft` | Configured, not yet running | Fully mutable |
-| `active` | Work in progress | Mutable (Name, Mission, Vision; not Status backward) |
-| `achieved` | All Goals met; terminal | **Read-only** — no further updates |
-
-### Transition Guards
-
-| From | To | Guard | Side-effect |
-|---|---|---|---|
-| `draft` | `active` | Agency must have ≥1 Goal and ≥1 Workflow with ≥1 WorkItem | Write `AgencySnapshot` entity (immutable) |
-| `active` | `achieved` | None beyond valid status value | — |
-| any | backward | **Always rejected** | — |
-| `achieved` | any | **Always rejected** (terminal) | — |
+There is no terminal state. `GetAgency` returns `ErrAgencyNotPublished`
+until the first `AgencyDraft` has been promoted.
 
 ---
 
-## 2. SetAgencyDetails Flow
+## 2. Draft Lifecycle
 
-Upserts the root `Agency` entity and publishes the creation event.
+Draft status progresses forward-only. Both `promoted` and `archived` are
+terminal.
+
+```
+open ──► promoted
+     └─► archived
+```
+
+| Status | Meaning |
+|---|---|
+| `open` | Being edited; may be promoted or archived |
+| `promoted` | Became the live agency; read-only |
+| `archived` | Soft-discarded; read-only |
+
+---
+
+## 3. SetAgencyDetails Flow (Bootstrap Only)
+
+`SetAgencyDetails` is the **first-time setup path**. Once a live agency exists
+it returns `ErrAgencyReadOnly` — subsequent changes go through drafts.
 
 ```
 AgencyManager.SetAgencyDetails(ctx, jsonStr)
     │
-    ├─ parse JSON → Agency{ID, Name, Mission, Vision, Status}
+    ├─ parse JSON → Agency{ID, Name, Mission, Vision, Enabled}
     │       → ErrInvalidJSON if malformed or ID empty
     │
-    ├─ dataManager.ListEntities(ctx, EntityFilter{AgencyID: id, TypeID: "Agency"})
-    │       exists?
-    │         ├─ No  → dataManager.CreateEntity(...)
-    │         └─ Yes → dataManager.UpdateEntity(...)
+    ├─ check if live agency already exists
+    │       exists? → ErrAgencyReadOnly
+    │
+    ├─ dataManager.CreateEntity — Agency entity
     │
     └─ publisher.Publish(ctx, "cross.agency.created", agencyID)
             publish errors are logged; never returned to caller
@@ -50,30 +59,95 @@ AgencyManager.SetAgencyDetails(ctx, jsonStr)
 
 ---
 
-## 3. UpdateAgency Flow
+## 4. CreateDraft Flow
+
+Forks the entire agency sub-graph (Goals, Workflows, WorkItems,
+ConfiguredRoles, Instructions, Deliverables) into a new open draft.
 
 ```
-AgencyManager.UpdateAgency(ctx, req)
+AgencyManager.CreateDraft(ctx, description, forkedFromID, forkedFromType)
     │
-    ├─ dataManager.GetEntity(ctx, agencyID, agencyEntityID)
-    │       → ErrAgencyNotFound if missing
+    ├─ validate description non-empty
     │
-    ├─ CanTransitionTo guard (if req.Status != "")
-    │       → ErrInvalidLifecycleTransition if backward or from achieved
+    ├─ resolve source:
+    │     forkedFromType="live"  → GetAgency() → ErrAgencyNotPublished if absent
+    │     forkedFromType="draft" → GetDraft(forkedFromID)
+    │                              → ErrDraftNotFound if absent
+    │                              → ErrDraftNotOpen  if not open
     │
-    ├─ draft → active guard: check ≥1 Goal + ≥1 Workflow with ≥1 WorkItem
-    │       → ErrInvalidAgency (FailedPrecondition) if violated
+    ├─ dataManager.CreateEntity — AgencyDraft root entity
+    │       Properties: {description, status="open", forked_from_id,
+    │                     forked_from_type, created_at, updated_at}
     │
-    ├─ dataManager.UpdateEntity(ctx, agencyID, entityID, updateReq)
-    │       → updated Agency
+    ├─ deep-copy sub-graph from source into the new draft scope:
+    │     for each entity type [Goal, Workflow, WorkItem, ConfiguredRole,
+    │                           Instruction, Deliverable]:
+    │         CreateEntity (new ID, same properties)
+    │         CreateRelationship (draft → entity, preserving internal edges)
     │
-    └─ (if draft → active) dataManager.CreateEntity — AgencySnapshot (immutable)
-            snapshot errors are logged; never returned to caller
+    └─ publisher.Publish(ctx, "cross.agency.draft.created", agencyID)
 ```
 
 ---
 
-## 4. PublishAgency Flow
+## 5. PromoteDraft Flow
+
+Replaces the live agency with the draft's sub-graph. Previous live agency
+entities are discarded (replaced in-place). The promoted draft becomes a
+**terminal record** — it is the immutable link between the authoring history
+and the publication chain.
+
+To make further changes after promotion, create a **new draft** from the
+live agency.
+
+```
+AgencyManager.PromoteDraft(ctx, draftID)
+    │
+    ├─ GetDraft(draftID)
+    │     → ErrDraftNotFound if absent
+    │     → ErrDraftNotOpen  if not open
+    │
+    ├─ replace live agency sub-graph:
+    │     delete existing live Goal / Workflow / WorkItem / ConfiguredRole /
+    │     Instruction / Deliverable entities and their relationships
+    │     upsert Agency scalar fields from draft
+    │     deep-copy draft's sub-graph into live agency scope (new IDs)
+    │
+    ├─ dataManager.UpdateEntity — AgencyDraft {status: "promoted"}
+    │       draft is now terminal; cannot be edited or re-promoted
+    │
+    ├─ dataManager.CreateEntity — AgencySnapshot (immutable, promotion record)
+    │
+    └─ publisher.Publish(ctx, "cross.agency.promoted", agencyID)
+
+Post-promotion workflow:
+    ↓
+    CreateDraft(forkedFromType="live")   ← start fresh from the new live state
+    [edit] → PromoteDraft → repeat
+```
+
+Other open drafts are **not modified** by promotion. They may still be
+promoted, but their base will be stale relative to the new live agency.
+
+---
+
+## 6. ArchiveDraft Flow
+
+```
+AgencyManager.ArchiveDraft(ctx, draftID)
+    │
+    ├─ GetDraft(draftID)
+    │     → ErrDraftNotFound if absent
+    │     → ErrDraftNotOpen  if not open
+    │
+    ├─ dataManager.UpdateEntity — AgencyDraft {status: "archived"}
+    │
+    └─ publisher.Publish(ctx, "cross.agency.draft.archived", agencyID)
+```
+
+---
+
+## 7. PublishAgency Flow
 
 ```
 AgencyManager.PublishAgency(ctx)
@@ -94,17 +168,21 @@ AgencyManager.PublishAgency(ctx)
 
 ---
 
-## 5. Error Types
+## 8. Error Types
 
 Defined in `errors.go` at the module root.
 
 ```go
 var (
-    ErrAgencyNotFound              = errors.New("agency not found")
-    ErrInvalidLifecycleTransition  = errors.New("invalid agency lifecycle transition")
-    ErrInvalidAgency               = errors.New("invalid agency: missing required fields")
-    ErrInvalidJSON                 = errors.New("invalid agency: malformed JSON payload")
-    ErrPublicationNotFound         = errors.New("agency publication not found")
+    ErrAgencyNotFound             = errors.New("agency not found")
+    ErrAgencyNotPublished         = errors.New("agency not published: promote a draft first")
+    ErrAgencyReadOnly             = errors.New("live agency is read-only: use a draft to make changes")
+    ErrDraftNotFound              = errors.New("agency draft not found")
+    ErrDraftNotOpen               = errors.New("agency draft is not open")
+    ErrInvalidAgency              = errors.New("invalid agency: missing required fields")
+    ErrInvalidJSON                = errors.New("invalid agency: malformed JSON payload")
+    ErrPublicationNotFound        = errors.New("agency publication not found")
+    ErrInvalidPublicationStatus   = errors.New("invalid publication status transition")
 )
 ```
 
@@ -115,10 +193,13 @@ Mapping lives exclusively in `internal/server/server.go` — never in the manage
 | Error | gRPC code |
 |---|---|
 | `ErrAgencyNotFound` | `codes.NotFound` |
+| `ErrAgencyNotPublished` | `codes.FailedPrecondition` |
+| `ErrDraftNotFound` | `codes.NotFound` |
 | `ErrPublicationNotFound` | `codes.NotFound` |
 | `ErrInvalidJSON` | `codes.InvalidArgument` |
 | `ErrInvalidAgency` | `codes.InvalidArgument` |
-| `ErrInvalidLifecycleTransition` | `codes.FailedPrecondition` |
+| `ErrAgencyReadOnly` | `codes.FailedPrecondition` |
+| `ErrDraftNotOpen` | `codes.FailedPrecondition` |
 | all others | `codes.Internal` |
 
 ### EntityService Error Mapping
@@ -142,19 +223,32 @@ Entity-layer errors are mapped in `internal/server/errors.go` via `toEntityGRPCE
 
 ### AgencyService
 
-Manages the lifecycle of the single Agency entity, its publications, and
-provides convenience accessors for Goals, Workflows, and ConfiguredRoles.
+Manages the live agency, drafts, publications, and convenience accessors
+for Goals, Workflows, and ConfiguredRoles.
 
 ```protobuf
 service AgencyService {
+  // Bootstrap
   rpc SetAgencyDetails   (SetAgencyDetailsRequest)      returns (Agency);
+
+  // Live agency (read-only once published)
   rpc GetAgency          (GetAgencyRequest)              returns (Agency);
-  rpc UpdateAgency       (UpdateAgencyRequest)           returns (Agency);
+
+  // Drafts
+  rpc CreateDraft              (CreateDraftRequest)              returns (AgencyDraft);
+  rpc GetDraft                 (GetDraftRequest)                 returns (AgencyDraft);
+  rpc ListDrafts               (ListDraftsRequest)               returns (ListDraftsResponse);
+  rpc UpdateDraftDescription   (UpdateDraftDescriptionRequest)   returns (AgencyDraft);
+  rpc PromoteDraft             (PromoteDraftRequest)             returns (Agency);
+  rpc ArchiveDraft             (ArchiveDraftRequest)             returns (AgencyDraft);
+
+  // Publications
   rpc PublishAgency      (PublishAgencyRequest)          returns (AgencyPublication);
   rpc GetPublication     (GetPublicationRequest)         returns (AgencyPublication);
   rpc ListPublications   (ListPublicationsRequest)       returns (ListPublicationsResponse);
+  rpc UpdatePublicationStatus (UpdatePublicationStatusRequest) returns (AgencyPublication);
 
-  // Convenience wrappers retained for direct gRPC callers.
+  // Convenience wrappers (live agency sub-resources)
   rpc GetGoals           (GetGoalsRequest)               returns (GetGoalsResponse);
   rpc GetWorkflows       (GetWorkflowsRequest)           returns (GetWorkflowsResponse);
   rpc GetConfiguredRoles (GetConfiguredRolesRequest)     returns (GetConfiguredRolesResponse);
@@ -201,7 +295,12 @@ fall into two groups:
 |---|---|---|
 | `POST` | `/agency/{agencyId}` | `AgencyService/SetAgencyDetails` |
 | `GET`  | `/agency/{agencyId}` | `AgencyService/GetAgency` |
-| `PUT`  | `/agency/{agencyId}` | `AgencyService/UpdateAgency` |
+| `POST` | `/agency/{agencyId}/drafts` | `AgencyService/CreateDraft` |
+| `GET`  | `/agency/{agencyId}/drafts` | `AgencyService/ListDrafts` |
+| `GET`  | `/agency/{agencyId}/drafts/{draftId}` | `AgencyService/GetDraft` |
+| `PUT`  | `/agency/{agencyId}/drafts/{draftId}` | `AgencyService/UpdateDraftDescription` |
+| `POST` | `/agency/{agencyId}/drafts/{draftId}/promote` | `AgencyService/PromoteDraft` |
+| `POST` | `/agency/{agencyId}/drafts/{draftId}/archive` | `AgencyService/ArchiveDraft` |
 | `POST` | `/agency/{agencyId}/publish` | `AgencyService/PublishAgency` |
 | `GET`  | `/agency/{agencyId}/publications` | `AgencyService/ListPublications` |
 | `GET`  | `/agency/{agencyId}/publications/{version}` | `AgencyService/GetPublication` |

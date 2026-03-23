@@ -19,15 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AgencyService_SetAgencyDetails_FullMethodName   = "/codevaldagency.v1.AgencyService/SetAgencyDetails"
-	AgencyService_GetAgency_FullMethodName          = "/codevaldagency.v1.AgencyService/GetAgency"
-	AgencyService_UpdateAgency_FullMethodName       = "/codevaldagency.v1.AgencyService/UpdateAgency"
-	AgencyService_PublishAgency_FullMethodName      = "/codevaldagency.v1.AgencyService/PublishAgency"
-	AgencyService_GetPublication_FullMethodName     = "/codevaldagency.v1.AgencyService/GetPublication"
-	AgencyService_ListPublications_FullMethodName   = "/codevaldagency.v1.AgencyService/ListPublications"
-	AgencyService_GetGoals_FullMethodName           = "/codevaldagency.v1.AgencyService/GetGoals"
-	AgencyService_GetWorkflows_FullMethodName       = "/codevaldagency.v1.AgencyService/GetWorkflows"
-	AgencyService_GetConfiguredRoles_FullMethodName = "/codevaldagency.v1.AgencyService/GetConfiguredRoles"
+	AgencyService_SetAgencyDetails_FullMethodName       = "/codevaldagency.v1.AgencyService/SetAgencyDetails"
+	AgencyService_GetAgency_FullMethodName              = "/codevaldagency.v1.AgencyService/GetAgency"
+	AgencyService_PublishAgency_FullMethodName          = "/codevaldagency.v1.AgencyService/PublishAgency"
+	AgencyService_GetPublication_FullMethodName         = "/codevaldagency.v1.AgencyService/GetPublication"
+	AgencyService_ListPublications_FullMethodName       = "/codevaldagency.v1.AgencyService/ListPublications"
+	AgencyService_GetGoals_FullMethodName               = "/codevaldagency.v1.AgencyService/GetGoals"
+	AgencyService_GetWorkflows_FullMethodName           = "/codevaldagency.v1.AgencyService/GetWorkflows"
+	AgencyService_GetConfiguredRoles_FullMethodName     = "/codevaldagency.v1.AgencyService/GetConfiguredRoles"
+	AgencyService_CreateDraft_FullMethodName            = "/codevaldagency.v1.AgencyService/CreateDraft"
+	AgencyService_GetDraft_FullMethodName               = "/codevaldagency.v1.AgencyService/GetDraft"
+	AgencyService_ListDrafts_FullMethodName             = "/codevaldagency.v1.AgencyService/ListDrafts"
+	AgencyService_UpdateDraftDescription_FullMethodName = "/codevaldagency.v1.AgencyService/UpdateDraftDescription"
+	AgencyService_PromoteDraft_FullMethodName           = "/codevaldagency.v1.AgencyService/PromoteDraft"
+	AgencyService_ArchiveDraft_FullMethodName           = "/codevaldagency.v1.AgencyService/ArchiveDraft"
 )
 
 // AgencyServiceClient is the client API for AgencyService service.
@@ -39,16 +44,13 @@ const (
 type AgencyServiceClient interface {
 	// SetAgencyDetails replaces the full agency document from a JSON string.
 	// Error: INVALID_ARGUMENT if the JSON is malformed or the id field is missing.
+	// Error: FAILED_PRECONDITION if the agency has already been published (Enabled=true).
 	SetAgencyDetails(ctx context.Context, in *SetAgencyDetailsRequest, opts ...grpc.CallOption) (*Agency, error)
 	// GetAgency retrieves the single agency for this database.
 	// Error: NOT_FOUND if no agency document exists yet.
 	GetAgency(ctx context.Context, in *GetAgencyRequest, opts ...grpc.CallOption) (*Agency, error)
-	// UpdateAgency applies incremental field edits with lifecycle validation.
-	// Error: FAILED_PRECONDITION on invalid lifecycle transition.
-	// Error: NOT_FOUND if no agency document exists yet.
-	UpdateAgency(ctx context.Context, in *UpdateAgencyRequest, opts ...grpc.CallOption) (*Agency, error)
 	// PublishAgency creates an immutable versioned publication of the current
-	// agency state. The agency status is NOT changed.
+	// agency state.
 	// Error: NOT_FOUND if no agency document exists yet.
 	PublishAgency(ctx context.Context, in *PublishAgencyRequest, opts ...grpc.CallOption) (*AgencyPublication, error)
 	// GetPublication retrieves a single publication by version number.
@@ -56,13 +58,36 @@ type AgencyServiceClient interface {
 	GetPublication(ctx context.Context, in *GetPublicationRequest, opts ...grpc.CallOption) (*AgencyPublication, error)
 	// ListPublications returns all publications in ascending version order.
 	ListPublications(ctx context.Context, in *ListPublicationsRequest, opts ...grpc.CallOption) (*ListPublicationsResponse, error)
-	// GetGoals returns all Goal entities linked to the Agency.
+	// GetGoals returns all live Goal entities linked to the Agency.
 	GetGoals(ctx context.Context, in *GetGoalsRequest, opts ...grpc.CallOption) (*GetGoalsResponse, error)
-	// GetWorkflows returns all Workflow entities linked to the Agency,
-	// each populated with its ordered WorkItems.
+	// GetWorkflows returns all live Workflow entities linked to the Agency.
 	GetWorkflows(ctx context.Context, in *GetWorkflowsRequest, opts ...grpc.CallOption) (*GetWorkflowsResponse, error)
-	// GetConfiguredRoles returns all ConfiguredRole entities linked to the Agency.
+	// GetConfiguredRoles returns all live ConfiguredRole entities linked to the Agency.
 	GetConfiguredRoles(ctx context.Context, in *GetConfiguredRolesRequest, opts ...grpc.CallOption) (*GetConfiguredRolesResponse, error)
+	// CreateDraft creates a new editable draft by deep-copying the sub-entity
+	// graph from the nominated source.
+	// Error: NOT_FOUND if no agency document exists.
+	// Error: NOT_FOUND if forked_from_type=="draft" and the source draft does not exist.
+	// Error: FAILED_PRECONDITION if the source draft is not open.
+	CreateDraft(ctx context.Context, in *CreateDraftRequest, opts ...grpc.CallOption) (*AgencyDraft, error)
+	// GetDraft retrieves a single draft by its ID.
+	// Error: NOT_FOUND if no draft with that ID exists.
+	GetDraft(ctx context.Context, in *GetDraftRequest, opts ...grpc.CallOption) (*AgencyDraft, error)
+	// ListDrafts returns all drafts for this agency in creation order.
+	ListDrafts(ctx context.Context, in *ListDraftsRequest, opts ...grpc.CallOption) (*ListDraftsResponse, error)
+	// UpdateDraftDescription replaces the description of an open draft.
+	// Error: NOT_FOUND if the draft does not exist.
+	// Error: FAILED_PRECONDITION if the draft is not open.
+	UpdateDraftDescription(ctx context.Context, in *UpdateDraftDescriptionRequest, opts ...grpc.CallOption) (*AgencyDraft, error)
+	// PromoteDraft copies draft sub-entities into the live graph, enables the
+	// agency, marks the draft promoted, and writes a snapshot.
+	// Error: NOT_FOUND if the draft does not exist.
+	// Error: FAILED_PRECONDITION if the draft is not open.
+	PromoteDraft(ctx context.Context, in *PromoteDraftRequest, opts ...grpc.CallOption) (*Agency, error)
+	// ArchiveDraft marks an open draft as archived without promoting it.
+	// Error: NOT_FOUND if the draft does not exist.
+	// Error: FAILED_PRECONDITION if the draft is not open.
+	ArchiveDraft(ctx context.Context, in *ArchiveDraftRequest, opts ...grpc.CallOption) (*AgencyDraft, error)
 }
 
 type agencyServiceClient struct {
@@ -87,16 +112,6 @@ func (c *agencyServiceClient) GetAgency(ctx context.Context, in *GetAgencyReques
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Agency)
 	err := c.cc.Invoke(ctx, AgencyService_GetAgency_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *agencyServiceClient) UpdateAgency(ctx context.Context, in *UpdateAgencyRequest, opts ...grpc.CallOption) (*Agency, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Agency)
-	err := c.cc.Invoke(ctx, AgencyService_UpdateAgency_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -163,6 +178,66 @@ func (c *agencyServiceClient) GetConfiguredRoles(ctx context.Context, in *GetCon
 	return out, nil
 }
 
+func (c *agencyServiceClient) CreateDraft(ctx context.Context, in *CreateDraftRequest, opts ...grpc.CallOption) (*AgencyDraft, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AgencyDraft)
+	err := c.cc.Invoke(ctx, AgencyService_CreateDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) GetDraft(ctx context.Context, in *GetDraftRequest, opts ...grpc.CallOption) (*AgencyDraft, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AgencyDraft)
+	err := c.cc.Invoke(ctx, AgencyService_GetDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) ListDrafts(ctx context.Context, in *ListDraftsRequest, opts ...grpc.CallOption) (*ListDraftsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDraftsResponse)
+	err := c.cc.Invoke(ctx, AgencyService_ListDrafts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) UpdateDraftDescription(ctx context.Context, in *UpdateDraftDescriptionRequest, opts ...grpc.CallOption) (*AgencyDraft, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AgencyDraft)
+	err := c.cc.Invoke(ctx, AgencyService_UpdateDraftDescription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) PromoteDraft(ctx context.Context, in *PromoteDraftRequest, opts ...grpc.CallOption) (*Agency, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Agency)
+	err := c.cc.Invoke(ctx, AgencyService_PromoteDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) ArchiveDraft(ctx context.Context, in *ArchiveDraftRequest, opts ...grpc.CallOption) (*AgencyDraft, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AgencyDraft)
+	err := c.cc.Invoke(ctx, AgencyService_ArchiveDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgencyServiceServer is the server API for AgencyService service.
 // All implementations must embed UnimplementedAgencyServiceServer
 // for forward compatibility.
@@ -172,16 +247,13 @@ func (c *agencyServiceClient) GetConfiguredRoles(ctx context.Context, in *GetCon
 type AgencyServiceServer interface {
 	// SetAgencyDetails replaces the full agency document from a JSON string.
 	// Error: INVALID_ARGUMENT if the JSON is malformed or the id field is missing.
+	// Error: FAILED_PRECONDITION if the agency has already been published (Enabled=true).
 	SetAgencyDetails(context.Context, *SetAgencyDetailsRequest) (*Agency, error)
 	// GetAgency retrieves the single agency for this database.
 	// Error: NOT_FOUND if no agency document exists yet.
 	GetAgency(context.Context, *GetAgencyRequest) (*Agency, error)
-	// UpdateAgency applies incremental field edits with lifecycle validation.
-	// Error: FAILED_PRECONDITION on invalid lifecycle transition.
-	// Error: NOT_FOUND if no agency document exists yet.
-	UpdateAgency(context.Context, *UpdateAgencyRequest) (*Agency, error)
 	// PublishAgency creates an immutable versioned publication of the current
-	// agency state. The agency status is NOT changed.
+	// agency state.
 	// Error: NOT_FOUND if no agency document exists yet.
 	PublishAgency(context.Context, *PublishAgencyRequest) (*AgencyPublication, error)
 	// GetPublication retrieves a single publication by version number.
@@ -189,13 +261,36 @@ type AgencyServiceServer interface {
 	GetPublication(context.Context, *GetPublicationRequest) (*AgencyPublication, error)
 	// ListPublications returns all publications in ascending version order.
 	ListPublications(context.Context, *ListPublicationsRequest) (*ListPublicationsResponse, error)
-	// GetGoals returns all Goal entities linked to the Agency.
+	// GetGoals returns all live Goal entities linked to the Agency.
 	GetGoals(context.Context, *GetGoalsRequest) (*GetGoalsResponse, error)
-	// GetWorkflows returns all Workflow entities linked to the Agency,
-	// each populated with its ordered WorkItems.
+	// GetWorkflows returns all live Workflow entities linked to the Agency.
 	GetWorkflows(context.Context, *GetWorkflowsRequest) (*GetWorkflowsResponse, error)
-	// GetConfiguredRoles returns all ConfiguredRole entities linked to the Agency.
+	// GetConfiguredRoles returns all live ConfiguredRole entities linked to the Agency.
 	GetConfiguredRoles(context.Context, *GetConfiguredRolesRequest) (*GetConfiguredRolesResponse, error)
+	// CreateDraft creates a new editable draft by deep-copying the sub-entity
+	// graph from the nominated source.
+	// Error: NOT_FOUND if no agency document exists.
+	// Error: NOT_FOUND if forked_from_type=="draft" and the source draft does not exist.
+	// Error: FAILED_PRECONDITION if the source draft is not open.
+	CreateDraft(context.Context, *CreateDraftRequest) (*AgencyDraft, error)
+	// GetDraft retrieves a single draft by its ID.
+	// Error: NOT_FOUND if no draft with that ID exists.
+	GetDraft(context.Context, *GetDraftRequest) (*AgencyDraft, error)
+	// ListDrafts returns all drafts for this agency in creation order.
+	ListDrafts(context.Context, *ListDraftsRequest) (*ListDraftsResponse, error)
+	// UpdateDraftDescription replaces the description of an open draft.
+	// Error: NOT_FOUND if the draft does not exist.
+	// Error: FAILED_PRECONDITION if the draft is not open.
+	UpdateDraftDescription(context.Context, *UpdateDraftDescriptionRequest) (*AgencyDraft, error)
+	// PromoteDraft copies draft sub-entities into the live graph, enables the
+	// agency, marks the draft promoted, and writes a snapshot.
+	// Error: NOT_FOUND if the draft does not exist.
+	// Error: FAILED_PRECONDITION if the draft is not open.
+	PromoteDraft(context.Context, *PromoteDraftRequest) (*Agency, error)
+	// ArchiveDraft marks an open draft as archived without promoting it.
+	// Error: NOT_FOUND if the draft does not exist.
+	// Error: FAILED_PRECONDITION if the draft is not open.
+	ArchiveDraft(context.Context, *ArchiveDraftRequest) (*AgencyDraft, error)
 	mustEmbedUnimplementedAgencyServiceServer()
 }
 
@@ -211,9 +306,6 @@ func (UnimplementedAgencyServiceServer) SetAgencyDetails(context.Context, *SetAg
 }
 func (UnimplementedAgencyServiceServer) GetAgency(context.Context, *GetAgencyRequest) (*Agency, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAgency not implemented")
-}
-func (UnimplementedAgencyServiceServer) UpdateAgency(context.Context, *UpdateAgencyRequest) (*Agency, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateAgency not implemented")
 }
 func (UnimplementedAgencyServiceServer) PublishAgency(context.Context, *PublishAgencyRequest) (*AgencyPublication, error) {
 	return nil, status.Error(codes.Unimplemented, "method PublishAgency not implemented")
@@ -232,6 +324,24 @@ func (UnimplementedAgencyServiceServer) GetWorkflows(context.Context, *GetWorkfl
 }
 func (UnimplementedAgencyServiceServer) GetConfiguredRoles(context.Context, *GetConfiguredRolesRequest) (*GetConfiguredRolesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetConfiguredRoles not implemented")
+}
+func (UnimplementedAgencyServiceServer) CreateDraft(context.Context, *CreateDraftRequest) (*AgencyDraft, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateDraft not implemented")
+}
+func (UnimplementedAgencyServiceServer) GetDraft(context.Context, *GetDraftRequest) (*AgencyDraft, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDraft not implemented")
+}
+func (UnimplementedAgencyServiceServer) ListDrafts(context.Context, *ListDraftsRequest) (*ListDraftsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDrafts not implemented")
+}
+func (UnimplementedAgencyServiceServer) UpdateDraftDescription(context.Context, *UpdateDraftDescriptionRequest) (*AgencyDraft, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateDraftDescription not implemented")
+}
+func (UnimplementedAgencyServiceServer) PromoteDraft(context.Context, *PromoteDraftRequest) (*Agency, error) {
+	return nil, status.Error(codes.Unimplemented, "method PromoteDraft not implemented")
+}
+func (UnimplementedAgencyServiceServer) ArchiveDraft(context.Context, *ArchiveDraftRequest) (*AgencyDraft, error) {
+	return nil, status.Error(codes.Unimplemented, "method ArchiveDraft not implemented")
 }
 func (UnimplementedAgencyServiceServer) mustEmbedUnimplementedAgencyServiceServer() {}
 func (UnimplementedAgencyServiceServer) testEmbeddedByValue()                       {}
@@ -286,24 +396,6 @@ func _AgencyService_GetAgency_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgencyServiceServer).GetAgency(ctx, req.(*GetAgencyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AgencyService_UpdateAgency_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateAgencyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AgencyServiceServer).UpdateAgency(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AgencyService_UpdateAgency_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgencyServiceServer).UpdateAgency(ctx, req.(*UpdateAgencyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -416,6 +508,114 @@ func _AgencyService_GetConfiguredRoles_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgencyService_CreateDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).CreateDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_CreateDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).CreateDraft(ctx, req.(*CreateDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_GetDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).GetDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_GetDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).GetDraft(ctx, req.(*GetDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_ListDrafts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDraftsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).ListDrafts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_ListDrafts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).ListDrafts(ctx, req.(*ListDraftsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_UpdateDraftDescription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateDraftDescriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).UpdateDraftDescription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_UpdateDraftDescription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).UpdateDraftDescription(ctx, req.(*UpdateDraftDescriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_PromoteDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PromoteDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).PromoteDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_PromoteDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).PromoteDraft(ctx, req.(*PromoteDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_ArchiveDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ArchiveDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).ArchiveDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_ArchiveDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).ArchiveDraft(ctx, req.(*ArchiveDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgencyService_ServiceDesc is the grpc.ServiceDesc for AgencyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -430,10 +630,6 @@ var AgencyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAgency",
 			Handler:    _AgencyService_GetAgency_Handler,
-		},
-		{
-			MethodName: "UpdateAgency",
-			Handler:    _AgencyService_UpdateAgency_Handler,
 		},
 		{
 			MethodName: "PublishAgency",
@@ -458,6 +654,30 @@ var AgencyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetConfiguredRoles",
 			Handler:    _AgencyService_GetConfiguredRoles_Handler,
+		},
+		{
+			MethodName: "CreateDraft",
+			Handler:    _AgencyService_CreateDraft_Handler,
+		},
+		{
+			MethodName: "GetDraft",
+			Handler:    _AgencyService_GetDraft_Handler,
+		},
+		{
+			MethodName: "ListDrafts",
+			Handler:    _AgencyService_ListDrafts_Handler,
+		},
+		{
+			MethodName: "UpdateDraftDescription",
+			Handler:    _AgencyService_UpdateDraftDescription_Handler,
+		},
+		{
+			MethodName: "PromoteDraft",
+			Handler:    _AgencyService_PromoteDraft_Handler,
+		},
+		{
+			MethodName: "ArchiveDraft",
+			Handler:    _AgencyService_ArchiveDraft_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

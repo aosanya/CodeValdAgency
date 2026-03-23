@@ -69,9 +69,10 @@ func DefaultAgencySchema() types.Schema {
 		Tag:     "v1",
 		Types: []types.TypeDefinition{
 			{
-				Name:        "Agency",
-				DisplayName: "Agency",
-				PathSegment: "", // no top-level routes — Agency IS the agency context
+				Name:              "Agency",
+				DisplayName:       "Agency",
+				PathSegment:       "", // no top-level routes — Agency IS the agency context
+				StorageCollection: "agencies",
 				Properties: []types.PropertyDefinition{
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "mission", Type: types.PropertyTypeString, Required: false},
@@ -86,10 +87,11 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "Goal",
-				DisplayName:   "Goal",
-				PathSegment:   "goals",
-				EntityIDParam: "goalId",
+				Name:              "Goal",
+				DisplayName:       "Goal",
+				PathSegment:       "goals",
+				EntityIDParam:     "goalId",
+				StorageCollection: "agency_goals",
 				Properties: []types.PropertyDefinition{
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
@@ -102,10 +104,11 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "Workflow",
-				DisplayName:   "Workflow",
-				PathSegment:   "workflows",
-				EntityIDParam: "workflowId",
+				Name:              "Workflow",
+				DisplayName:       "Workflow",
+				PathSegment:       "workflows",
+				EntityIDParam:     "workflowId",
+				StorageCollection: "agency_workflows",
 				Properties: []types.PropertyDefinition{
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
@@ -120,10 +123,11 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "WorkItem",
-				DisplayName:   "Work Item",
-				PathSegment:   "work-items",
-				EntityIDParam: "workItemId",
+				Name:              "WorkItem",
+				DisplayName:       "Work Item",
+				PathSegment:       "work-items",
+				EntityIDParam:     "workItemId",
+				StorageCollection: "agency_work_items",
 				Properties: []types.PropertyDefinition{
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
@@ -151,10 +155,11 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "Instruction",
-				DisplayName:   "Instruction",
-				PathSegment:   "instructions",
-				EntityIDParam: "instructionId",
+				Name:              "Instruction",
+				DisplayName:       "Instruction",
+				PathSegment:       "instructions",
+				EntityIDParam:     "instructionId",
+				StorageCollection: "agency_instructions",
 				Properties: []types.PropertyDefinition{
 					// content is the rule or constraint text delivered to the actor.
 					{Name: "content", Type: types.PropertyTypeString, Required: true},
@@ -171,10 +176,11 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "Deliverable",
-				DisplayName:   "Deliverable",
-				PathSegment:   "deliverables",
-				EntityIDParam: "deliverableId",
+				Name:              "Deliverable",
+				DisplayName:       "Deliverable",
+				PathSegment:       "deliverables",
+				EntityIDParam:     "deliverableId",
+				StorageCollection: "agency_deliverables",
 				Properties: []types.PropertyDefinition{
 					// title names the expected output (e.g. "Analysis Report", "Migration Script").
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
@@ -246,10 +252,11 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "ConfiguredRole",
-				DisplayName:   "Configured Role",
-				PathSegment:   "configured-roles",
-				EntityIDParam: "configuredRoleId",
+				Name:              "ConfiguredRole",
+				DisplayName:       "Configured Role",
+				PathSegment:       "configured-roles",
+				EntityIDParam:     "configuredRoleId",
+				StorageCollection: "agency_configured_roles",
 				Properties: []types.PropertyDefinition{
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					// description is the role brief — responsibilities, boundaries, and context

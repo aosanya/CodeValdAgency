@@ -22,14 +22,6 @@ var (
 	errImmutableType       = errors.New("entity type is immutable")
 )
 
-// immutableTypeIDs lists the TypeDefinition names that are marked Immutable in
-// the pre-delivered agency schema. UpdateEntity returns errImmutableType for
-// any entity whose TypeID appears here.
-var immutableTypeIDs = map[string]bool{
-	"AgencySnapshot":    true,
-	"AgencyPublication": true,
-}
-
 // entityDoc is the ArangoDB document representation of an [entitygraph.Entity].
 type entityDoc struct {
 	Key        string         `json:"_key,omitempty"`
@@ -41,33 +33,6 @@ type entityDoc struct {
 	Deleted    bool           `json:"deleted"`
 	DeletedAt  *time.Time     `json:"deleted_at,omitempty"`
 }
-
-// collectionForTypeID returns the driver.Collection in which entities of the
-// given TypeID should be stored. AgencySnapshot and AgencyPublication entities
-// use dedicated immutable collections; all others use agency_entities.
-func (b *Backend) collectionForTypeID(typeID string) driver.Collection {
-	switch typeID {
-	case "AgencySnapshot":
-		return b.snapshots
-	case "AgencyPublication":
-		return b.publications
-	default:
-		return b.entities
-	}
-}
-
-// // collectionNameForTypeID returns the ArangoDB collection name string for the
-// // given TypeID. Used when constructing _from / _to handles for edge documents.
-// func collectionNameForTypeID(typeID string) string {
-// 	switch typeID {
-// 	case "AgencySnapshot":
-// 		return colSnapshots
-// 	case "AgencyPublication":
-// 		return colPublications
-// 	default:
-// 		return colEntities
-// 	}
-// }
 
 // CreateEntity creates a new entity document in the appropriate collection.
 // Returns errEntityAlreadyExists if a document with the same key already exists.
@@ -85,7 +50,7 @@ func (b *Backend) CreateEntity(ctx context.Context, req entitygraph.CreateEntity
 	if doc.Properties == nil {
 		doc.Properties = make(map[string]any)
 	}
-	col := b.collectionForTypeID(req.TypeID)
+	col := b.collectionFor(req.TypeID)
 	if _, err := col.CreateDocument(ctx, doc); err != nil {
 		if driver.IsConflict(err) {
 			return entitygraph.Entity{}, fmt.Errorf("CreateEntity: %w", errEntityAlreadyExists)
@@ -96,10 +61,10 @@ func (b *Backend) CreateEntity(ctx context.Context, req entitygraph.CreateEntity
 }
 
 // GetEntity returns the entity identified by agencyID and entityID.
-// Searches agency_entities first, then agency_snapshots, then
-// agency_publications. Returns errEntityNotFound if not present in any.
+// Searches every entity collection derived from the schema. Returns
+// errEntityNotFound if the entity is absent from all collections.
 func (b *Backend) GetEntity(ctx context.Context, agencyID, entityID string) (entitygraph.Entity, error) {
-	for _, col := range []driver.Collection{b.entities, b.snapshots, b.publications} {
+	for _, col := range b.allEntityCollections() {
 		var doc entityDoc
 		if _, err := col.ReadDocument(ctx, entityID, &doc); err == nil {
 			if doc.AgencyID != agencyID {
@@ -125,7 +90,7 @@ func (b *Backend) UpdateEntity(
 	if err != nil {
 		return entitygraph.Entity{}, fmt.Errorf("UpdateEntity %s: %w", entityID, err)
 	}
-	if immutableTypeIDs[existing.TypeID] {
+	if b.isImmutable(existing.TypeID) {
 		return entitygraph.Entity{}, fmt.Errorf("UpdateEntity %s: %w", entityID, errImmutableType)
 	}
 	if existing.Properties == nil {
@@ -145,7 +110,7 @@ func (b *Backend) UpdateEntity(
 		Deleted:    existing.Deleted,
 		DeletedAt:  existing.DeletedAt,
 	}
-	col := b.collectionForTypeID(existing.TypeID)
+	col := b.collectionFor(existing.TypeID)
 	if _, err := col.ReplaceDocument(ctx, entityID, updated); err != nil {
 		if driver.IsNotFound(err) {
 			return entitygraph.Entity{}, fmt.Errorf("UpdateEntity %s: %w", entityID, errEntityNotFound)
@@ -173,7 +138,7 @@ func (b *Backend) DeleteEntity(ctx context.Context, agencyID, entityID string) e
 		Deleted:    true,
 		DeletedAt:  &now,
 	}
-	col := b.collectionForTypeID(existing.TypeID)
+	col := b.collectionFor(existing.TypeID)
 	if _, err := col.ReplaceDocument(ctx, entityID, updated); err != nil {
 		if driver.IsNotFound(err) {
 			return fmt.Errorf("DeleteEntity %s: %w", entityID, errEntityNotFound)
@@ -203,16 +168,13 @@ func (b *Backend) ListEntities(
 	where := strings.Join(conditions, " AND ")
 
 	// Determine which collection(s) to query based on the TypeID filter.
+	// When TypeID is set we go directly to that type's collection.
+	// When TypeID is empty we query every entity collection from the schema.
 	var cols []driver.Collection
-	switch filter.TypeID {
-	case "AgencySnapshot":
-		cols = []driver.Collection{b.snapshots}
-	case "AgencyPublication":
-		cols = []driver.Collection{b.publications}
-	case "":
-		cols = []driver.Collection{b.entities, b.snapshots, b.publications}
-	default:
-		cols = []driver.Collection{b.entities}
+	if filter.TypeID != "" {
+		cols = []driver.Collection{b.collectionFor(filter.TypeID)}
+	} else {
+		cols = b.allEntityCollections()
 	}
 
 	var results []entitygraph.Entity

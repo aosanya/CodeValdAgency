@@ -22,6 +22,7 @@ import (
 	driver "github.com/arangodb/go-driver"
 	driverhttp "github.com/arangodb/go-driver/http"
 
+	codevaldagency "github.com/aosanya/CodeValdAgency"
 	"github.com/aosanya/CodeValdAgency/storage/arangodb"
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
 	"github.com/aosanya/CodeValdSharedLib/types"
@@ -79,7 +80,8 @@ func openTestBackend(t *testing.T) (*arangodb.Backend, driver.Database) {
 		t.Fatalf("open/create test database %q: %v", dbName, err)
 	}
 
-	b, err := arangodb.NewBackendFromDB(db)
+	schema := codevaldagency.DefaultAgencySchema()
+	b, err := arangodb.NewBackendFromDB(db, schema)
 	if err != nil {
 		t.Fatalf("NewBackendFromDB: %v", err)
 	}

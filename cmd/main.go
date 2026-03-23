@@ -75,6 +75,7 @@ func main() {
 		Username: cfg.ArangoUser,
 		Password: cfg.ArangoPassword,
 		Database: cfg.ArangoDatabase,
+		Schema:   codevaldagency.DefaultAgencySchema(),
 	})
 	if err != nil {
 		log.Fatalf("codevaldagency: ArangoDB backend: %v", err)

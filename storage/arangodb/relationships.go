@@ -33,10 +33,10 @@ type relationshipDoc struct {
 }
 
 // entityHandle returns the ArangoDB document handle for an entity ID, e.g.
-// "agency_entities/<id>".  It performs a lightweight existence check across the
-// three entity collections so that the correct collection prefix is used.
+// "agencies/<id>". It searches every entity collection derived from the schema
+// so that the correct collection prefix is used in edge documents.
 func (b *Backend) entityHandle(ctx context.Context, agencyID, entityID string) (string, error) {
-	for _, col := range []driver.Collection{b.entities, b.snapshots, b.publications} {
+	for _, col := range b.allEntityCollections() {
 		var doc entityDoc
 		if _, err := col.ReadDocument(ctx, entityID, &doc); err == nil {
 			if doc.AgencyID == agencyID {

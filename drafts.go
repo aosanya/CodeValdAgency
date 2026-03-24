@@ -86,7 +86,7 @@ func (m *agencyManager) CreateDraft(ctx context.Context, description, forkedFrom
 
 // copySubEntitiesToDraft routes the deep-copy to the appropriate helper based
 // on forkedFromType.
-func (m *agencyManager) copySubEntitiesToDraft(ctx context.Context, agencyEntityID, draftID, forkedFromID, forkedFromType string) error {
+func (m *agencyManager) copySubEntitiesToDraft(ctx context.Context, _ /*agencyEntityID*/, draftID, forkedFromID, forkedFromType string) error {
 	if forkedFromType == "live" {
 		return m.copyLiveEntitiesToDraft(ctx, draftID)
 	}

@@ -127,28 +127,6 @@ func uniqueIntegrationID(prefix string) string {
 	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
 }
 
-// snapshotCountForAgency counts documents in the agency_snapshots collection
-// whose agency_id field equals agencyID.
-func snapshotCountForAgency(t *testing.T, db driver.Database, agencyID string) int {
-	t.Helper()
-	ctx := context.Background()
-	query := `FOR s IN agency_snapshots FILTER s.agency_id == @id RETURN s`
-	cursor, err := db.Query(ctx, query, map[string]interface{}{"id": agencyID})
-	if err != nil {
-		t.Fatalf("snapshot query: %v", err)
-	}
-	defer cursor.Close()
-	count := 0
-	for cursor.HasMore() {
-		var doc map[string]interface{}
-		if _, err := cursor.ReadDocument(ctx, &doc); err != nil {
-			t.Fatalf("snapshot ReadDocument: %v", err)
-		}
-		count++
-	}
-	return count
-}
-
 // integrationJSON builds a minimal valid agency JSON payload.
 func integrationJSON(id, name string) string {
 	return fmt.Sprintf(`{"id":%q,"name":%q}`, id, name)

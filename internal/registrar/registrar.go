@@ -89,11 +89,10 @@ func (r *Registrar) Publish(ctx context.Context, topic string, agencyID string) 
 //   - Static routes for the agency-level gRPC methods (SetAgencyDetails,
 //     GetAgency, UpdateAgency, PublishAgency, GetPublication, ListPublications,
 //     UpdatePublicationStatus).
-//   - Dynamic entity CRUD and relationship routes generated from
-//     [codevaldagency.DefaultAgencySchema] via
-//     [schemaroutes.RoutesFromSchema]. Every TypeDefinition with a PathSegment
-//     gets its own collection of GET/POST/PUT/DELETE routes, all backed by the
-//     generic EntityService gRPC methods.
+//   - Dynamic entity CRUD routes generated from [codevaldagency.DefaultAgencySchema]
+//     via a single [schemaroutes.RoutesFromSchema] call. DraftXxx types embed
+//     their full sub-path in PathSegment (e.g. "drafts/{draftId}/goals"), so
+//     they are naturally served at the correct nested URL with no extra logic.
 func agencyRoutes() []types.RouteInfo {
 	static := []types.RouteInfo{
 		// POST /agency/{agencyId} — replace (or create) the full agency document.
@@ -124,6 +123,14 @@ func agencyRoutes() []types.RouteInfo {
 			Capability: "publish_agency",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/PublishAgency",
 		},
+		// POST /agency/{agencyId}/import — parse a raw agency.yaml body and
+		// idempotently populate a draft in one shot.
+		{
+			Method:     "POST",
+			Pattern:    "/agency/{agencyId}/import",
+			Capability: "import_draft",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/ImportDraft",
+		},
 		// GET /agency/{agencyId}/publications — list all publications.
 		{
 			Method:     "GET",
@@ -153,10 +160,9 @@ func agencyRoutes() []types.RouteInfo {
 		},
 	}
 
-	// Dynamic routes derived directly from the schema: one CRUD set per
-	// TypeDefinition, one list/create/delete set per RelationshipDefinition.
-	// All route by "/agency/{agencyId}" prefix and back the generic
-	// EntityService gRPC methods.
+	// Dynamic routes: one CRUD set per TypeDefinition with a non-empty PathSegment.
+	// DraftXxx types embed their full sub-path (e.g. "drafts/{draftId}/goals"),
+	// so no extra splitting or grouping is needed here.
 	dynamic := schemaroutes.RoutesFromSchema(
 		codevaldagency.DefaultAgencySchema(),
 		"/agency/{agencyId}",

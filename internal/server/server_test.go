@@ -21,8 +21,6 @@ type mockManager struct {
 	setDetailsErr    error
 	getResult        codevaldagency.Agency
 	getErr           error
-	updateResult     codevaldagency.Agency
-	updateErr        error
 	publishResult    codevaldagency.AgencyPublication
 	publishErr       error
 	getPubResult     codevaldagency.AgencyPublication
@@ -35,6 +33,19 @@ type mockManager struct {
 	workflowsErr     error
 	rolesResult      []codevaldagency.ConfiguredRole
 	rolesErr         error
+
+	createDraftResult     codevaldagency.AgencyDraft
+	createDraftErr        error
+	getDraftResult        codevaldagency.AgencyDraft
+	getDraftErr           error
+	listDraftsResult      []codevaldagency.AgencyDraft
+	listDraftsErr         error
+	updateDraftDescResult codevaldagency.AgencyDraft
+	updateDraftDescErr    error
+	promoteDraftResult    codevaldagency.Agency
+	promoteDraftErr       error
+	archiveDraftResult    codevaldagency.AgencyDraft
+	archiveDraftErr       error
 }
 
 func (m *mockManager) SetAgencyDetails(_ context.Context, _ string) (codevaldagency.Agency, error) {
@@ -43,10 +54,25 @@ func (m *mockManager) SetAgencyDetails(_ context.Context, _ string) (codevaldage
 func (m *mockManager) GetAgency(_ context.Context) (codevaldagency.Agency, error) {
 	return m.getResult, m.getErr
 }
-func (m *mockManager) UpdateAgency(_ context.Context, _ codevaldagency.UpdateAgencyRequest) (codevaldagency.Agency, error) {
-	return m.updateResult, m.updateErr
+func (m *mockManager) CreateDraft(_ context.Context, _, _, _ string) (codevaldagency.AgencyDraft, error) {
+	return m.createDraftResult, m.createDraftErr
 }
-func (m *mockManager) PublishAgency(_ context.Context) (codevaldagency.AgencyPublication, error) {
+func (m *mockManager) GetDraft(_ context.Context, _ string) (codevaldagency.AgencyDraft, error) {
+	return m.getDraftResult, m.getDraftErr
+}
+func (m *mockManager) ListDrafts(_ context.Context) ([]codevaldagency.AgencyDraft, error) {
+	return m.listDraftsResult, m.listDraftsErr
+}
+func (m *mockManager) UpdateDraftDescription(_ context.Context, _, _ string) (codevaldagency.AgencyDraft, error) {
+	return m.updateDraftDescResult, m.updateDraftDescErr
+}
+func (m *mockManager) PromoteDraft(_ context.Context, _ string) (codevaldagency.Agency, error) {
+	return m.promoteDraftResult, m.promoteDraftErr
+}
+func (m *mockManager) ArchiveDraft(_ context.Context, _ string) (codevaldagency.AgencyDraft, error) {
+	return m.archiveDraftResult, m.archiveDraftErr
+}
+func (m *mockManager) PublishAgency(_ context.Context, _ string) (codevaldagency.AgencyPublication, error) {
 	return m.publishResult, m.publishErr
 }
 func (m *mockManager) GetPublication(_ context.Context, _ int) (codevaldagency.AgencyPublication, error) {
@@ -93,7 +119,7 @@ func TestServer_SetAgencyDetails_OK(t *testing.T) {
 		ID:   "a1",
 		Name: "Alpha",
 	}}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	got, err := srv.SetAgencyDetails(context.Background(), &pb.SetAgencyDetailsRequest{
 		Json: `{"id":"a1","name":"Alpha","status":"draft"}`,
 	})
@@ -108,7 +134,7 @@ func TestServer_SetAgencyDetails_OK(t *testing.T) {
 func TestServer_SetAgencyDetails_InvalidJSON_ReturnsInvalidArgument(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{setDetailsErr: codevaldagency.ErrInvalidJSON}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	_, err := srv.SetAgencyDetails(context.Background(), &pb.SetAgencyDetailsRequest{Json: "bad"})
 	requireCode(t, err, codes.InvalidArgument)
 }
@@ -116,7 +142,7 @@ func TestServer_SetAgencyDetails_InvalidJSON_ReturnsInvalidArgument(t *testing.T
 func TestServer_SetAgencyDetails_BackendError_ReturnsInternal(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{setDetailsErr: fmt.Errorf("database failure")}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	_, err := srv.SetAgencyDetails(context.Background(), &pb.SetAgencyDetailsRequest{Json: `{"id":"a1"}`})
 	requireCode(t, err, codes.Internal)
 }
@@ -126,7 +152,7 @@ func TestServer_SetAgencyDetails_BackendError_ReturnsInternal(t *testing.T) {
 func TestServer_GetAgency_OK(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{getResult: codevaldagency.Agency{ID: "a2", Name: "Beta"}}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	got, err := srv.GetAgency(context.Background(), &pb.GetAgencyRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -139,47 +165,169 @@ func TestServer_GetAgency_OK(t *testing.T) {
 func TestServer_GetAgency_NotFound(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{getErr: codevaldagency.ErrAgencyNotFound}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	_, err := srv.GetAgency(context.Background(), &pb.GetAgencyRequest{})
 	requireCode(t, err, codes.NotFound)
 }
 
-// ── UpdateAgency ───────────────────────────────────────────────────────────────────────────
+// ── Draft handlers ───────────────────────────────────────────────────────────────────────
 
-func TestServer_UpdateAgency_OK(t *testing.T) {
+func TestServer_CreateDraft_OK(t *testing.T) {
 	t.Parallel()
-	mgr := &mockManager{updateResult: codevaldagency.Agency{
-		ID:     "a3",
-		Status: codevaldagency.LifecycleActive,
-	}}
-	srv := server.New(mgr)
-	got, err := srv.UpdateAgency(context.Background(), &pb.UpdateAgencyRequest{
-		Status: pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE,
+	mgr := &mockManager{
+		createDraftResult: codevaldagency.AgencyDraft{
+			ID:          "d1",
+			AgencyID:    "a1",
+			Description: "Draft one",
+			Status:      codevaldagency.DraftStatusOpen,
+		},
+	}
+	srv := server.New(mgr, nil)
+	got, err := srv.CreateDraft(context.Background(), &pb.CreateDraftRequest{
+		Description: "Draft one",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got.GetStatus() != pb.AgencyLifecycle_AGENCY_LIFECYCLE_ACTIVE {
-		t.Errorf("Status: want ACTIVE, got %v", got.GetStatus())
+	if got.GetId() != "d1" {
+		t.Errorf("ID: want %q, got %q", "d1", got.GetId())
+	}
+	if got.GetStatus() != pb.AgencyDraftStatus_AGENCY_DRAFT_STATUS_OPEN {
+		t.Errorf("Status: want OPEN, got %v", got.GetStatus())
 	}
 }
 
-func TestServer_UpdateAgency_InvalidTransition_ReturnsFailedPrecondition(t *testing.T) {
+func TestServer_CreateDraft_AgencyNotFound_ReturnsNotFound(t *testing.T) {
 	t.Parallel()
-	mgr := &mockManager{updateErr: codevaldagency.ErrInvalidLifecycleTransition}
-	srv := server.New(mgr)
-	_, err := srv.UpdateAgency(context.Background(), &pb.UpdateAgencyRequest{
-		Status: pb.AgencyLifecycle_AGENCY_LIFECYCLE_DRAFT,
+	mgr := &mockManager{createDraftErr: codevaldagency.ErrAgencyNotFound}
+	srv := server.New(mgr, nil)
+	_, err := srv.CreateDraft(context.Background(), &pb.CreateDraftRequest{})
+	requireCode(t, err, codes.NotFound)
+}
+
+func TestServer_GetDraft_OK(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		getDraftResult: codevaldagency.AgencyDraft{
+			ID:     "d1",
+			Status: codevaldagency.DraftStatusOpen,
+		},
+	}
+	srv := server.New(mgr, nil)
+	got, err := srv.GetDraft(context.Background(), &pb.GetDraftRequest{DraftId: "d1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.GetId() != "d1" {
+		t.Errorf("ID: want %q, got %q", "d1", got.GetId())
+	}
+}
+
+func TestServer_GetDraft_NotFound_ReturnsNotFound(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{getDraftErr: codevaldagency.ErrDraftNotFound}
+	srv := server.New(mgr, nil)
+	_, err := srv.GetDraft(context.Background(), &pb.GetDraftRequest{DraftId: "nonexistent"})
+	requireCode(t, err, codes.NotFound)
+}
+
+func TestServer_ListDrafts_OK(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		listDraftsResult: []codevaldagency.AgencyDraft{
+			{ID: "d1", Status: codevaldagency.DraftStatusOpen},
+			{ID: "d2", Status: codevaldagency.DraftStatusArchived},
+		},
+	}
+	srv := server.New(mgr, nil)
+	got, err := srv.ListDrafts(context.Background(), &pb.ListDraftsRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.GetDrafts()) != 2 {
+		t.Fatalf("expected 2 drafts, got %d", len(got.GetDrafts()))
+	}
+}
+
+func TestServer_UpdateDraftDescription_OK(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		updateDraftDescResult: codevaldagency.AgencyDraft{
+			ID:          "d1",
+			Description: "Updated",
+			Status:      codevaldagency.DraftStatusOpen,
+		},
+	}
+	srv := server.New(mgr, nil)
+	got, err := srv.UpdateDraftDescription(context.Background(), &pb.UpdateDraftDescriptionRequest{
+		DraftId:     "d1",
+		Description: "Updated",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.GetDescription() != "Updated" {
+		t.Errorf("Description: want %q, got %q", "Updated", got.GetDescription())
+	}
+}
+
+func TestServer_UpdateDraftDescription_NotOpen_ReturnsFailedPrecondition(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{updateDraftDescErr: codevaldagency.ErrDraftNotOpen}
+	srv := server.New(mgr, nil)
+	_, err := srv.UpdateDraftDescription(context.Background(), &pb.UpdateDraftDescriptionRequest{
+		DraftId: "d1",
 	})
 	requireCode(t, err, codes.FailedPrecondition)
 }
 
-func TestServer_UpdateAgency_NotFound(t *testing.T) {
+func TestServer_PromoteDraft_OK(t *testing.T) {
 	t.Parallel()
-	mgr := &mockManager{updateErr: codevaldagency.ErrAgencyNotFound}
-	srv := server.New(mgr)
-	_, err := srv.UpdateAgency(context.Background(), &pb.UpdateAgencyRequest{})
-	requireCode(t, err, codes.NotFound)
+	mgr := &mockManager{
+		promoteDraftResult: codevaldagency.Agency{ID: "a1", Enabled: true},
+	}
+	srv := server.New(mgr, nil)
+	got, err := srv.PromoteDraft(context.Background(), &pb.PromoteDraftRequest{DraftId: "d1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !got.GetEnabled() {
+		t.Error("expected Enabled=true after PromoteDraft")
+	}
+}
+
+func TestServer_PromoteDraft_NotOpen_ReturnsFailedPrecondition(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{promoteDraftErr: codevaldagency.ErrDraftNotOpen}
+	srv := server.New(mgr, nil)
+	_, err := srv.PromoteDraft(context.Background(), &pb.PromoteDraftRequest{DraftId: "d1"})
+	requireCode(t, err, codes.FailedPrecondition)
+}
+
+func TestServer_ArchiveDraft_OK(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		archiveDraftResult: codevaldagency.AgencyDraft{
+			ID:     "d1",
+			Status: codevaldagency.DraftStatusArchived,
+		},
+	}
+	srv := server.New(mgr, nil)
+	got, err := srv.ArchiveDraft(context.Background(), &pb.ArchiveDraftRequest{DraftId: "d1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.GetStatus() != pb.AgencyDraftStatus_AGENCY_DRAFT_STATUS_ARCHIVED {
+		t.Errorf("Status: want ARCHIVED, got %v", got.GetStatus())
+	}
+}
+
+func TestServer_ArchiveDraft_NotOpen_ReturnsFailedPrecondition(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{archiveDraftErr: codevaldagency.ErrDraftNotOpen}
+	srv := server.New(mgr, nil)
+	_, err := srv.ArchiveDraft(context.Background(), &pb.ArchiveDraftRequest{DraftId: "d1"})
+	requireCode(t, err, codes.FailedPrecondition)
 }
 
 // ── PublishAgency ───────────────────────────────────────────────────────────────────────
@@ -194,7 +342,7 @@ func TestServer_PublishAgency_OK(t *testing.T) {
 			Tag:      "v1",
 		},
 	}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	got, err := srv.PublishAgency(context.Background(), &pb.PublishAgencyRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -210,7 +358,7 @@ func TestServer_PublishAgency_OK(t *testing.T) {
 func TestServer_PublishAgency_NotFound_ReturnsNotFound(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{publishErr: codevaldagency.ErrAgencyNotFound}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	_, err := srv.PublishAgency(context.Background(), &pb.PublishAgencyRequest{})
 	requireCode(t, err, codes.NotFound)
 }
@@ -227,7 +375,7 @@ func TestServer_GetPublication_OK(t *testing.T) {
 			Tag:      "v1",
 		},
 	}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	got, err := srv.GetPublication(context.Background(), &pb.GetPublicationRequest{Version: 1})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -240,7 +388,7 @@ func TestServer_GetPublication_OK(t *testing.T) {
 func TestServer_GetPublication_NotFound_ReturnsNotFound(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{getPubErr: codevaldagency.ErrPublicationNotFound}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	_, err := srv.GetPublication(context.Background(), &pb.GetPublicationRequest{Version: 99})
 	requireCode(t, err, codes.NotFound)
 }
@@ -255,7 +403,7 @@ func TestServer_ListPublications_OK(t *testing.T) {
 			{ID: "pub-2", AgencyID: "a1", Version: 2, Tag: "v2"},
 		},
 	}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	got, err := srv.ListPublications(context.Background(), &pb.ListPublicationsRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -271,7 +419,7 @@ func TestServer_ListPublications_OK(t *testing.T) {
 func TestServer_ListPublications_Empty_ReturnsEmptyList(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{listPubResult: nil}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	got, err := srv.ListPublications(context.Background(), &pb.ListPublicationsRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -291,7 +439,7 @@ func TestServer_GetGoals_OK(t *testing.T) {
 			{ID: "g2", Title: "Goal Two", Ordinality: 2},
 		},
 	}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	got, err := srv.GetGoals(context.Background(), &pb.GetGoalsRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -307,7 +455,7 @@ func TestServer_GetGoals_OK(t *testing.T) {
 func TestServer_GetGoals_Empty_ReturnsEmptyList(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{goalsResult: nil}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	got, err := srv.GetGoals(context.Background(), &pb.GetGoalsRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -320,7 +468,7 @@ func TestServer_GetGoals_Empty_ReturnsEmptyList(t *testing.T) {
 func TestServer_GetGoals_ManagerError_ReturnsInternal(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{goalsErr: fmt.Errorf("storage failure")}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	_, err := srv.GetGoals(context.Background(), &pb.GetGoalsRequest{})
 	requireCode(t, err, codes.Internal)
 }
@@ -337,7 +485,7 @@ func TestServer_GetWorkflows_OK(t *testing.T) {
 			},
 		},
 	}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	got, err := srv.GetWorkflows(context.Background(), &pb.GetWorkflowsRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -353,7 +501,7 @@ func TestServer_GetWorkflows_OK(t *testing.T) {
 func TestServer_GetWorkflows_Empty_ReturnsEmptyList(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{workflowsResult: nil}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	got, err := srv.GetWorkflows(context.Background(), &pb.GetWorkflowsRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -366,7 +514,7 @@ func TestServer_GetWorkflows_Empty_ReturnsEmptyList(t *testing.T) {
 func TestServer_GetWorkflows_ManagerError_ReturnsInternal(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{workflowsErr: fmt.Errorf("storage failure")}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	_, err := srv.GetWorkflows(context.Background(), &pb.GetWorkflowsRequest{})
 	requireCode(t, err, codes.Internal)
 }
@@ -381,7 +529,7 @@ func TestServer_GetConfiguredRoles_OK(t *testing.T) {
 			{Name: "reviewer", ActorType: codevaldagency.ActorTypeAIAgent},
 		},
 	}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	got, err := srv.GetConfiguredRoles(context.Background(), &pb.GetConfiguredRolesRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -397,7 +545,7 @@ func TestServer_GetConfiguredRoles_OK(t *testing.T) {
 func TestServer_GetConfiguredRoles_Empty_ReturnsEmptyList(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{rolesResult: nil}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	got, err := srv.GetConfiguredRoles(context.Background(), &pb.GetConfiguredRolesRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -410,7 +558,7 @@ func TestServer_GetConfiguredRoles_Empty_ReturnsEmptyList(t *testing.T) {
 func TestServer_GetConfiguredRoles_ManagerError_ReturnsInternal(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{rolesErr: fmt.Errorf("storage failure")}
-	srv := server.New(mgr)
+	srv := server.New(mgr, nil)
 	_, err := srv.GetConfiguredRoles(context.Background(), &pb.GetConfiguredRolesRequest{})
 	requireCode(t, err, codes.Internal)
 }

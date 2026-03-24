@@ -12,7 +12,13 @@ Agency ──has_goal──────────────► Goal
        ──has_configured_role──► ConfiguredRole                        │
        ──has_snapshot─────────► AgencySnapshot   (Immutable)          ├──has_instruction──► Instruction ──has_content_ref──► ContentRef
        ──has_publication──────► AgencyPublication (Immutable)         ├──has_deliverable──► Deliverable
-                                    │                                 ├──has_content_ref──► ContentRef                                    ├──has_status──────────────► AgencyPublicationStatus (mutable)                                    └──has_instruction──► Instruction └──assigned_role────► ConfiguredRole
+       ──has_draft────────────► AgencyDraft (Mutable)                 ├──has_content_ref──► ContentRef
+                                    │                                 └──assigned_role────► ConfiguredRole
+                                    ├──has_goal──────────────► Goal   (draft copy)
+                                    ├──has_workflow──────────► Workflow (draft copy)
+                                    └──has_configured_role──► ConfiguredRole (draft copy)
+
+                               AgencyPublication ──has_status──► AgencyPublicationStatus (mutable)
 
 Deliverable ──has_result──────► DeliverableResult ──has_content_ref──► ContentRef
             ──reviewer_role───► ConfiguredRole  (waiver authority)
@@ -29,7 +35,7 @@ All nodes and edges live in two ArangoDB collections:
 
 | Type | Mutable | Properties | Notes |
 |---|---|---|---|
-| `Agency` | ✅ | `name`(req), `mission`, `vision` | Root entity; one per database |
+| `Agency` | ✅ | `name`(req), `mission`, `vision`, `enabled`(req) | Root entity; one per database; read-only after first publish |
 | `Goal` | ✅ | `title`(req), `description`, `ordinality`(req) | Strategic objective |
 | `Workflow` | ✅ | `name`(req), `description`, `ordinality`(req) | Ordered container of WorkItems |
 | `WorkItem` | ✅ | `title`(req), `description`, `ordinality`(req), `prompt` | Unit of work; same `ordinality` = parallel execution |
@@ -38,7 +44,8 @@ All nodes and edges live in two ArangoDB collections:
 | `DeliverableResult` | ❌ immutable | `status`(req), `produced_at` | Instance: actual output submitted against a Deliverable |
 | `ContentRef` | ❌ immutable | `path`(req) | CodeValdGit artifact path; attaches to DeliverableResult, Instruction, or WorkItem |
 | `ConfiguredRole` | ✅ | `name`(req), `description`, `actor_type`(req), `ordinality`(req) | `actor_type`: `"human"` / `"ai_agent"` / `"compute_agent"` |
-| `AgencySnapshot` | ❌ immutable | `snapshot_at`(req) | Written on `draft → active` transition |
+| `AgencyDraft` | ✅ | `description`(req), `status`(req), `forked_from_id`, `forked_from_type`, `created_at`, `updated_at` | Mutable full-copy of the agency graph; `status`: `"open"` / `"promoted"` / `"archived"` |
+| `AgencySnapshot` | ❌ immutable | `snapshot_at`(req) | Written on `PromoteDraft`; promotion audit record |
 | `AgencyPublication` | ❌ immutable | `version`(req), `tag`(req), `published_at`(req) | Content record; status is stored in the linked `AgencyPublicationStatus` entity |
 | `AgencyPublicationStatus` | ✅ | `status`(req) | Mutable status node (`"draft"` / `"active"` / `"archived"`) linked via `has_status` |
 
@@ -62,6 +69,7 @@ Edges are stored in `agency_relationships`. Each edge has `_from`, `_to`, `name`
 | `has_configured_role` | `Agency` | `ConfiguredRole` | ✅ | `belongs_to_agency` |
 | `has_snapshot` | `Agency` | `AgencySnapshot` | ✅ | `belongs_to_agency` |
 | `has_publication` | `Agency` | `AgencyPublication` | ✅ | `belongs_to_agency` |
+| `has_draft` | `Agency` | `AgencyDraft` | ✅ | `belongs_to_agency` |
 | `has_work_item` | `Workflow` | `WorkItem` | ✅ | `belongs_to_workflow` |
 | `has_instruction` | `Workflow` | `Instruction` | ✅ | `belongs_to_workflow` |
 | `has_instruction` | `WorkItem` | `Instruction` | ✅ | `belongs_to_work_item` |
@@ -101,18 +109,25 @@ Edges are stored in `agency_relationships`. Each edge has `_from`, `_to`, `name`
 
 | Type | Immutable | StorageCollection |
 |---|---|---|
-| `Agency` | — | `agency_entities` (default) |
-| `Goal` | — | `agency_entities` (default) |
-| `Workflow` | — | `agency_entities` (default) |
-| `WorkItem` | — | `agency_entities` (default) |
-| `Instruction` | — | `agency_entities` (default) |
-| `Deliverable` | — | `agency_entities` (default) |
+| `Agency` | — | `agency_entities` |
+| `Goal` | — | `agency_entities` (live) / `agency_draft_entities` (draft copy) |
+| `Workflow` | — | `agency_entities` (live) / `agency_draft_entities` (draft copy) |
+| `WorkItem` | — | `agency_entities` (live) / `agency_draft_entities` (draft copy) |
+| `Instruction` | — | `agency_entities` (live) / `agency_draft_entities` (draft copy) |
+| `Deliverable` | — | `agency_entities` (live) / `agency_draft_entities` (draft copy) |
 | `DeliverableResult` | **true** | `deliverable_results` |
 | `ContentRef` | **true** | `content_refs` |
-| `ConfiguredRole` | — | `agency_entities` (default) |
+| `ConfiguredRole` | — | `agency_entities` (live) / `agency_draft_entities` (draft copy) |
+| `AgencyDraft` | — | `agency_drafts` |
 | `AgencySnapshot` | **true** | `agency_snapshots` |
 | `AgencyPublication` | **true** | `agency_publications` |
 | `AgencyPublicationStatus` | — | `publication_statuses` |
+
+> Draft copies of `Goal`, `Workflow`, `WorkItem`, `ConfiguredRole`,
+> `Instruction`, and `Deliverable` are scoped by `draft_id` inside
+> `agency_draft_entities`. Live copies in `agency_entities` are scoped by
+> `agency_id`. The single `agency_relationships` edge collection spans both
+> vertex collections via full ArangoDB document handles.
 
 **`Immutable: true`** — `UpdateEntity` returns `ErrImmutableType` for these types. Each submission or review decision creates a new record, giving a full audit trail.
 

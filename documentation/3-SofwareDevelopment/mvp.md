@@ -39,6 +39,13 @@ The MVP delivers:
 | MVP-AGENCY-008-F | `cmd/main.go` wiring — inject DataManager, seed schema on startup | ✅ Done | MVP-AGENCY-008-D, MVP-AGENCY-008-E |
 | MVP-AGENCY-008-G | Test rewrite — `fakeDataManager` replacing `fakeBackend` | ✅ Done | MVP-AGENCY-008-D |
 | MVP-AGENCY-008-H | Type-specific URL params — `EntityIDParam` on all schema types; adopt `schemaroutes.RoutesFromSchema` in registrar | ✅ Done | MVP-AGENCY-008-B, ~~SHAREDLIB-011~~ 🚀 |
+| **MVP-AGENCY-009 — Agency Drafts** | | | |
+| MVP-AGENCY-009-A | Models & errors update — `AgencyDraft`, `AgencyDraftStatus`, remove `AgencyLifecycle`, add `enabled` to `Agency`, add `ErrAgencyNotPublished / ErrDraftNotFound / ErrDraftNotOpen / ErrAgencyReadOnly` | 🔲 Not Started | — |
+| MVP-AGENCY-009-B | Schema update — `AgencyDraft` TypeDefinition, update `Agency` / `Goal` / `Workflow` / `ConfiguredRole` TypeDefinitions | 🔲 Not Started | MVP-AGENCY-009-A |
+| MVP-AGENCY-009-C | `AgencyManager` draft methods — `CreateDraft`, `GetDraft`, `ListDrafts`, `UpdateDraftDescription`, `PromoteDraft`, `ArchiveDraft`; enforce `ErrAgencyReadOnly` on direct edits | 🔲 Not Started | MVP-AGENCY-009-A |
+| MVP-AGENCY-009-D | ArangoDB storage — `agency_drafts` collection, fork deep-copy logic in `PromoteDraft` | 🔲 Not Started | MVP-AGENCY-009-C |
+| MVP-AGENCY-009-E | gRPC handlers — new RPCs for all draft operations; update `Agency` proto message | 🔲 Not Started | MVP-AGENCY-009-C |
+| MVP-AGENCY-009-F | Tests — full acceptance test suite for all draft flows | 🔲 Not Started | MVP-AGENCY-009-C, MVP-AGENCY-009-D |
 
 ---
 
@@ -80,4 +87,10 @@ feature/AGENCY-008-D_arangodb_storage_split
 feature/AGENCY-008-E_grpc_goals_workflows_roles
 feature/AGENCY-008-F_cmd_wiring_schema_seed
 feature/AGENCY-008-G_test_rewrite
+feature/AGENCY-009-A_agency_draft_models
+feature/AGENCY-009-B_agency_draft_schema
+feature/AGENCY-009-C_agency_draft_manager
+feature/AGENCY-009-D_agency_draft_storage
+feature/AGENCY-009-E_agency_draft_grpc
+feature/AGENCY-009-F_agency_draft_tests
 ```

@@ -165,6 +165,15 @@ func (b *Backend) ListEntities(
 		conditions = append(conditions, "doc.type_id == @typeID")
 		bindVars["typeID"] = filter.TypeID
 	}
+	// Property filters: each key-value pair in filter.Properties must match
+	// the corresponding value in the stored document's properties map.
+	// Used to scope Draft* sub-types by draft_id (and similar) when multiple
+	// drafts share the same collection.
+	for k, v := range filter.Properties {
+		paramName := "prop_" + k
+		conditions = append(conditions, fmt.Sprintf("doc.properties.`%s` == @%s", k, paramName))
+		bindVars[paramName] = v
+	}
 	where := strings.Join(conditions, " AND ")
 
 	// Determine which collection(s) to query based on the TypeID filter.
@@ -200,6 +209,108 @@ func (b *Backend) ListEntities(
 		}
 	}
 	return results, nil
+}
+
+// UpsertEntity finds a non-deleted entity whose UniqueKey property values
+// match the request and merges the supplied properties onto it, or inserts a
+// new entity if no match is found.
+// Returns [entitygraph.ErrUniqueKeyNotDefined] if the type has no UniqueKey.
+func (b *Backend) UpsertEntity(ctx context.Context, req entitygraph.CreateEntityRequest) (entitygraph.Entity, error) {
+	td, ok := b.typeDefs[req.TypeID]
+	if !ok || len(td.UniqueKey) == 0 {
+		return entitygraph.Entity{}, fmt.Errorf("UpsertEntity %s: %w", req.TypeID, entitygraph.ErrUniqueKeyNotDefined)
+	}
+
+	props := req.Properties
+	if props == nil {
+		props = make(map[string]any)
+	}
+
+	// Build an AQL query that locates an existing entity by the UniqueKey fields.
+	bindVars := map[string]interface{}{
+		"agencyID": req.AgencyID,
+		"typeID":   req.TypeID,
+	}
+	conditions := []string{
+		"doc.agency_id == @agencyID",
+		"doc.type_id == @typeID",
+		"doc.deleted != true",
+	}
+	for i, field := range td.UniqueKey {
+		valParam := fmt.Sprintf("ukval%d", i)
+		conditions = append(conditions, fmt.Sprintf("doc.properties.`%s` == @%s", field, valParam))
+		bindVars[valParam] = props[field]
+	}
+	col := b.collectionFor(req.TypeID)
+	q := fmt.Sprintf(
+		"FOR doc IN %s FILTER %s LIMIT 1 RETURN doc",
+		col.Name(), strings.Join(conditions, " AND "),
+	)
+	cursor, err := b.db.Query(ctx, q, bindVars)
+	if err != nil {
+		return entitygraph.Entity{}, fmt.Errorf("UpsertEntity %s: query: %w", req.TypeID, err)
+	}
+
+	var existingDoc *entityDoc
+	if cursor.HasMore() {
+		var doc entityDoc
+		meta, rErr := cursor.ReadDocument(ctx, &doc)
+		if rErr != nil {
+			cursor.Close()
+			return entitygraph.Entity{}, fmt.Errorf("UpsertEntity %s: read: %w", req.TypeID, rErr)
+		}
+		doc.Key = meta.Key
+		existingDoc = &doc
+	}
+	cursor.Close()
+
+	now := time.Now().UTC()
+
+	if existingDoc == nil {
+		// No match — insert a new entity.
+		id := uuid.NewString()
+		doc := entityDoc{
+			Key:        id,
+			TypeID:     req.TypeID,
+			AgencyID:   req.AgencyID,
+			Properties: props,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		}
+		if _, err := col.CreateDocument(ctx, doc); err != nil {
+			if driver.IsConflict(err) {
+				return entitygraph.Entity{}, fmt.Errorf("UpsertEntity: %w", errEntityAlreadyExists)
+			}
+			return entitygraph.Entity{}, fmt.Errorf("UpsertEntity: %w", err)
+		}
+		return toEntity(doc, id), nil
+	}
+
+	// Match found — merge supplied properties onto the existing entity.
+	if existingDoc.Properties == nil {
+		existingDoc.Properties = make(map[string]any)
+	}
+	for k, v := range props {
+		existingDoc.Properties[k] = v
+	}
+	existingDoc.UpdatedAt = now
+	updated := entityDoc{
+		Key:        existingDoc.Key,
+		TypeID:     existingDoc.TypeID,
+		AgencyID:   existingDoc.AgencyID,
+		Properties: existingDoc.Properties,
+		CreatedAt:  existingDoc.CreatedAt,
+		UpdatedAt:  existingDoc.UpdatedAt,
+		Deleted:    existingDoc.Deleted,
+		DeletedAt:  existingDoc.DeletedAt,
+	}
+	if _, err := col.ReplaceDocument(ctx, existingDoc.Key, updated); err != nil {
+		if driver.IsNotFound(err) {
+			return entitygraph.Entity{}, fmt.Errorf("UpsertEntity: %w", errEntityNotFound)
+		}
+		return entitygraph.Entity{}, fmt.Errorf("UpsertEntity: %w", err)
+	}
+	return toEntity(updated, existingDoc.Key), nil
 }
 
 // toEntity converts an entityDoc and its ArangoDB _key to an

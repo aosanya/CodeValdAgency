@@ -14,31 +14,70 @@ the interface, never the concrete type. The implementation wraps
 // AgencyManager is the top-level interface for managing a single Agency.
 // All gRPC handlers delegate to AgencyManager — never to storage directly.
 type AgencyManager interface {
-    // SetAgencyDetails persists a full Agency record from a JSON payload.
-    // Creates or upserts the root Agency entity. Publishes cross.agency.created
-    // after a successful create.
-    SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
+    // ── Live agency (read-only once published) ────────────────────────────────
 
-    // GetAgency returns the single Agency entity stored in this database.
+    // GetAgency returns the current live Agency.
+    // Returns ErrAgencyNotPublished if no draft has been promoted yet.
     GetAgency(ctx context.Context) (Agency, error)
 
-    // UpdateAgency applies partial updates and enforces lifecycle transitions.
-    // Writing Status: active triggers an immutable AgencySnapshot entity.
-    UpdateAgency(ctx context.Context, req UpdateAgencyRequest) (Agency, error)
-
-    // GetGoals returns all Goal entities linked to the Agency.
+    // GetGoals returns all Goal entities linked to the live Agency.
     GetGoals(ctx context.Context) ([]Goal, error)
 
-    // GetWorkflows returns all Workflow entities linked to the Agency.
-    // Sub-resources (WorkItems, Instructions, Deliverables) are fetched
-    // via separate manager methods — Workflow is a scalar entity.
+    // GetWorkflows returns all Workflow entities linked to the live Agency.
     GetWorkflows(ctx context.Context) ([]Workflow, error)
 
-    // GetConfiguredRoles returns all ConfiguredRole entities linked to the Agency.
+    // GetConfiguredRoles returns all ConfiguredRole entities linked to the live Agency.
     GetConfiguredRoles(ctx context.Context) ([]ConfiguredRole, error)
 
+    // ── Bootstrap (first-time setup only) ────────────────────────────────────
+
+    // SetAgencyDetails is the bootstrap path for first-time database setup.
+    // It creates the initial Agency entity and the first open draft.
+    // Returns ErrAgencyReadOnly if a live agency already exists — use
+    // CreateDraft + PromoteDraft for subsequent changes.
+    // Publishes cross.agency.created after a successful create.
+    SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
+
+    // ── Drafts ────────────────────────────────────────────────────────────────
+
+    // CreateDraft forks the agency graph into a new open AgencyDraft.
+    // forkedFromType must be "live" or "draft".
+    // Returns ErrAgencyNotPublished if forkedFromType="live" and no live agency exists.
+    // Returns ErrDraftNotFound if forkedFromType="draft" and the source does not exist.
+    // Returns ErrDraftNotOpen if forkedFromType="draft" and the source is not open.
+    // description must be non-empty.
+    CreateDraft(ctx context.Context, description, forkedFromID, forkedFromType string) (AgencyDraft, error)
+
+    // GetDraft retrieves a single draft by its ID.
+    // Returns ErrDraftNotFound if no draft with that ID exists.
+    GetDraft(ctx context.Context, draftID string) (AgencyDraft, error)
+
+    // ListDrafts returns all drafts in descending creation order.
+    ListDrafts(ctx context.Context) ([]AgencyDraft, error)
+
+    // UpdateDraftDescription updates the human-readable description of an open draft.
+    // Returns ErrDraftNotFound if the draft does not exist.
+    // Returns ErrDraftNotOpen if the draft is not open.
+    UpdateDraftDescription(ctx context.Context, draftID, description string) (AgencyDraft, error)
+
+    // PromoteDraft replaces the live agency with the full sub-graph of the given draft.
+    // The draft transitions from "open" to "promoted". Other open drafts are unaffected.
+    // Publishes cross.agency.promoted on success.
+    // Returns ErrDraftNotFound if the draft does not exist.
+    // Returns ErrDraftNotOpen if the draft is not open.
+    PromoteDraft(ctx context.Context, draftID string) (Agency, error)
+
+    // ArchiveDraft soft-discards an open draft.
+    // The draft transitions from "open" to "archived".
+    // Returns ErrDraftNotFound if the draft does not exist.
+    // Returns ErrDraftNotOpen if the draft is not open.
+    ArchiveDraft(ctx context.Context, draftID string) (AgencyDraft, error)
+
+    // ── Publications ──────────────────────────────────────────────────────────
+
     // PublishAgency creates an immutable AgencyPublication snapshot of the
-    // current Agency state. Version numbers are auto-incremented.
+    // current live Agency state. Version numbers are auto-incremented.
+    // Returns ErrAgencyNotPublished if no live agency exists.
     PublishAgency(ctx context.Context) (AgencyPublication, error)
 
     // GetPublication retrieves a publication by its version number.
@@ -118,13 +157,12 @@ type CrossPublisher interface {
 
 ## 5. Data Models
 
-Defined in `models.go` at the module root. All types are pure value structs;
-methods are limited to `AgencyLifecycle.CanTransitionTo`.
+Defined in `models.go` at the module root. All types are pure value structs.
+The only method is `AgencyDraftStatus.CanTransitionTo`.
 
 Sub-resources (WorkItems, Instructions, Deliverables, ContentRefs) are **never
 embedded** as slices on their parent struct — they are fetched via separate
-`AgencyManager` methods. Nested convenience fields will be added in a future
-iteration.
+`AgencyManager` methods.
 
 ### Core types
 
@@ -138,29 +176,41 @@ const (
     ActorTypeComputeAgent ActorType = "compute_agent"
 )
 
-// AgencyLifecycle is the forward-only progression of an Agency.
-type AgencyLifecycle string
+// AgencyDraftStatus is the lifecycle state of an AgencyDraft.
+type AgencyDraftStatus string
 
 const (
-    LifecycleDraft    AgencyLifecycle = "draft"
-    LifecycleActive   AgencyLifecycle = "active"
-    LifecycleAchieved AgencyLifecycle = "achieved"
+    // DraftStatusOpen means the draft is being edited and can be promoted.
+    DraftStatusOpen AgencyDraftStatus = "open"
+
+    // DraftStatusPromoted is a terminal state: this draft became the live agency.
+    DraftStatusPromoted AgencyDraftStatus = "promoted"
+
+    // DraftStatusArchived is a terminal state: this draft was soft-discarded.
+    DraftStatusArchived AgencyDraftStatus = "archived"
 )
 
-// CanTransitionTo returns true if moving from the current state to next is valid.
-func (l AgencyLifecycle) CanTransitionTo(next AgencyLifecycle) bool
+// CanTransitionTo returns true if transitioning from the receiver status to
+// next is a permitted move.
+//
+//	open → promoted | archived
+//	promoted → (none — terminal)
+//	archived → (none — terminal)
+func (s AgencyDraftStatus) CanTransitionTo(next AgencyDraftStatus) bool
 ```
 
 ### Domain types (graph entity counterparts)
 
 ```go
-// Agency is the root entity. One Agency per database.
+// Agency is the live, published version of the agency.
+// It is read-only — all edits flow through an AgencyDraft.
+// GetAgency returns ErrAgencyNotPublished until the first draft is promoted.
 type Agency struct {
     ID        string
     Name      string
     Mission   string
     Vision    string
-    Status    AgencyLifecycle
+    Enabled   bool      // true = agency is active; false = disabled
     CreatedAt time.Time
     UpdatedAt time.Time
 }
@@ -241,8 +291,23 @@ type ConfiguredRole struct {
     Ordinality  int       // sort order among ConfiguredRoles on this Agency
 }
 
-// AgencySnapshot is an immutable point-in-time record captured at the
-// draft → active lifecycle transition. Written once, never modified.
+// AgencyDraft is a mutable, full deep-copy of the agency graph.
+// It holds Goals, Workflows, WorkItems, ConfiguredRoles, Instructions,
+// and Deliverables forked from the live agency or another open draft.
+// Sub-resources are fetched via the same AgencyManager convenience methods
+// scoped to the draft's own entity set.
+type AgencyDraft struct {
+    ID             string
+    Description    string            // required; human-readable label
+    ForkedFromID   string            // ID of the source Agency or AgencyDraft
+    ForkedFromType string            // "live" or "draft"
+    Status         AgencyDraftStatus
+    CreatedAt      time.Time
+    UpdatedAt      time.Time
+}
+
+// AgencySnapshot is an immutable point-in-time record written as a side-effect
+// of PromoteDraft. Written once per promotion, never modified.
 type AgencySnapshot struct {
     ID         string
     AgencyID   string
@@ -264,12 +329,12 @@ type AgencyPublication struct {
 ### Request types
 
 ```go
-// UpdateAgencyRequest carries the scalar Agency fields that may be changed
-// via UpdateAgency. Sub-resources are managed through dedicated manager methods.
-type UpdateAgencyRequest struct {
+// UpdateAgencyRequest is used to edit the scalar fields of an open AgencyDraft.
+// Sub-resources (Goals, Workflows, etc.) are managed through EntityService CRUD.
+type UpdateDraftDetailsRequest struct {
     Name    string
     Mission string
     Vision  string
-    Status  AgencyLifecycle // forward-only; triggers guards and side-effects
+    Enabled bool
 }
 ```

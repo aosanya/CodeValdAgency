@@ -16,41 +16,35 @@ const (
 	ActorTypeComputeAgent ActorType = "compute_agent"
 )
 
-// AgencyLifecycle is the progression state of an [Agency].
-// Transitions are strictly forward-only; see [AgencyLifecycle.CanTransitionTo].
-type AgencyLifecycle string
+// AgencyDraftStatus is the lifecycle state of an [AgencyDraft].
+// Transitions are strictly forward-only; see [AgencyDraftStatus.CanTransitionTo].
+type AgencyDraftStatus string
 
 const (
-	// LifecycleDraft is the initial state — the agency is configured but not
-	// yet running.
-	LifecycleDraft AgencyLifecycle = "draft"
+	// DraftStatusOpen means the draft is actively being edited.
+	DraftStatusOpen AgencyDraftStatus = "open"
 
-	// LifecycleActive means work is currently in progress within the agency.
-	LifecycleActive AgencyLifecycle = "active"
+	// DraftStatusPromoted means this draft was selected and its entities were
+	// copied into the live agency. Terminal — no further transitions.
+	DraftStatusPromoted AgencyDraftStatus = "promoted"
 
-	// LifecycleAchieved is a terminal state — all goals have been met.
-	// No further lifecycle transitions are permitted.
-	LifecycleAchieved AgencyLifecycle = "achieved"
+	// DraftStatusArchived means the draft was discarded without promotion.
+	// Terminal — no further transitions.
+	DraftStatusArchived AgencyDraftStatus = "archived"
 )
 
-// CanTransitionTo reports whether transitioning from the receiver lifecycle
-// state to next is a valid forward move.
+// CanTransitionTo reports whether transitioning from the receiver draft status
+// to next is valid.
 //
 // Allowed transitions:
 //
-// draft    → active
-// active   → achieved
-// achieved → (none — terminal)
-func (l AgencyLifecycle) CanTransitionTo(next AgencyLifecycle) bool {
-	switch l {
-	case LifecycleDraft:
-		return next == LifecycleActive
-	case LifecycleActive:
-		return next == LifecycleAchieved
-	default:
-		// achieved is terminal — no further transitions.
-		return false
+//	open → promoted
+//	open → archived
+func (s AgencyDraftStatus) CanTransitionTo(next AgencyDraftStatus) bool {
+	if s == DraftStatusOpen {
+		return next == DraftStatusPromoted || next == DraftStatusArchived
 	}
+	return false // promoted and archived are terminal
 }
 
 // Agency is the root entity of an agency graph. One Agency entity exists per
@@ -70,8 +64,10 @@ type Agency struct {
 	// Vision describes the long-term aspiration of the agency.
 	Vision string
 
-	// Status is the current lifecycle state of the agency.
-	Status AgencyLifecycle
+	// Enabled reports whether the agency is active. When false the agency is
+	// disabled (e.g. suspended). Defaults to false until the first
+	// [AgencyManager.PromoteDraft] call succeeds, at which point it is set to true.
+	Enabled bool
 
 	// CreatedAt is the time at which the agency was first persisted.
 	CreatedAt time.Time
@@ -178,6 +174,14 @@ type AgencyPublication struct {
 	// AgencyID is the identifier of the agency this publication belongs to.
 	AgencyID string
 
+	// DraftID is the ID of the AgencyDraft entity that was published.
+	DraftID string
+
+	// ContentHash is the SHA-256 fingerprint of the draft's sub-entity content
+	// at publish time. Two publications with the same ContentHash contain
+	// identical logical content. Empty when no draftID was provided.
+	ContentHash string
+
 	// Version is the auto-incrementing publication number (1, 2, 3, …).
 	Version int
 
@@ -256,13 +260,39 @@ type ContentRef struct {
 	Path string
 }
 
-// UpdateAgencyRequest carries the scalar fields of an existing Agency that
-// may be changed via UpdateAgency. Sub-resources (Goals, Workflows,
-// ConfiguredRoles) are managed through their own dedicated manager methods
-// and are not part of an agency update.
-type UpdateAgencyRequest struct {
-	Name    string
-	Mission string
-	Vision  string
-	Status  AgencyLifecycle
+// AgencyDraft is a parallel, editable copy of an agency's sub-graph. Drafts
+// are forked from the live agency or from another open draft, edited freely,
+// then promoted to become the new live state — or archived if discarded.
+//
+// Sub-entities (Goals, Workflows, WorkItems, ConfiguredRoles, Instructions,
+// Deliverables) belonging to this draft are stored in the dedicated
+// agency_draft_entities collection and scoped by DraftID.
+type AgencyDraft struct {
+	// ID is the unique identifier for this draft.
+	ID string
+
+	// AgencyID is the identifier of the owning agency.
+	AgencyID string
+
+	// Description is the human-readable purpose of this draft
+	// (e.g. "Q3 restructure — reduce headcount by 20%").
+	Description string
+
+	// ForkedFromID is the ID of the entity this draft was copied from.
+	// It is either an Agency ID (ForkedFromType == "live") or an AgencyDraft
+	// ID (ForkedFromType == "draft").
+	ForkedFromID string
+
+	// ForkedFromType is "live" when forked from the current live agency, or
+	// "draft" when forked from another open draft.
+	ForkedFromType string
+
+	// Status is the current lifecycle state of this draft.
+	Status AgencyDraftStatus
+
+	// CreatedAt is the time at which this draft was first persisted.
+	CreatedAt time.Time
+
+	// UpdatedAt is the time at which this draft was most recently modified.
+	UpdatedAt time.Time
 }

@@ -3,7 +3,7 @@ package server
 
 import (
 	"context"
-	"time"
+	"errors"
 
 	pb "github.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1"
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
@@ -28,8 +28,9 @@ func NewEntityServer(dm entitygraph.DataManager) *EntityServer {
 // type_id is injected by CodeValdCross via ConstantBinding at dispatch time.
 func (s *EntityServer) ListEntities(ctx context.Context, req *pb.ListEntitiesRequest) (*pb.ListEntitiesResponse, error) {
 	entities, err := s.dm.ListEntities(ctx, entitygraph.EntityFilter{
-		AgencyID: req.GetAgencyId(),
-		TypeID:   req.GetTypeId(),
+		AgencyID:   req.GetAgencyId(),
+		TypeID:     req.GetTypeId(),
+		Properties: structToMap(req.GetProperties()),
 	})
 	if err != nil {
 		return nil, toEntityGRPCError(err)
@@ -47,15 +48,27 @@ func (s *EntityServer) ListEntities(ctx context.Context, req *pb.ListEntitiesReq
 
 // CreateEntity implements pb.EntityServiceServer.
 // type_id is injected by CodeValdCross via ConstantBinding at dispatch time.
+// When the entity type declares a UniqueKey, UpsertEntity is called so that
+// a POST with a matching code value merges onto the existing entity instead
+// of inserting a duplicate. Types without a UniqueKey fall back to a plain
+// CreateEntity (immutable types, Agency, etc.).
 func (s *EntityServer) CreateEntity(ctx context.Context, req *pb.CreateEntityRequest) (*pb.EntityItem, error) {
 	props := structToMap(req.GetProperties())
-	entity, err := s.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
+	createReq := entitygraph.CreateEntityRequest{
 		AgencyID:   req.GetAgencyId(),
 		TypeID:     req.GetTypeId(),
 		Properties: props,
-	})
+	}
+	entity, err := s.dm.UpsertEntity(ctx, createReq)
 	if err != nil {
-		return nil, toEntityGRPCError(err)
+		if !errors.Is(err, entitygraph.ErrUniqueKeyNotDefined) {
+			return nil, toEntityGRPCError(err)
+		}
+		// Type has no UniqueKey — fall back to a plain insert.
+		entity, err = s.dm.CreateEntity(ctx, createReq)
+		if err != nil {
+			return nil, toEntityGRPCError(err)
+		}
 	}
 	return entityToProto(entity)
 }
@@ -181,13 +194,4 @@ func structToMap(s *structpb.Struct) map[string]any {
 		return nil
 	}
 	return s.AsMap()
-}
-
-// optTimestamp returns a *timestamppb.Timestamp from an optional Go time
-// pointer. Returns nil when t is nil.
-func optTimestamp(t *time.Time) *timestamppb.Timestamp {
-	if t == nil {
-		return nil
-	}
-	return timestamppb.New(*t)
 }

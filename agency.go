@@ -1,6 +1,8 @@
 // Package codevaldagency provides agency lifecycle management for the CodeVald
 // platform. It exposes [AgencyManager] — the single interface for writing,
-// reading, and updating the one agency that lives in this database.
+// reading, and managing the one agency that lives in this database, including
+// draft-based version management via [AgencyManager.CreateDraft] and
+// [AgencyManager.PromoteDraft].
 //
 // Usage:
 //
@@ -11,8 +13,12 @@ package codevaldagency
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
@@ -26,7 +32,9 @@ type AgencyManager interface {
 	// SetAgencyDetails replaces the full agency document from a raw JSON string.
 	// The JSON must include a non-empty "id" field; all other fields are optional.
 	// Returns [ErrInvalidJSON] if the payload cannot be parsed or id is missing.
-	// Lifecycle validation is NOT applied — any status value is written as-is.
+	// Returns [ErrAgencyReadOnly] if the live agency has already been published
+	// (i.e. at least one draft has been promoted). Once published, only
+	// [CreateDraft] + [PromoteDraft] may mutate the agency state.
 	// Publishes "cross.agency.created" after every successful write.
 	SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
 
@@ -34,31 +42,24 @@ type AgencyManager interface {
 	// Returns [ErrAgencyNotFound] if no agency entity exists yet.
 	GetAgency(ctx context.Context) (Agency, error)
 
-	// UpdateAgency applies incremental field edits with lifecycle validation.
-	// Lifecycle transitions are validated — returns [ErrInvalidLifecycleTransition]
-	// if the new status is not reachable from the current status.
-	// On draft → active, a guard checks ≥1 Goal and ≥1 Workflow with ≥1 WorkItem;
-	// returns [ErrInvalidAgency] if violated. An immutable [AgencySnapshot] entity
-	// is written as a side-effect of the draft → active transition.
-	// Returns [ErrAgencyNotFound] if no agency entity exists yet.
-	UpdateAgency(ctx context.Context, req UpdateAgencyRequest) (Agency, error)
-
-	// GetGoals returns all Goal entities linked to this Agency.
+	// GetGoals returns all live Goal entities linked to this Agency.
 	GetGoals(ctx context.Context) ([]Goal, error)
 
-	// GetWorkflows returns all Workflow entities linked to this Agency,
-	// each populated with its ordered WorkItem entities.
+	// GetWorkflows returns all live Workflow entities linked to this Agency.
 	GetWorkflows(ctx context.Context) ([]Workflow, error)
 
-	// GetConfiguredRoles returns all ConfiguredRole entities linked to this Agency.
+	// GetConfiguredRoles returns all live ConfiguredRole entities linked to this Agency.
 	GetConfiguredRoles(ctx context.Context) ([]ConfiguredRole, error)
 
 	// PublishAgency creates an immutable versioned publication of the current
-	// agency state. The agency [Status] is NOT changed by this operation.
-	// Version is auto-incremented from the last publication (starts at 1).
+	// agency state, linked to the given draftID. Version is auto-incremented
+	// from the last publication (starts at 1).
+	// Returns [ErrAgencyNotFound] if no agency entity exists.
+	// Returns [ErrDraftNotFound] if draftID is provided but not found.
+	// Returns [ErrNoChangesDetected] if draftID is non-empty and the draft's
+	// content hash matches an existing publication.
 	// Publishes "cross.agency.published" after every successful write.
-	// Returns [ErrAgencyNotFound] if no agency entity exists yet.
-	PublishAgency(ctx context.Context) (AgencyPublication, error)
+	PublishAgency(ctx context.Context, draftID string) (AgencyPublication, error)
 
 	// GetPublication retrieves a single publication by its version number.
 	// Returns [ErrPublicationNotFound] if no publication with that version exists.
@@ -73,6 +74,42 @@ type AgencyManager interface {
 	// Returns [ErrPublicationNotFound] if no publication with that version exists.
 	// Returns [ErrInvalidPublicationStatus] if the transition is not permitted.
 	UpdatePublicationStatus(ctx context.Context, version int, status string) (AgencyPublication, error)
+
+	// CreateDraft creates a new [AgencyDraft] by deep-copying the sub-entity
+	// graph from the source identified by forkedFromID and forkedFromType.
+	// forkedFromType must be "live" (fork from current live agency) or "draft"
+	// (fork from an existing open draft identified by forkedFromID).
+	// Returns [ErrAgencyNotFound] if no agency entity exists yet.
+	// Returns [ErrDraftNotFound] if forkedFromType=="draft" and the source draft
+	// does not exist.
+	// Returns [ErrDraftNotOpen] if the source draft is not in the "open" state.
+	CreateDraft(ctx context.Context, description, forkedFromID, forkedFromType string) (AgencyDraft, error)
+
+	// GetDraft retrieves a single [AgencyDraft] by its ID.
+	// Returns [ErrDraftNotFound] if no draft with that ID exists.
+	GetDraft(ctx context.Context, draftID string) (AgencyDraft, error)
+
+	// ListDrafts returns all [AgencyDraft] entities for this agency in creation
+	// order (oldest first).
+	ListDrafts(ctx context.Context) ([]AgencyDraft, error)
+
+	// UpdateDraftDescription replaces the human-readable description on an open
+	// draft. Returns [ErrDraftNotFound] if the draft does not exist.
+	// Returns [ErrDraftNotOpen] if the draft is already promoted or archived.
+	UpdateDraftDescription(ctx context.Context, draftID, description string) (AgencyDraft, error)
+
+	// PromoteDraft copies all draft sub-entities into the live agency graph,
+	// replaces the previous live sub-entities, sets Agency.Enabled = true, marks
+	// the draft as "promoted", and writes an [AgencySnapshot].
+	// Returns [ErrDraftNotFound] if the draft does not exist.
+	// Returns [ErrDraftNotOpen] if the draft is already promoted or archived.
+	// Publishes "cross.agency.promoted" on success.
+	PromoteDraft(ctx context.Context, draftID string) (Agency, error)
+
+	// ArchiveDraft marks an open draft as "archived" without promoting it.
+	// Returns [ErrDraftNotFound] if the draft does not exist.
+	// Returns [ErrDraftNotOpen] if the draft is already promoted or archived.
+	ArchiveDraft(ctx context.Context, draftID string) (AgencyDraft, error)
 }
 
 // AgencySchemaManager manages schema versions for the Agency entity graph.
@@ -117,7 +154,9 @@ func NewAgencyManager(
 // ── SetAgencyDetails ──────────────────────────────────────────────────────────
 
 // SetAgencyDetails parses the JSON payload and upserts the root Agency entity.
-// If no Agency entity exists yet it calls CreateEntity; otherwise UpdateEntity.
+// If no Agency entity exists yet it calls CreateEntity; otherwise UpdateEntity
+// (only when the agency has not yet been published — Agency.Enabled == false).
+// Returns [ErrAgencyReadOnly] when the live agency is already published.
 // Publishes "cross.agency.created" on every successful write.
 func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error) {
 	var raw struct {
@@ -125,7 +164,6 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 		Name    string `json:"name"`
 		Mission string `json:"mission"`
 		Vision  string `json:"vision"`
-		Status  string `json:"status"`
 	}
 	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
 		return Agency{}, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
@@ -138,7 +176,6 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 		"name":    raw.Name,
 		"mission": raw.Mission,
 		"vision":  raw.Vision,
-		"status":  raw.Status,
 	}
 
 	// Check whether an Agency entity already exists.
@@ -155,6 +192,10 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 			Properties: props,
 		})
 	} else {
+		// Reject edits once the agency has been published.
+		if boolProp(existing[0].Properties, "enabled") {
+			return Agency{}, ErrAgencyReadOnly
+		}
 		entity, err = m.dm.UpdateEntity(ctx, m.agencyID, existing[0].ID, entitygraph.UpdateEntityRequest{
 			Properties: props,
 		})
@@ -184,65 +225,6 @@ func (m *agencyManager) GetAgency(ctx context.Context) (Agency, error) {
 		return Agency{}, ErrAgencyNotFound
 	}
 	return entityToAgency(entities[0]), nil
-}
-
-// ── UpdateAgency ──────────────────────────────────────────────────────────────
-
-// UpdateAgency applies lifecycle-validated partial updates to the Agency entity.
-// On draft → active it enforces ≥1 Goal and ≥1 Workflow-with-WorkItem guard,
-// then writes an immutable [AgencySnapshot] entity as a side-effect.
-func (m *agencyManager) UpdateAgency(ctx context.Context, req UpdateAgencyRequest) (Agency, error) {
-	current, err := m.GetAgency(ctx)
-	if err != nil {
-		return Agency{}, err
-	}
-
-	if req.Status != "" {
-		if current.Status == LifecycleAchieved {
-			return Agency{}, ErrInvalidLifecycleTransition
-		}
-		if req.Status != current.Status {
-			if !current.Status.CanTransitionTo(req.Status) {
-				return Agency{}, ErrInvalidLifecycleTransition
-			}
-			if current.Status == LifecycleDraft && req.Status == LifecycleActive {
-				if err := m.checkActivationGuards(ctx); err != nil {
-					return Agency{}, err
-				}
-				if sErr := m.writeSnapshot(ctx, current.ID); sErr != nil {
-					// Non-fatal — log and continue.
-					_ = sErr
-				}
-			}
-		}
-	}
-
-	props := map[string]any{}
-	if req.Name != "" {
-		props["name"] = req.Name
-	}
-	if req.Mission != "" {
-		props["mission"] = req.Mission
-	}
-	if req.Vision != "" {
-		props["vision"] = req.Vision
-	}
-	if req.Status != "" {
-		props["status"] = string(req.Status)
-	}
-
-	entities, err := m.listAgencyEntities(ctx)
-	if err != nil || len(entities) == 0 {
-		return Agency{}, ErrAgencyNotFound
-	}
-
-	updated, err := m.dm.UpdateEntity(ctx, m.agencyID, entities[0].ID, entitygraph.UpdateEntityRequest{
-		Properties: props,
-	})
-	if err != nil {
-		return Agency{}, fmt.Errorf("UpdateAgency: %w", err)
-	}
-	return entityToAgency(updated), nil
 }
 
 // ── GetGoals ─────────────────────────────────────────────────────────────────
@@ -303,11 +285,14 @@ func (m *agencyManager) GetConfiguredRoles(ctx context.Context) ([]ConfiguredRol
 // ── PublishAgency ─────────────────────────────────────────────────────────────
 
 // PublishAgency creates an immutable [AgencyPublication] entity with an
-// auto-incremented version, then creates a linked mutable
-// [AgencyPublicationStatus] entity seeded at status "draft".
+// auto-incremented version linked to the given draftID, then creates a linked
+// mutable [AgencyPublicationStatus] entity seeded at status "draft".
+// When draftID is non-empty, the draft's content is hashed and compared
+// against all existing publications — [ErrNoChangesDetected] is returned if
+// the hash matches, preventing a re-publish with no new content.
 // Publishes "cross.agency.published" on success.
 // Returns [ErrAgencyNotFound] if no agency entity exists yet.
-func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, error) {
+func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (AgencyPublication, error) {
 	agency, err := m.GetAgency(ctx)
 	if err != nil {
 		return AgencyPublication{}, err
@@ -318,6 +303,26 @@ func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, e
 		return AgencyPublication{}, fmt.Errorf("PublishAgency: next version: %w", err)
 	}
 
+	// Guard: when a draftID is supplied, compute the content hash of the draft
+	// and reject if any existing publication already has the same hash.
+	var contentHash string
+	if draftID != "" {
+		h, err := m.draftContentHash(ctx, draftID)
+		if err != nil {
+			return AgencyPublication{}, fmt.Errorf("PublishAgency: %w", err)
+		}
+		contentHash = h
+		existing, err := m.ListPublications(ctx)
+		if err != nil {
+			return AgencyPublication{}, fmt.Errorf("PublishAgency: %w", err)
+		}
+		for _, p := range existing {
+			if p.ContentHash != "" && p.ContentHash == contentHash {
+				return AgencyPublication{}, fmt.Errorf("PublishAgency: %w", ErrNoChangesDetected)
+			}
+		}
+	}
+
 	now := time.Now().UTC()
 	entity, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 		AgencyID: m.agencyID,
@@ -326,6 +331,8 @@ func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, e
 			"version":      version,
 			"tag":          fmt.Sprintf("v%d", version),
 			"published_at": now.Format(time.RFC3339),
+			"draft_id":     draftID,
+			"content_hash": contentHash,
 		},
 	})
 	if err != nil {
@@ -358,6 +365,8 @@ func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, e
 	pub := AgencyPublication{
 		ID:          entity.ID,
 		AgencyID:    m.agencyID,
+		DraftID:     draftID,
+		ContentHash: contentHash,
 		Version:     version,
 		Tag:         fmt.Sprintf("v%d", version),
 		PublishedAt: now,
@@ -543,51 +552,6 @@ func (m *agencyManager) listAgencyEntities(ctx context.Context) ([]entitygraph.E
 	})
 }
 
-// checkActivationGuards enforces the draft → active preconditions:
-// ≥1 Goal entity and ≥1 Workflow with ≥1 WorkItem.
-func (m *agencyManager) checkActivationGuards(ctx context.Context) error {
-	goals, err := m.GetGoals(ctx)
-	if err != nil {
-		return fmt.Errorf("activation guard: goals: %w", err)
-	}
-	if len(goals) == 0 {
-		return fmt.Errorf("%w: agency must have at least one Goal before activating", ErrInvalidAgency)
-	}
-
-	workflows, err := m.GetWorkflows(ctx)
-	if err != nil {
-		return fmt.Errorf("activation guard: workflows: %w", err)
-	}
-	if len(workflows) == 0 {
-		return fmt.Errorf("%w: agency must have at least one Workflow with a WorkItem before activating", ErrInvalidAgency)
-	}
-
-	wiEntities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
-		AgencyID: m.agencyID,
-		TypeID:   "WorkItem",
-	})
-	if err != nil {
-		return fmt.Errorf("activation guard: work items: %w", err)
-	}
-	if len(wiEntities) == 0 {
-		return fmt.Errorf("%w: agency must have at least one Workflow with a WorkItem before activating", ErrInvalidAgency)
-	}
-	return nil
-}
-
-// writeSnapshot creates an immutable AgencySnapshot entity.
-func (m *agencyManager) writeSnapshot(ctx context.Context, agencyID string) error {
-	_, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
-		AgencyID: m.agencyID,
-		TypeID:   "AgencySnapshot",
-		Properties: map[string]any{
-			"snapshot_at": time.Now().UTC().Format(time.RFC3339),
-			"agency_id":   agencyID,
-		},
-	})
-	return err
-}
-
 // nextPublicationVersion returns MAX(version)+1 across existing publications,
 // or 1 if none exist.
 func (m *agencyManager) nextPublicationVersion(ctx context.Context) (int, error) {
@@ -616,6 +580,55 @@ func (m *agencyManager) nextPublicationVersion(ctx context.Context) (int, error)
 	return max + 1, nil
 }
 
+// draftContentHash computes a deterministic SHA-256 fingerprint of the
+// logical content of the given draft. It collects DraftGoal, DraftWorkflow,
+// DraftWorkItem, and DraftConfiguredRole entities whose draft_id property
+// equals draftID, excludes infrastructure properties (draft_id,
+// draft_workflow_id, created_at, updated_at), JSON-encodes each entity's
+// remaining properties together with its type, sorts the resulting strings for
+// determinism, and returns the hex-encoded SHA-256 of the joined output.
+//
+// Two drafts whose sub-entity logical content is identical produce the same
+// hash regardless of entity creation order or internal IDs.
+func (m *agencyManager) draftContentHash(ctx context.Context, draftID string) (string, error) {
+	listByDraft := func(typeID string) ([]entitygraph.Entity, error) {
+		all, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+			AgencyID: m.agencyID,
+			TypeID:   typeID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		var out []entitygraph.Entity
+		for _, e := range all {
+			if strProp(e.Properties, "draft_id") == draftID {
+				out = append(out, e)
+			}
+		}
+		return out, nil
+	}
+
+	var records []string
+	for _, typeID := range []string{"DraftGoal", "DraftWorkflow", "DraftWorkItem", "DraftConfiguredRole"} {
+		entities, err := listByDraft(typeID)
+		if err != nil {
+			return "", fmt.Errorf("draftContentHash %s: %w", typeID, err)
+		}
+		for _, e := range entities {
+			props := copyPropsExcluding(e.Properties,
+				"draft_id", "draft_workflow_id", "created_at", "updated_at")
+			b, err := json.Marshal(map[string]any{"type": typeID, "props": props})
+			if err != nil {
+				return "", fmt.Errorf("draftContentHash marshal: %w", err)
+			}
+			records = append(records, string(b))
+		}
+	}
+	sort.Strings(records)
+	sum := sha256.Sum256([]byte(strings.Join(records, "\n")))
+	return hex.EncodeToString(sum[:]), nil
+}
+
 // ── Entity → Domain converters ────────────────────────────────────────────────
 
 func entityToAgency(e entitygraph.Entity) Agency {
@@ -625,7 +638,7 @@ func entityToAgency(e entitygraph.Entity) Agency {
 		Name:      strProp(p, "name"),
 		Mission:   strProp(p, "mission"),
 		Vision:    strProp(p, "vision"),
-		Status:    AgencyLifecycle(strProp(p, "status")),
+		Enabled:   boolProp(p, "enabled"),
 		CreatedAt: e.CreatedAt,
 		UpdatedAt: e.UpdatedAt,
 	}
@@ -714,6 +727,8 @@ func entityToPublication(e entitygraph.Entity, status string) AgencyPublication 
 		ID:          e.ID,
 		Version:     version,
 		Tag:         strProp(p, "tag"),
+		DraftID:     strProp(p, "draft_id"),
+		ContentHash: strProp(p, "content_hash"),
 		PublishedAt: publishedAt,
 		Status:      status,
 	}
@@ -726,4 +741,54 @@ func strProp(props map[string]any, key string) string {
 		}
 	}
 	return ""
+}
+
+// boolProp returns the bool value of key in props, defaulting to false.
+func boolProp(props map[string]any, key string) bool {
+	if v, ok := props[key]; ok {
+		if b, ok := v.(bool); ok {
+			return b
+		}
+	}
+	return false
+}
+
+// copyProps returns a shallow copy of src.
+func copyProps(src map[string]any) map[string]any {
+	dst := make(map[string]any, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
+// copyPropsExcluding returns a shallow copy of src with the given keys omitted.
+func copyPropsExcluding(src map[string]any, excludeKeys ...string) map[string]any {
+	exclude := make(map[string]struct{}, len(excludeKeys))
+	for _, k := range excludeKeys {
+		exclude[k] = struct{}{}
+	}
+	dst := make(map[string]any, len(src))
+	for k, v := range src {
+		if _, skip := exclude[k]; !skip {
+			dst[k] = v
+		}
+	}
+	return dst
+}
+
+// entityToDraft converts a raw [entitygraph.Entity] of type "AgencyDraft" to a
+// domain [AgencyDraft].
+func entityToDraft(e entitygraph.Entity) AgencyDraft {
+	p := e.Properties
+	return AgencyDraft{
+		ID:             e.ID,
+		AgencyID:       e.AgencyID,
+		Description:    strProp(p, "description"),
+		ForkedFromID:   strProp(p, "forked_from_id"),
+		ForkedFromType: strProp(p, "forked_from_type"),
+		Status:         AgencyDraftStatus(strProp(p, "status")),
+		CreatedAt:      e.CreatedAt,
+		UpdatedAt:      e.UpdatedAt,
+	}
 }

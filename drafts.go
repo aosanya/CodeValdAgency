@@ -45,12 +45,12 @@ func (m *agencyManager) CreateDraft(ctx context.Context, description, forkedFrom
 		AgencyID: m.agencyID,
 		TypeID:   "AgencyDraft",
 		Properties: map[string]any{
-			"description":      description,
-			"status":           string(DraftStatusOpen),
-			"forked_from_id":   forkedFromID,
-			"forked_from_type": forkedFromType,
-			"created_at":       now.Format(time.RFC3339),
-			"updated_at":       now.Format(time.RFC3339),
+			"description":          description,
+			"status":               string(DraftStatusOpen),
+			"forked_from_ref_code": forkedFromID,
+			"forked_from_type":     forkedFromType,
+			"created_at":           now.Format(time.RFC3339),
+			"updated_at":           now.Format(time.RFC3339),
 		},
 	})
 	if err != nil {
@@ -103,7 +103,7 @@ func (m *agencyManager) copyLiveEntitiesToDraft(ctx context.Context, draftID str
 	}
 	for _, g := range goals {
 		props := copyProps(g.Properties)
-		props["draft_id"] = draftID
+		props["draft_ref_code"] = draftID
 		if _, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 			AgencyID: m.agencyID, TypeID: "DraftGoal", Properties: props,
 		}); err != nil {
@@ -119,7 +119,7 @@ func (m *agencyManager) copyLiveEntitiesToDraft(ctx context.Context, draftID str
 	liveWFToDraftWF := make(map[string]string, len(workflows))
 	for _, wf := range workflows {
 		props := copyProps(wf.Properties)
-		props["draft_id"] = draftID
+		props["draft_ref_code"] = draftID
 		newWF, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 			AgencyID: m.agencyID, TypeID: "DraftWorkflow", Properties: props,
 		})
@@ -136,7 +136,7 @@ func (m *agencyManager) copyLiveEntitiesToDraft(ctx context.Context, draftID str
 	}
 	for _, r := range roles {
 		props := copyProps(r.Properties)
-		props["draft_id"] = draftID
+		props["draft_ref_code"] = draftID
 		if _, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 			AgencyID: m.agencyID, TypeID: "DraftConfiguredRole", Properties: props,
 		}); err != nil {
@@ -166,10 +166,10 @@ func (m *agencyManager) copyLiveEntitiesToDraft(ctx context.Context, draftID str
 
 	for _, wi := range workItems {
 		props := copyProps(wi.Properties)
-		props["draft_id"] = draftID
+		props["draft_ref_code"] = draftID
 		if liveWFID, ok := liveWIToLiveWF[wi.ID]; ok {
 			if draftWFID, ok := liveWFToDraftWF[liveWFID]; ok {
-				props["draft_workflow_id"] = draftWFID
+				props["draft_workflow_ref_code"] = draftWFID
 			}
 		}
 		if _, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
@@ -183,7 +183,7 @@ func (m *agencyManager) copyLiveEntitiesToDraft(ctx context.Context, draftID str
 
 // copyDraftEntitiesToDraft copies DraftGoal, DraftWorkflow, DraftWorkItem, and
 // DraftConfiguredRole entities from an existing open draft into a new draft,
-// re-mapping draft_workflow_id references.
+// re-mapping draft_workflow_ref_code references.
 func (m *agencyManager) copyDraftEntitiesToDraft(ctx context.Context, newDraftID, srcDraftID string) error {
 	listByDraftID := func(typeID string) ([]entitygraph.Entity, error) {
 		all, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{AgencyID: m.agencyID, TypeID: typeID})
@@ -192,7 +192,7 @@ func (m *agencyManager) copyDraftEntitiesToDraft(ctx context.Context, newDraftID
 		}
 		var out []entitygraph.Entity
 		for _, e := range all {
-			if strProp(e.Properties, "draft_id") == srcDraftID {
+			if strProp(e.Properties, "draft_ref_code") == srcDraftID {
 				out = append(out, e)
 			}
 		}
@@ -206,7 +206,7 @@ func (m *agencyManager) copyDraftEntitiesToDraft(ctx context.Context, newDraftID
 	}
 	for _, g := range goals {
 		props := copyProps(g.Properties)
-		props["draft_id"] = newDraftID
+		props["draft_ref_code"] = newDraftID
 		if _, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 			AgencyID: m.agencyID, TypeID: "DraftGoal", Properties: props,
 		}); err != nil {
@@ -222,7 +222,7 @@ func (m *agencyManager) copyDraftEntitiesToDraft(ctx context.Context, newDraftID
 	srcWFToNewWF := make(map[string]string, len(srcWorkflows))
 	for _, wf := range srcWorkflows {
 		props := copyProps(wf.Properties)
-		props["draft_id"] = newDraftID
+		props["draft_ref_code"] = newDraftID
 		newWF, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 			AgencyID: m.agencyID, TypeID: "DraftWorkflow", Properties: props,
 		})
@@ -239,7 +239,7 @@ func (m *agencyManager) copyDraftEntitiesToDraft(ctx context.Context, newDraftID
 	}
 	for _, r := range roles {
 		props := copyProps(r.Properties)
-		props["draft_id"] = newDraftID
+		props["draft_ref_code"] = newDraftID
 		if _, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 			AgencyID: m.agencyID, TypeID: "DraftConfiguredRole", Properties: props,
 		}); err != nil {
@@ -254,10 +254,10 @@ func (m *agencyManager) copyDraftEntitiesToDraft(ctx context.Context, newDraftID
 	}
 	for _, wi := range workItems {
 		props := copyProps(wi.Properties)
-		props["draft_id"] = newDraftID
-		if srcWFID := strProp(wi.Properties, "draft_workflow_id"); srcWFID != "" {
+		props["draft_ref_code"] = newDraftID
+		if srcWFID := strProp(wi.Properties, "draft_workflow_ref_code"); srcWFID != "" {
 			if newWFID, ok := srcWFToNewWF[srcWFID]; ok {
-				props["draft_workflow_id"] = newWFID
+				props["draft_workflow_ref_code"] = newWFID
 			}
 		}
 		if _, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
@@ -428,7 +428,7 @@ func (m *agencyManager) promoteSubEntities(ctx context.Context, agencyEntityID, 
 		}
 		var out []entitygraph.Entity
 		for _, e := range all {
-			if strProp(e.Properties, "draft_id") == draftID {
+			if strProp(e.Properties, "draft_ref_code") == draftID {
 				out = append(out, e)
 			}
 		}
@@ -443,7 +443,7 @@ func (m *agencyManager) promoteSubEntities(ctx context.Context, agencyEntityID, 
 		return fmt.Errorf("promote goals: %w", err)
 	}
 	for _, dg := range draftGoals {
-		props := copyPropsExcluding(dg.Properties, "draft_id")
+		props := copyPropsExcluding(dg.Properties, "draft_ref_code")
 		if _, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 			AgencyID:      m.agencyID,
 			TypeID:        "Goal",
@@ -461,7 +461,7 @@ func (m *agencyManager) promoteSubEntities(ctx context.Context, agencyEntityID, 
 	}
 	draftWFToLiveWF := make(map[string]string, len(draftWorkflows))
 	for _, dw := range draftWorkflows {
-		props := copyPropsExcluding(dw.Properties, "draft_id")
+		props := copyPropsExcluding(dw.Properties, "draft_ref_code")
 		newWF, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 			AgencyID:      m.agencyID,
 			TypeID:        "Workflow",
@@ -480,7 +480,7 @@ func (m *agencyManager) promoteSubEntities(ctx context.Context, agencyEntityID, 
 		return fmt.Errorf("promote configured roles: %w", err)
 	}
 	for _, dr := range draftRoles {
-		props := copyPropsExcluding(dr.Properties, "draft_id")
+		props := copyPropsExcluding(dr.Properties, "draft_ref_code")
 		if _, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 			AgencyID:      m.agencyID,
 			TypeID:        "ConfiguredRole",
@@ -491,15 +491,15 @@ func (m *agencyManager) promoteSubEntities(ctx context.Context, agencyEntityID, 
 		}
 	}
 
-	// ── WorkItems (re-map draft_workflow_id → new live WF ID) ─────────────────
+	// ── WorkItems (re-map draft_workflow_ref_code → new live WF ID) ─────────────────
 	draftWorkItems, err := listByDraftID("DraftWorkItem")
 	if err != nil {
 		return fmt.Errorf("promote work items: %w", err)
 	}
 	for _, dwi := range draftWorkItems {
-		props := copyPropsExcluding(dwi.Properties, "draft_id", "draft_workflow_id")
+		props := copyPropsExcluding(dwi.Properties, "draft_ref_code", "draft_workflow_ref_code")
 		var rels []entitygraph.EntityRelationshipRequest
-		if draftWFID := strProp(dwi.Properties, "draft_workflow_id"); draftWFID != "" {
+		if draftWFID := strProp(dwi.Properties, "draft_workflow_ref_code"); draftWFID != "" {
 			if liveWFID, ok := draftWFToLiveWF[draftWFID]; ok {
 				rels = append(rels, entitygraph.EntityRelationshipRequest{Name: "belongs_to_workflow", ToID: liveWFID})
 			}

@@ -133,12 +133,12 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 	// 3. Configured roles.
 	for _, r := range spec.ConfiguredRoles {
 		props := map[string]any{
-			"draft_id":    draftID,
-			"code":        r.Code,
-			"name":        r.Name,
-			"description": clean(r.Description),
-			"actor_type":  r.ActorType,
-			"ordinality":  r.Ordinality,
+			"draft_ref_code": draftID,
+			"code":           r.Code,
+			"name":           r.Name,
+			"description":    clean(r.Description),
+			"actor_type":     r.ActorType,
+			"ordinality":     r.Ordinality,
 		}
 		if err := s.importUpsert(ctx, agencyID, "DraftConfiguredRole", props); err != nil {
 			return nil, status.Errorf(codes.Internal, "ImportDraft %s: role %s: %v", agencyID, r.Code, err)
@@ -148,11 +148,11 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 	// 4. Goals.
 	for _, g := range spec.Goals {
 		props := map[string]any{
-			"draft_id":    draftID,
-			"code":        g.Code,
-			"title":       clean(g.Title),
-			"description": clean(g.Description),
-			"ordinality":  g.Ordinality,
+			"draft_ref_code": draftID,
+			"code":           g.Code,
+			"title":          clean(g.Title),
+			"description":    clean(g.Description),
+			"ordinality":     g.Ordinality,
 		}
 		if err := s.importUpsert(ctx, agencyID, "DraftGoal", props); err != nil {
 			return nil, status.Errorf(codes.Internal, "ImportDraft %s: goal %s: %v", agencyID, g.Code, err)
@@ -162,11 +162,11 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 	// 5. Workflows.
 	for _, wf := range spec.Workflows {
 		wfID, err := s.importUpsertID(ctx, agencyID, "DraftWorkflow", map[string]any{
-			"draft_id":    draftID,
-			"code":        wf.Code,
-			"name":        wf.Name,
-			"description": clean(wf.Description),
-			"ordinality":  wf.Ordinality,
+			"draft_ref_code": draftID,
+			"code":           wf.Code,
+			"name":           wf.Name,
+			"description":    clean(wf.Description),
+			"ordinality":     wf.Ordinality,
 		})
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "ImportDraft %s: workflow %s: %v", agencyID, wf.Code, err)
@@ -175,11 +175,11 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 		// Workflow-scoped instructions.
 		for _, inst := range wf.Instructions {
 			if err := s.importUpsert(ctx, agencyID, "DraftInstruction", map[string]any{
-				"draft_id":          draftID,
-				"code":              inst.Code,
-				"draft_workflow_id": wfID,
-				"content":           clean(inst.Content),
-				"ordinality":        inst.Ordinality,
+				"draft_ref_code":          draftID,
+				"code":                    inst.Code,
+				"draft_workflow_ref_code": wfID,
+				"content":                 clean(inst.Content),
+				"ordinality":              inst.Ordinality,
 			}); err != nil {
 				return nil, status.Errorf(codes.Internal, "ImportDraft %s: workflow %s instruction %s: %v", agencyID, wf.Code, inst.Code, err)
 			}
@@ -188,13 +188,13 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 		// Work items.
 		for _, wi := range wf.WorkItems {
 			wiProps := map[string]any{
-				"draft_id":          draftID,
-				"code":              wi.Code,
-				"draft_workflow_id": wfID,
-				"title":             clean(wi.Title),
-				"description":       clean(wi.Description),
-				"ordinality":        wi.Ordinality,
-				"prompt":            clean(wi.Prompt),
+				"draft_ref_code":          draftID,
+				"code":                    wi.Code,
+				"draft_workflow_ref_code": wfID,
+				"title":                   clean(wi.Title),
+				"description":             clean(wi.Description),
+				"ordinality":              wi.Ordinality,
+				"prompt":                  clean(wi.Prompt),
 			}
 			if wi.AssignedRole != "" {
 				wiProps["assigned_role"] = wi.AssignedRole
@@ -207,11 +207,11 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			// Work-item-scoped instructions.
 			for _, inst := range wi.Instructions {
 				if err := s.importUpsert(ctx, agencyID, "DraftInstruction", map[string]any{
-					"draft_id":           draftID,
-					"code":               inst.Code,
-					"draft_work_item_id": wiID,
-					"content":            clean(inst.Content),
-					"ordinality":         inst.Ordinality,
+					"draft_ref_code":           draftID,
+					"code":                     inst.Code,
+					"draft_work_item_ref_code": wiID,
+					"content":                  clean(inst.Content),
+					"ordinality":               inst.Ordinality,
 				}); err != nil {
 					return nil, status.Errorf(codes.Internal, "ImportDraft %s: work item %s instruction %s: %v", agencyID, wi.Code, inst.Code, err)
 				}
@@ -220,13 +220,13 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			// Deliverables.
 			for _, d := range wi.Deliverables {
 				if err := s.importUpsert(ctx, agencyID, "DraftDeliverable", map[string]any{
-					"draft_id":           draftID,
-					"code":               d.Code,
-					"draft_work_item_id": wiID,
-					"title":              clean(d.Title),
-					"description":        clean(d.Description),
-					"ordinality":         d.Ordinality,
-					"blocking":           d.Blocking,
+					"draft_ref_code":           draftID,
+					"code":                     d.Code,
+					"draft_work_item_ref_code": wiID,
+					"title":                    clean(d.Title),
+					"description":              clean(d.Description),
+					"ordinality":               d.Ordinality,
+					"blocking":                 d.Blocking,
 				}); err != nil {
 					return nil, status.Errorf(codes.Internal, "ImportDraft %s: work item %s deliverable %s: %v", agencyID, wi.Code, d.Code, err)
 				}

@@ -582,9 +582,9 @@ func (m *agencyManager) nextPublicationVersion(ctx context.Context) (int, error)
 
 // draftContentHash computes a deterministic SHA-256 fingerprint of the
 // logical content of the given draft. It collects DraftGoal, DraftWorkflow,
-// DraftWorkItem, and DraftConfiguredRole entities whose draft_id property
-// equals draftID, excludes infrastructure properties (draft_id,
-// draft_workflow_id, created_at, updated_at), JSON-encodes each entity's
+// DraftWorkItem, and DraftConfiguredRole entities whose draft_ref_code property
+// equals draftID, excludes infrastructure properties (draft_ref_code,
+// draft_workflow_ref_code, created_at, updated_at), JSON-encodes each entity's
 // remaining properties together with its type, sorts the resulting strings for
 // determinism, and returns the hex-encoded SHA-256 of the joined output.
 //
@@ -601,7 +601,7 @@ func (m *agencyManager) draftContentHash(ctx context.Context, draftID string) (s
 		}
 		var out []entitygraph.Entity
 		for _, e := range all {
-			if strProp(e.Properties, "draft_id") == draftID {
+			if strProp(e.Properties, "draft_ref_code") == draftID {
 				out = append(out, e)
 			}
 		}
@@ -616,7 +616,7 @@ func (m *agencyManager) draftContentHash(ctx context.Context, draftID string) (s
 		}
 		for _, e := range entities {
 			props := copyPropsExcluding(e.Properties,
-				"draft_id", "draft_workflow_id", "created_at", "updated_at")
+				"draft_ref_code", "draft_workflow_ref_code", "created_at", "updated_at")
 			b, err := json.Marshal(map[string]any{"type": typeID, "props": props})
 			if err != nil {
 				return "", fmt.Errorf("draftContentHash marshal: %w", err)
@@ -785,7 +785,7 @@ func entityToDraft(e entitygraph.Entity) AgencyDraft {
 		ID:             e.ID,
 		AgencyID:       e.AgencyID,
 		Description:    strProp(p, "description"),
-		ForkedFromID:   strProp(p, "forked_from_id"),
+		ForkedFromID:   strProp(p, "forked_from_ref_code"),
 		ForkedFromType: strProp(p, "forked_from_type"),
 		Status:         AgencyDraftStatus(strProp(p, "status")),
 		CreatedAt:      e.CreatedAt,

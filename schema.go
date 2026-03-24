@@ -111,8 +111,7 @@ func DefaultAgencySchema() types.Schema {
 				Name:        "Agency",
 				DisplayName: "Agency",
 				PathSegment: "",
-				Properties: []types.PropertyDefinition{
-					{Name: "code", Type: types.PropertyTypeString, Required: false},
+				Properties: []types.PropertyDefinition{{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true}, {Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "mission", Type: types.PropertyTypeString, Required: false},
 					{Name: "vision", Type: types.PropertyTypeString, Required: false},
@@ -138,8 +137,7 @@ func DefaultAgencySchema() types.Schema {
 				// not via direct HTTP CRUD. CRUD routes exist only for DraftGoal, scoped under
 				// /agency/{agencyId}/drafts/{draftId}/goals.
 				UniqueKey: []string{"code"},
-				Properties: []types.PropertyDefinition{
-					{Name: "code", Type: types.PropertyTypeString, Required: false},
+				Properties: []types.PropertyDefinition{{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true}, {Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
@@ -184,8 +182,7 @@ func DefaultAgencySchema() types.Schema {
 				// not via direct HTTP CRUD. CRUD routes exist only for DraftWorkItem, scoped under
 				// /agency/{agencyId}/drafts/{draftId}/work-items.
 				UniqueKey: []string{"code"},
-				Properties: []types.PropertyDefinition{
-					{Name: "code", Type: types.PropertyTypeString, Required: false},
+				Properties: []types.PropertyDefinition{{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true}, {Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					// WorkItems with the same ordinality value run in parallel.
@@ -218,8 +215,7 @@ func DefaultAgencySchema() types.Schema {
 				// not via direct HTTP CRUD. CRUD routes exist only for DraftInstruction, scoped under
 				// /agency/{agencyId}/drafts/{draftId}/instructions.
 				UniqueKey: []string{"code"},
-				Properties: []types.PropertyDefinition{
-					{Name: "code", Type: types.PropertyTypeString, Required: false},
+				Properties: []types.PropertyDefinition{{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true}, {Name: "code", Type: types.PropertyTypeString, Required: false},
 					// content is the rule or constraint text delivered to the actor.
 					{Name: "content", Type: types.PropertyTypeString, Required: true},
 					// ordinality controls the order in which instructions are applied.
@@ -271,8 +267,7 @@ func DefaultAgencySchema() types.Schema {
 				PathSegment:   "results",
 				EntityIDParam: "resultId",
 				Immutable:     true,
-				Properties: []types.PropertyDefinition{
-					{Name: "code", Type: types.PropertyTypeString, Required: false},
+				Properties: []types.PropertyDefinition{{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true}, {Name: "code", Type: types.PropertyTypeString, Required: false},
 					// status valid values: "pending", "completed", "rejected", "waived"
 					//   pending   — submitted by the actor; awaiting review
 					//   completed — accepted by the reviewer (or auto-accepted when blocking=false)
@@ -297,6 +292,7 @@ func DefaultAgencySchema() types.Schema {
 				EntityIDParam: "contentRefId",
 				Immutable:     true,
 				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// path is the location of the artifact in CodeValdGit (e.g. "output/report.md").
 					{Name: "path", Type: types.PropertyTypeString, Required: true},
@@ -348,7 +344,7 @@ func DefaultAgencySchema() types.Schema {
 			// AgencyDraft is a parallel, editable copy of the agency sub-graph. It is
 			// stored in the dedicated agency_drafts collection (not agency_entities).
 			// Sub-entities copied into a draft are stored in agency_draft_entities
-			// and queried by TypeID ("DraftGoal", etc.) + draft_id property.
+			// and queried by TypeID ("DraftGoal", etc.) + draft_ref_code property.
 			{
 				Name:              "AgencyDraft",
 				DisplayName:       "Agency Draft",
@@ -357,6 +353,7 @@ func DefaultAgencySchema() types.Schema {
 				StorageCollection: "agency_drafts",
 				UniqueKey:         []string{"code"},
 				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					// status valid values: "open", "promoted", "archived"
@@ -364,9 +361,9 @@ func DefaultAgencySchema() types.Schema {
 					//   promoted — draft entities copied to live; terminal
 					//   archived — discarded without promotion; terminal
 					{Name: "status", Type: types.PropertyTypeOption, Required: true},
-					// forked_from_id is the Agency ID (forked_from_type=="live") or
-					// AgencyDraft ID (forked_from_type=="draft") this was copied from.
-					{Name: "forked_from_id", Type: types.PropertyTypeString, Required: false},
+					// forked_from_ref_code is the ref_code of the Agency (forked_from_type=="live") or
+					// AgencyDraft (forked_from_type=="draft") this was copied from.
+					{Name: "forked_from_ref_code", Type: types.PropertyTypeString, Required: false},
 					// forked_from_type is either "live" or "draft".
 					{Name: "forked_from_type", Type: types.PropertyTypeString, Required: false},
 				},
@@ -378,19 +375,20 @@ func DefaultAgencySchema() types.Schema {
 			},
 			// Draft sub-entity types — stored in agency_draft_entities.
 			// These are editable copies of the live sub-entity types created by
-			// CreateDraft. They carry a draft_id property for scoping. Each type
+			// CreateDraft. They carry a draft_ref_code property for scoping. Each type
 			// has a PathSegment so the registrar can generate CRUD routes scoped
 			// under /agency/{agencyId}/drafts/{draftId}/...
 			{
 				Name:              "DraftGoal",
 				DisplayName:       "Draft Goal",
-				PathSegment:       "drafts/{draftId}/goals",
+				PathSegment:       "drafts/{draftRefCode}/goals",
 				EntityIDParam:     "goalId",
 				StorageCollection: "agency_draft_entities",
-				UniqueKey:         []string{"draft_id", "code"},
+				UniqueKey:         []string{"draft_ref_code", "code"},
 				Properties: []types.PropertyDefinition{
-					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
+					{Name: "draft_ref_code", Type: types.PropertyTypeString, Required: true},
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
@@ -399,13 +397,14 @@ func DefaultAgencySchema() types.Schema {
 			{
 				Name:              "DraftWorkflow",
 				DisplayName:       "Draft Workflow",
-				PathSegment:       "drafts/{draftId}/workflows",
+				PathSegment:       "drafts/{draftRefCode}/workflows",
 				EntityIDParam:     "workflowId",
 				StorageCollection: "agency_draft_entities",
-				UniqueKey:         []string{"draft_id", "code"},
+				UniqueKey:         []string{"draft_ref_code", "code"},
 				Properties: []types.PropertyDefinition{
-					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
+					{Name: "draft_ref_code", Type: types.PropertyTypeString, Required: true},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
@@ -414,15 +413,16 @@ func DefaultAgencySchema() types.Schema {
 			{
 				Name:              "DraftWorkItem",
 				DisplayName:       "Draft Work Item",
-				PathSegment:       "drafts/{draftId}/work-items",
+				PathSegment:       "drafts/{draftRefCode}/work-items",
 				EntityIDParam:     "workItemId",
 				StorageCollection: "agency_draft_entities",
-				UniqueKey:         []string{"draft_id", "code"},
+				UniqueKey:         []string{"draft_ref_code", "code"},
 				Properties: []types.PropertyDefinition{
-					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
-					// draft_workflow_id references the parent DraftWorkflow entity ID.
-					{Name: "draft_workflow_id", Type: types.PropertyTypeString, Required: false},
+					{Name: "draft_ref_code", Type: types.PropertyTypeString, Required: true},
+					// draft_workflow_ref_code references the parent DraftWorkflow entity.
+					{Name: "draft_workflow_ref_code", Type: types.PropertyTypeString, Required: false},
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
@@ -432,13 +432,14 @@ func DefaultAgencySchema() types.Schema {
 			{
 				Name:              "DraftConfiguredRole",
 				DisplayName:       "Draft Configured Role",
-				PathSegment:       "drafts/{draftId}/configured-roles",
+				PathSegment:       "drafts/{draftRefCode}/configured-roles",
 				EntityIDParam:     "configuredRoleId",
 				StorageCollection: "agency_draft_entities",
-				UniqueKey:         []string{"draft_id", "code"},
+				UniqueKey:         []string{"draft_ref_code", "code"},
 				Properties: []types.PropertyDefinition{
-					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
+					{Name: "draft_ref_code", Type: types.PropertyTypeString, Required: true},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "actor_type", Type: types.PropertyTypeOption, Required: true},
@@ -448,16 +449,17 @@ func DefaultAgencySchema() types.Schema {
 			{
 				Name:              "DraftInstruction",
 				DisplayName:       "Draft Instruction",
-				PathSegment:       "drafts/{draftId}/instructions",
+				PathSegment:       "drafts/{draftRefCode}/instructions",
 				EntityIDParam:     "instructionId",
 				StorageCollection: "agency_draft_entities",
-				UniqueKey:         []string{"draft_id", "code"},
+				UniqueKey:         []string{"draft_ref_code", "code"},
 				Properties: []types.PropertyDefinition{
-					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
-					// draft_workflow_id or draft_work_item_id — whichever parent applies.
-					{Name: "draft_workflow_id", Type: types.PropertyTypeString, Required: false},
-					{Name: "draft_work_item_id", Type: types.PropertyTypeString, Required: false},
+					{Name: "draft_ref_code", Type: types.PropertyTypeString, Required: true},
+					// draft_workflow_ref_code or draft_work_item_ref_code — whichever parent applies.
+					{Name: "draft_workflow_ref_code", Type: types.PropertyTypeString, Required: false},
+					{Name: "draft_work_item_ref_code", Type: types.PropertyTypeString, Required: false},
 					{Name: "content", Type: types.PropertyTypeString, Required: true},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
 				},
@@ -465,15 +467,16 @@ func DefaultAgencySchema() types.Schema {
 			{
 				Name:              "DraftDeliverable",
 				DisplayName:       "Draft Deliverable",
-				PathSegment:       "drafts/{draftId}/deliverables",
+				PathSegment:       "drafts/{draftRefCode}/deliverables",
 				EntityIDParam:     "deliverableId",
 				StorageCollection: "agency_draft_entities",
-				UniqueKey:         []string{"draft_id", "code"},
+				UniqueKey:         []string{"draft_ref_code", "code"},
 				Properties: []types.PropertyDefinition{
-					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
-					// draft_work_item_id references the parent DraftWorkItem entity ID.
-					{Name: "draft_work_item_id", Type: types.PropertyTypeString, Required: false},
+					{Name: "draft_ref_code", Type: types.PropertyTypeString, Required: true},
+					// draft_work_item_ref_code references the parent DraftWorkItem entity.
+					{Name: "draft_work_item_ref_code", Type: types.PropertyTypeString, Required: false},
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
@@ -483,15 +486,16 @@ func DefaultAgencySchema() types.Schema {
 			{
 				Name:              "DraftDeliverableResult",
 				DisplayName:       "Draft Deliverable Result",
-				PathSegment:       "drafts/{draftId}/results",
+				PathSegment:       "drafts/{draftRefCode}/results",
 				EntityIDParam:     "resultId",
 				StorageCollection: "agency_draft_entities",
-				UniqueKey:         []string{"draft_id", "code"},
+				UniqueKey:         []string{"draft_ref_code", "code"},
 				Properties: []types.PropertyDefinition{
-					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
-					// draft_deliverable_id references the parent DraftDeliverable entity ID.
-					{Name: "draft_deliverable_id", Type: types.PropertyTypeString, Required: false},
+					{Name: "draft_ref_code", Type: types.PropertyTypeString, Required: true},
+					// draft_deliverable_ref_code references the parent DraftDeliverable entity.
+					{Name: "draft_deliverable_ref_code", Type: types.PropertyTypeString, Required: false},
 					// status valid values: "pending", "completed", "rejected", "waived"
 					{Name: "status", Type: types.PropertyTypeOption, Required: true},
 					{Name: "produced_at", Type: types.PropertyTypeDatetime, Required: false},
@@ -504,10 +508,11 @@ func DefaultAgencySchema() types.Schema {
 				EntityIDParam: "snapshotId",
 				Immutable:     true,
 				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "snapshot_at", Type: types.PropertyTypeDatetime, Required: true},
-					// draft_id references the AgencyDraft entity that was promoted to create this snapshot.
-					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					// draft_ref_code references the AgencyDraft entity that was promoted to create this snapshot.
+					{Name: "draft_ref_code", Type: types.PropertyTypeString, Required: true},
 				},
 				Relationships: []types.RelationshipDefinition{
 					// ToMany=false, Required=true: a Snapshot must belong to exactly one Agency.
@@ -522,12 +527,13 @@ func DefaultAgencySchema() types.Schema {
 				EntityIDParam: "publicationId",
 				Immutable:     true,
 				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "version", Type: types.PropertyTypeInteger, Required: true},
 					{Name: "tag", Type: types.PropertyTypeString, Required: true},
 					{Name: "published_at", Type: types.PropertyTypeDatetime, Required: true},
-					// draft_id references the AgencyDraft entity that was published.
-					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					// draft_ref_code references the AgencyDraft entity that was published.
+					{Name: "draft_ref_code", Type: types.PropertyTypeString, Required: true},
 					// content_hash is the SHA-256 fingerprint of the draft sub-entity
 					// content at publish time. Used to guard against re-publishing
 					// identical content.
@@ -553,11 +559,12 @@ func DefaultAgencySchema() types.Schema {
 				EntityIDParam: "publicationStatusId",
 				UniqueKey:     []string{"code"},
 				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// status valid values: "draft", "active", "archived"
 					{Name: "status", Type: types.PropertyTypeOption, Required: true},
-					// draft_id references the AgencyDraft entity that was published to create the parent publication.
-					{Name: "draft_id", Type: types.PropertyTypeString, Required: false},
+					// draft_ref_code references the AgencyDraft entity that was published to create the parent publication.
+					{Name: "draft_ref_code", Type: types.PropertyTypeString, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
 					// ToMany=false: each status node belongs to exactly one publication.

@@ -412,9 +412,9 @@ func TestPublishAgency_SameDraftContent_ReturnsErrNoChangesDetected(t *testing.T
 		AgencyID: testAgencyID,
 		TypeID:   "DraftGoal",
 		Properties: map[string]any{
-			"draft_id":   "draft-001",
-			"title":      "Grow revenue",
-			"ordinality": 1,
+			"draft_ref_code": "draft-001",
+			"title":          "Grow revenue",
+			"ordinality":     1,
 		},
 	})
 
@@ -671,7 +671,7 @@ func TestCreateDraft_FromLive_CopiesGoals(t *testing.T) {
 
 	var draftGoals []entitygraph.Entity
 	for _, e := range fdm.entities {
-		if !e.Deleted && e.TypeID == "DraftGoal" && e.Properties["draft_id"] == draft.ID {
+		if !e.Deleted && e.TypeID == "DraftGoal" && e.Properties["draft_ref_code"] == draft.ID {
 			draftGoals = append(draftGoals, e)
 		}
 	}
@@ -886,9 +886,9 @@ func TestPromoteDraft_CopiesGoalsToLive(t *testing.T) {
 	fdm.addEntity(entitygraph.Entity{
 		ID: "dg-001", AgencyID: testAgencyID, TypeID: "DraftGoal",
 		Properties: map[string]any{
-			"draft_id":   draft.ID,
-			"title":      "Promoted goal",
-			"ordinality": 1,
+			"draft_ref_code": draft.ID,
+			"title":          "Promoted goal",
+			"ordinality":     1,
 		},
 	})
 
@@ -972,8 +972,8 @@ func TestCreateDraft_FromDraft_CopiesSubEntities(t *testing.T) {
 	fdm.addEntity(entitygraph.Entity{
 		ID: "dg-src-001", AgencyID: testAgencyID, TypeID: "DraftGoal",
 		Properties: map[string]any{
-			"draft_id": src.ID,
-			"title":    "Source goal",
+			"draft_ref_code": src.ID,
+			"title":          "Source goal",
 		},
 	})
 
@@ -986,7 +986,7 @@ func TestCreateDraft_FromDraft_CopiesSubEntities(t *testing.T) {
 	// Count DraftGoals belonging to the new draft.
 	var forkedGoals int
 	for _, e := range fdm.entities {
-		if !e.Deleted && e.TypeID == "DraftGoal" && e.Properties["draft_id"] == dst.ID {
+		if !e.Deleted && e.TypeID == "DraftGoal" && e.Properties["draft_ref_code"] == dst.ID {
 			forkedGoals++
 		}
 	}

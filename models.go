@@ -177,6 +177,11 @@ type AgencyPublication struct {
 	// DraftID is the ID of the AgencyDraft entity that was published.
 	DraftID string
 
+	// ContentHash is the SHA-256 fingerprint of the draft's sub-entity content
+	// at publish time. Two publications with the same ContentHash contain
+	// identical logical content. Empty when no draftID was provided.
+	ContentHash string
+
 	// Version is the auto-incrementing publication number (1, 2, 3, …).
 	Version int
 

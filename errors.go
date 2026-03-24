@@ -38,3 +38,9 @@ var ErrPublicationNotFound = errors.New("agency publication not found")
 // when the requested status is not a valid transition from the publication's
 // current status. Allowed transitions: draft → active, active → archived.
 var ErrInvalidPublicationStatus = errors.New("invalid publication status transition")
+
+// ErrNoChangesDetected is returned by [AgencyManager.PublishAgency] when the
+// content hash of the supplied draft matches an existing publication, meaning
+// the draft content is identical to a previously published version and there
+// is nothing new to release.
+var ErrNoChangesDetected = errors.New("no changes detected: draft content is identical to an existing publication")

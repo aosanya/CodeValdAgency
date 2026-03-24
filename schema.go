@@ -528,6 +528,10 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "published_at", Type: types.PropertyTypeDatetime, Required: true},
 					// draft_id references the AgencyDraft entity that was published.
 					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
+					// content_hash is the SHA-256 fingerprint of the draft sub-entity
+					// content at publish time. Used to guard against re-publishing
+					// identical content.
+					{Name: "content_hash", Type: types.PropertyTypeString, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
 					// ToMany=false, Required=true: a Publication must belong to exactly one Agency.

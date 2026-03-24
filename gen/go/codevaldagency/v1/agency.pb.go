@@ -728,7 +728,12 @@ type AgencyPublication struct {
 	Tag         string                 `protobuf:"bytes,4,opt,name=tag,proto3" json:"tag,omitempty"`
 	PublishedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
 	// draft_id is the ID of the AgencyDraft that was published.
-	DraftId       string `protobuf:"bytes,6,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
+	DraftId string `protobuf:"bytes,6,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
+	// content_hash is the SHA-256 fingerprint of the draft sub-entity content
+	// at publish time. Identical content across two publications produces the
+	// same hash; PublishAgency rejects a publish when the hash matches an
+	// existing publication.
+	ContentHash   string `protobuf:"bytes,7,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -801,6 +806,13 @@ func (x *AgencyPublication) GetPublishedAt() *timestamppb.Timestamp {
 func (x *AgencyPublication) GetDraftId() string {
 	if x != nil {
 		return x.DraftId
+	}
+	return ""
+}
+
+func (x *AgencyPublication) GetContentHash() string {
+	if x != nil {
+		return x.ContentHash
 	}
 	return ""
 }
@@ -2669,14 +2681,15 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x12\n" +
 	"\x10GetAgencyRequest\"-\n" +
 	"\x17SetAgencyDetailsRequest\x12\x12\n" +
-	"\x04json\x18\x01 \x01(\tR\x04json\"\xdc\x01\n" +
+	"\x04json\x18\x01 \x01(\tR\x04json\"\xff\x01\n" +
 	"\x11AgencyPublication\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x121\n" +
 	"\x06agency\x18\x02 \x01(\v2\x19.codevaldagency.v1.AgencyR\x06agency\x12\x18\n" +
 	"\aversion\x18\x03 \x01(\x05R\aversion\x12\x10\n" +
 	"\x03tag\x18\x04 \x01(\tR\x03tag\x12=\n" +
 	"\fpublished_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\x12\x19\n" +
-	"\bdraft_id\x18\x06 \x01(\tR\adraftId\"1\n" +
+	"\bdraft_id\x18\x06 \x01(\tR\adraftId\x12!\n" +
+	"\fcontent_hash\x18\a \x01(\tR\vcontentHash\"1\n" +
 	"\x14PublishAgencyRequest\x12\x19\n" +
 	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"1\n" +
 	"\x15GetPublicationRequest\x12\x18\n" +

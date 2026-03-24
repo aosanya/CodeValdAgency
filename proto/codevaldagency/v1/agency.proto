@@ -117,6 +117,11 @@ message AgencyPublication {
   google.protobuf.Timestamp published_at = 5;
   // draft_id is the ID of the AgencyDraft that was published.
   string                    draft_id     = 6;
+  // content_hash is the SHA-256 fingerprint of the draft sub-entity content
+  // at publish time. Identical content across two publications produces the
+  // same hash; PublishAgency rejects a publish when the hash matches an
+  // existing publication.
+  string                    content_hash = 7;
 }
 
 // PublishAgencyRequest carries the draft to publish.

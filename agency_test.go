@@ -401,6 +401,35 @@ func TestPublishAgency_NoAgency_ReturnsErrAgencyNotFound(t *testing.T) {
 	}
 }
 
+func TestPublishAgency_SameDraftContent_ReturnsErrNoChangesDetected(t *testing.T) {
+	t.Parallel()
+	mgr, fdm := mustNewManager(t)
+	mustSetupAgency(t, mgr, "agency-001", "Alpha")
+
+	// Seed a DraftGoal so the hash is non-trivial.
+	fdm.addEntity(entitygraph.Entity{
+		ID:       "dg-001",
+		AgencyID: testAgencyID,
+		TypeID:   "DraftGoal",
+		Properties: map[string]any{
+			"draft_id":   "draft-001",
+			"title":      "Grow revenue",
+			"ordinality": 1,
+		},
+	})
+
+	// First publish succeeds.
+	if _, err := mgr.PublishAgency(context.Background(), "draft-001"); err != nil {
+		t.Fatalf("first publish: %v", err)
+	}
+
+	// Second publish with identical draft content must fail.
+	_, err := mgr.PublishAgency(context.Background(), "draft-001")
+	if !errors.Is(err, codevaldagency.ErrNoChangesDetected) {
+		t.Fatalf("expected ErrNoChangesDetected, got %v", err)
+	}
+}
+
 func TestPublishAgency_FirstPublish_VersionIsOne(t *testing.T) {
 	t.Parallel()
 	mgr, fdm := mustNewManager(t)

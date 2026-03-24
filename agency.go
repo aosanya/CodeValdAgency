@@ -13,8 +13,12 @@ package codevaldagency
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
@@ -52,6 +56,8 @@ type AgencyManager interface {
 	// from the last publication (starts at 1).
 	// Returns [ErrAgencyNotFound] if no agency entity exists.
 	// Returns [ErrDraftNotFound] if draftID is provided but not found.
+	// Returns [ErrNoChangesDetected] if draftID is non-empty and the draft's
+	// content hash matches an existing publication.
 	// Publishes "cross.agency.published" after every successful write.
 	PublishAgency(ctx context.Context, draftID string) (AgencyPublication, error)
 
@@ -281,6 +287,9 @@ func (m *agencyManager) GetConfiguredRoles(ctx context.Context) ([]ConfiguredRol
 // PublishAgency creates an immutable [AgencyPublication] entity with an
 // auto-incremented version linked to the given draftID, then creates a linked
 // mutable [AgencyPublicationStatus] entity seeded at status "draft".
+// When draftID is non-empty, the draft's content is hashed and compared
+// against all existing publications — [ErrNoChangesDetected] is returned if
+// the hash matches, preventing a re-publish with no new content.
 // Publishes "cross.agency.published" on success.
 // Returns [ErrAgencyNotFound] if no agency entity exists yet.
 func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (AgencyPublication, error) {
@@ -294,6 +303,26 @@ func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (Agen
 		return AgencyPublication{}, fmt.Errorf("PublishAgency: next version: %w", err)
 	}
 
+	// Guard: when a draftID is supplied, compute the content hash of the draft
+	// and reject if any existing publication already has the same hash.
+	var contentHash string
+	if draftID != "" {
+		h, err := m.draftContentHash(ctx, draftID)
+		if err != nil {
+			return AgencyPublication{}, fmt.Errorf("PublishAgency: %w", err)
+		}
+		contentHash = h
+		existing, err := m.ListPublications(ctx)
+		if err != nil {
+			return AgencyPublication{}, fmt.Errorf("PublishAgency: %w", err)
+		}
+		for _, p := range existing {
+			if p.ContentHash != "" && p.ContentHash == contentHash {
+				return AgencyPublication{}, fmt.Errorf("PublishAgency: %w", ErrNoChangesDetected)
+			}
+		}
+	}
+
 	now := time.Now().UTC()
 	entity, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 		AgencyID: m.agencyID,
@@ -303,6 +332,7 @@ func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (Agen
 			"tag":          fmt.Sprintf("v%d", version),
 			"published_at": now.Format(time.RFC3339),
 			"draft_id":     draftID,
+			"content_hash": contentHash,
 		},
 	})
 	if err != nil {
@@ -336,6 +366,7 @@ func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (Agen
 		ID:          entity.ID,
 		AgencyID:    m.agencyID,
 		DraftID:     draftID,
+		ContentHash: contentHash,
 		Version:     version,
 		Tag:         fmt.Sprintf("v%d", version),
 		PublishedAt: now,
@@ -549,6 +580,55 @@ func (m *agencyManager) nextPublicationVersion(ctx context.Context) (int, error)
 	return max + 1, nil
 }
 
+// draftContentHash computes a deterministic SHA-256 fingerprint of the
+// logical content of the given draft. It collects DraftGoal, DraftWorkflow,
+// DraftWorkItem, and DraftConfiguredRole entities whose draft_id property
+// equals draftID, excludes infrastructure properties (draft_id,
+// draft_workflow_id, created_at, updated_at), JSON-encodes each entity's
+// remaining properties together with its type, sorts the resulting strings for
+// determinism, and returns the hex-encoded SHA-256 of the joined output.
+//
+// Two drafts whose sub-entity logical content is identical produce the same
+// hash regardless of entity creation order or internal IDs.
+func (m *agencyManager) draftContentHash(ctx context.Context, draftID string) (string, error) {
+	listByDraft := func(typeID string) ([]entitygraph.Entity, error) {
+		all, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+			AgencyID: m.agencyID,
+			TypeID:   typeID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		var out []entitygraph.Entity
+		for _, e := range all {
+			if strProp(e.Properties, "draft_id") == draftID {
+				out = append(out, e)
+			}
+		}
+		return out, nil
+	}
+
+	var records []string
+	for _, typeID := range []string{"DraftGoal", "DraftWorkflow", "DraftWorkItem", "DraftConfiguredRole"} {
+		entities, err := listByDraft(typeID)
+		if err != nil {
+			return "", fmt.Errorf("draftContentHash %s: %w", typeID, err)
+		}
+		for _, e := range entities {
+			props := copyPropsExcluding(e.Properties,
+				"draft_id", "draft_workflow_id", "created_at", "updated_at")
+			b, err := json.Marshal(map[string]any{"type": typeID, "props": props})
+			if err != nil {
+				return "", fmt.Errorf("draftContentHash marshal: %w", err)
+			}
+			records = append(records, string(b))
+		}
+	}
+	sort.Strings(records)
+	sum := sha256.Sum256([]byte(strings.Join(records, "\n")))
+	return hex.EncodeToString(sum[:]), nil
+}
+
 // ── Entity → Domain converters ────────────────────────────────────────────────
 
 func entityToAgency(e entitygraph.Entity) Agency {
@@ -648,6 +728,7 @@ func entityToPublication(e entitygraph.Entity, status string) AgencyPublication 
 		Version:     version,
 		Tag:         strProp(p, "tag"),
 		DraftID:     strProp(p, "draft_id"),
+		ContentHash: strProp(p, "content_hash"),
 		PublishedAt: publishedAt,
 		Status:      status,
 	}

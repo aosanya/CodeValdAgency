@@ -189,6 +189,8 @@ func publicationToProto(p codevaldagency.AgencyPublication) *pb.AgencyPublicatio
 		Version:     int32(p.Version),
 		Tag:         p.Tag,
 		PublishedAt: timeToProto(p.PublishedAt),
+		DraftId:     p.DraftID,
+		ContentHash: p.ContentHash,
 	}
 }
 

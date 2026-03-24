@@ -158,8 +158,7 @@ func DefaultAgencySchema() types.Schema {
 				// not via direct HTTP CRUD. CRUD routes exist only for DraftWorkflow, scoped under
 				// /agency/{agencyId}/drafts/{draftId}/workflows.
 				UniqueKey: []string{"code"},
-				Properties: []types.PropertyDefinition{
-					{Name: "code", Type: types.PropertyTypeString, Required: false},
+				Properties: []types.PropertyDefinition{{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true}, {Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
@@ -238,6 +237,7 @@ func DefaultAgencySchema() types.Schema {
 				// /agency/{agencyId}/drafts/{draftId}/deliverables.
 				UniqueKey: []string{"code"},
 				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// title names the expected output (e.g. "Analysis Report", "Migration Script").
 					{Name: "title", Type: types.PropertyTypeString, Required: true},
@@ -316,6 +316,7 @@ func DefaultAgencySchema() types.Schema {
 				// /agency/{agencyId}/drafts/{draftId}/configured-roles.
 				UniqueKey: []string{"code"},
 				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					// description is the role brief — responsibilities, boundaries, and context

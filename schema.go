@@ -506,6 +506,8 @@ func DefaultAgencySchema() types.Schema {
 				Properties: []types.PropertyDefinition{
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "snapshot_at", Type: types.PropertyTypeDatetime, Required: true},
+					// draft_id references the AgencyDraft entity that was promoted to create this snapshot.
+					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
 				},
 				Relationships: []types.RelationshipDefinition{
 					// ToMany=false, Required=true: a Snapshot must belong to exactly one Agency.
@@ -524,6 +526,8 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "version", Type: types.PropertyTypeInteger, Required: true},
 					{Name: "tag", Type: types.PropertyTypeString, Required: true},
 					{Name: "published_at", Type: types.PropertyTypeDatetime, Required: true},
+					// draft_id references the AgencyDraft entity that was published.
+					{Name: "draft_id", Type: types.PropertyTypeString, Required: true},
 				},
 				Relationships: []types.RelationshipDefinition{
 					// ToMany=false, Required=true: a Publication must belong to exactly one Agency.
@@ -548,6 +552,8 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					// status valid values: "draft", "active", "archived"
 					{Name: "status", Type: types.PropertyTypeOption, Required: true},
+					// draft_id references the AgencyDraft entity that was published to create the parent publication.
+					{Name: "draft_id", Type: types.PropertyTypeString, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
 					// ToMany=false: each status node belongs to exactly one publication.

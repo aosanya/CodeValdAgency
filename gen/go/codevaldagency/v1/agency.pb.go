@@ -721,12 +721,14 @@ func (x *SetAgencyDetailsRequest) GetJson() string {
 // AgencyPublication is an immutable, versioned snapshot of an Agency
 // created by an explicit publish action. The agency status is NOT changed.
 type AgencyPublication struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Agency        *Agency                `protobuf:"bytes,2,opt,name=agency,proto3" json:"agency,omitempty"`
-	Version       int32                  `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
-	Tag           string                 `protobuf:"bytes,4,opt,name=tag,proto3" json:"tag,omitempty"`
-	PublishedAt   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Agency      *Agency                `protobuf:"bytes,2,opt,name=agency,proto3" json:"agency,omitempty"`
+	Version     int32                  `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
+	Tag         string                 `protobuf:"bytes,4,opt,name=tag,proto3" json:"tag,omitempty"`
+	PublishedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
+	// draft_id is the ID of the AgencyDraft that was published.
+	DraftId       string `protobuf:"bytes,6,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -796,10 +798,18 @@ func (x *AgencyPublication) GetPublishedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// PublishAgencyRequest is intentionally empty — the agency to publish is
-// determined by the database this service owns.
+func (x *AgencyPublication) GetDraftId() string {
+	if x != nil {
+		return x.DraftId
+	}
+	return ""
+}
+
+// PublishAgencyRequest carries the draft to publish.
 type PublishAgencyRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// draft_id is the ID of the open AgencyDraft to publish.
+	DraftId       string `protobuf:"bytes,1,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -832,6 +842,13 @@ func (x *PublishAgencyRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use PublishAgencyRequest.ProtoReflect.Descriptor instead.
 func (*PublishAgencyRequest) Descriptor() ([]byte, []int) {
 	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *PublishAgencyRequest) GetDraftId() string {
+	if x != nil {
+		return x.DraftId
+	}
+	return ""
 }
 
 // GetPublicationRequest selects a publication by its version number.
@@ -2652,14 +2669,16 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x12\n" +
 	"\x10GetAgencyRequest\"-\n" +
 	"\x17SetAgencyDetailsRequest\x12\x12\n" +
-	"\x04json\x18\x01 \x01(\tR\x04json\"\xc1\x01\n" +
+	"\x04json\x18\x01 \x01(\tR\x04json\"\xdc\x01\n" +
 	"\x11AgencyPublication\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x121\n" +
 	"\x06agency\x18\x02 \x01(\v2\x19.codevaldagency.v1.AgencyR\x06agency\x12\x18\n" +
 	"\aversion\x18\x03 \x01(\x05R\aversion\x12\x10\n" +
 	"\x03tag\x18\x04 \x01(\tR\x03tag\x12=\n" +
-	"\fpublished_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\"\x16\n" +
-	"\x14PublishAgencyRequest\"1\n" +
+	"\fpublished_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\x12\x19\n" +
+	"\bdraft_id\x18\x06 \x01(\tR\adraftId\"1\n" +
+	"\x14PublishAgencyRequest\x12\x19\n" +
+	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"1\n" +
 	"\x15GetPublicationRequest\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x05R\aversion\"\x19\n" +
 	"\x17ListPublicationsRequest\"d\n" +

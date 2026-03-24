@@ -115,11 +115,15 @@ message AgencyPublication {
   int32                     version      = 3;
   string                    tag          = 4;
   google.protobuf.Timestamp published_at = 5;
+  // draft_id is the ID of the AgencyDraft that was published.
+  string                    draft_id     = 6;
 }
 
-// PublishAgencyRequest is intentionally empty — the agency to publish is
-// determined by the database this service owns.
-message PublishAgencyRequest {}
+// PublishAgencyRequest carries the draft to publish.
+message PublishAgencyRequest {
+  // draft_id is the ID of the open AgencyDraft to publish.
+  string draft_id = 1;
+}
 
 // GetPublicationRequest selects a publication by its version number.
 message GetPublicationRequest {

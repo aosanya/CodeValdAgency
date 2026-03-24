@@ -48,10 +48,12 @@ type AgencyManager interface {
 	GetConfiguredRoles(ctx context.Context) ([]ConfiguredRole, error)
 
 	// PublishAgency creates an immutable versioned publication of the current
-	// agency state. Version is auto-incremented from the last publication (starts at 1).
-	// Returns [ErrAgencyNotPublished] if no draft has ever been promoted.
+	// agency state, linked to the given draftID. Version is auto-incremented
+	// from the last publication (starts at 1).
+	// Returns [ErrAgencyNotFound] if no agency entity exists.
+	// Returns [ErrDraftNotFound] if draftID is provided but not found.
 	// Publishes "cross.agency.published" after every successful write.
-	PublishAgency(ctx context.Context) (AgencyPublication, error)
+	PublishAgency(ctx context.Context, draftID string) (AgencyPublication, error)
 
 	// GetPublication retrieves a single publication by its version number.
 	// Returns [ErrPublicationNotFound] if no publication with that version exists.
@@ -277,11 +279,11 @@ func (m *agencyManager) GetConfiguredRoles(ctx context.Context) ([]ConfiguredRol
 // ── PublishAgency ─────────────────────────────────────────────────────────────
 
 // PublishAgency creates an immutable [AgencyPublication] entity with an
-// auto-incremented version, then creates a linked mutable
-// [AgencyPublicationStatus] entity seeded at status "draft".
+// auto-incremented version linked to the given draftID, then creates a linked
+// mutable [AgencyPublicationStatus] entity seeded at status "draft".
 // Publishes "cross.agency.published" on success.
 // Returns [ErrAgencyNotFound] if no agency entity exists yet.
-func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, error) {
+func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (AgencyPublication, error) {
 	agency, err := m.GetAgency(ctx)
 	if err != nil {
 		return AgencyPublication{}, err
@@ -300,6 +302,7 @@ func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, e
 			"version":      version,
 			"tag":          fmt.Sprintf("v%d", version),
 			"published_at": now.Format(time.RFC3339),
+			"draft_id":     draftID,
 		},
 	})
 	if err != nil {
@@ -332,6 +335,7 @@ func (m *agencyManager) PublishAgency(ctx context.Context) (AgencyPublication, e
 	pub := AgencyPublication{
 		ID:          entity.ID,
 		AgencyID:    m.agencyID,
+		DraftID:     draftID,
 		Version:     version,
 		Tag:         fmt.Sprintf("v%d", version),
 		PublishedAt: now,
@@ -643,6 +647,7 @@ func entityToPublication(e entitygraph.Entity, status string) AgencyPublication 
 		ID:          e.ID,
 		Version:     version,
 		Tag:         strProp(p, "tag"),
+		DraftID:     strProp(p, "draft_id"),
 		PublishedAt: publishedAt,
 		Status:      status,
 	}

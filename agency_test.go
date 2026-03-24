@@ -395,7 +395,7 @@ func TestGetConfiguredRoles_ReturnsRoles(t *testing.T) {
 func TestPublishAgency_NoAgency_ReturnsErrAgencyNotFound(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
-	_, err := mgr.PublishAgency(context.Background())
+	_, err := mgr.PublishAgency(context.Background(), "")
 	if !errors.Is(err, codevaldagency.ErrAgencyNotFound) {
 		t.Fatalf("expected ErrAgencyNotFound, got %v", err)
 	}
@@ -406,7 +406,7 @@ func TestPublishAgency_FirstPublish_VersionIsOne(t *testing.T) {
 	mgr, fdm := mustNewManager(t)
 	mustSetupAgency(t, mgr, "agency-001", "Alpha")
 
-	pub, err := mgr.PublishAgency(context.Background())
+	pub, err := mgr.PublishAgency(context.Background(), "")
 	if err != nil {
 		t.Fatalf("PublishAgency: %v", err)
 	}
@@ -435,10 +435,10 @@ func TestPublishAgency_SecondPublish_VersionIsTwo(t *testing.T) {
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "agency-001", "Alpha")
 
-	if _, err := mgr.PublishAgency(context.Background()); err != nil {
+	if _, err := mgr.PublishAgency(context.Background(), ""); err != nil {
 		t.Fatalf("first publish: %v", err)
 	}
-	pub2, err := mgr.PublishAgency(context.Background())
+	pub2, err := mgr.PublishAgency(context.Background(), "")
 	if err != nil {
 		t.Fatalf("second publish: %v", err)
 	}
@@ -456,7 +456,7 @@ func TestPublishAgency_PublishesEvent(t *testing.T) {
 	set := mustSetupAgency(t, mgr, "agency-001", "Alpha")
 	fp.events = nil // reset; SetAgencyDetails fires cross.agency.created
 
-	if _, err := mgr.PublishAgency(context.Background()); err != nil {
+	if _, err := mgr.PublishAgency(context.Background(), ""); err != nil {
 		t.Fatalf("PublishAgency: %v", err)
 	}
 	if len(fp.events) != 1 {
@@ -486,7 +486,7 @@ func TestGetPublication_RoundTrip(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "agency-001", "Alpha")
-	pub, err := mgr.PublishAgency(context.Background())
+	pub, err := mgr.PublishAgency(context.Background(), "")
 	if err != nil {
 		t.Fatalf("PublishAgency: %v", err)
 	}
@@ -525,7 +525,7 @@ func TestListPublications_AscendingVersionOrder(t *testing.T) {
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "agency-001", "Alpha")
 	for i := 0; i < 3; i++ {
-		if _, err := mgr.PublishAgency(context.Background()); err != nil {
+		if _, err := mgr.PublishAgency(context.Background(), ""); err != nil {
 			t.Fatalf("publish %d: %v", i+1, err)
 		}
 	}

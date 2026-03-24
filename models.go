@@ -174,6 +174,9 @@ type AgencyPublication struct {
 	// AgencyID is the identifier of the agency this publication belongs to.
 	AgencyID string
 
+	// DraftID is the ID of the AgencyDraft entity that was published.
+	DraftID string
+
 	// Version is the auto-incrementing publication number (1, 2, 3, …).
 	Version int
 

@@ -48,8 +48,8 @@ func (s *Server) SetAgencyDetails(ctx context.Context, req *pb.SetAgencyDetailsR
 }
 
 // PublishAgency implements pb.AgencyServiceServer.
-func (s *Server) PublishAgency(ctx context.Context, _ *pb.PublishAgencyRequest) (*pb.AgencyPublication, error) {
-	pub, err := s.mgr.PublishAgency(ctx)
+func (s *Server) PublishAgency(ctx context.Context, req *pb.PublishAgencyRequest) (*pb.AgencyPublication, error) {
+	pub, err := s.mgr.PublishAgency(ctx, req.GetDraftId())
 	if err != nil {
 		return nil, toGRPCError(err)
 	}

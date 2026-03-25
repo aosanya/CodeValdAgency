@@ -22,8 +22,6 @@ package main
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -39,6 +37,7 @@ import (
 	arangodb "github.com/aosanya/CodeValdAgency/storage/arangodb"
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
 	healthpb "github.com/aosanya/CodeValdSharedLib/gen/go/codevaldhealth/v1"
+	entitygraphpb "github.com/aosanya/CodeValdSharedLib/gen/go/entitygraph/v1"
 	"github.com/aosanya/CodeValdSharedLib/health"
 	"github.com/aosanya/CodeValdSharedLib/serverutil"
 )
@@ -84,7 +83,7 @@ func main() {
 	// Seed the pre-delivered schema idempotently on startup.
 	if cfg.AgencyID != "" {
 		seedCtx, seedCancel := context.WithTimeout(ctx, 10*time.Second)
-		if err := seedSchemaIfNeeded(seedCtx, backend, cfg.AgencyID); err != nil {
+		if err := entitygraph.SeedSchema(seedCtx, backend, cfg.AgencyID, codevaldagency.DefaultAgencySchema()); err != nil {
 			log.Printf("codevaldagency: schema seed: %v", err)
 		}
 		seedCancel()
@@ -101,7 +100,7 @@ func main() {
 
 	grpcServer, _ := serverutil.NewGRPCServer()
 	pb.RegisterAgencyServiceServer(grpcServer, server.New(mgr, backend))
-	pb.RegisterEntityServiceServer(grpcServer, server.NewEntityServer(backend))
+	entitygraphpb.RegisterEntityServiceServer(grpcServer, server.NewEntityServer(backend))
 	healthpb.RegisterHealthServiceServer(grpcServer, health.New("codevaldagency"))
 
 	quit := make(chan os.Signal, 1)
@@ -114,31 +113,4 @@ func main() {
 
 	log.Printf("CodeValdAgency gRPC server listening on :%s", cfg.GRPCPort)
 	serverutil.RunWithGracefulShutdown(ctx, grpcServer, lis, 30*time.Second)
-}
-
-// seedSchemaIfNeeded seeds the pre-delivered agency schema idempotently on
-// startup. It is a no-op if an active schema version already exists.
-// On first run it calls SetSchema, Publish, then Activate(1) to make the
-// default schema live.
-func seedSchemaIfNeeded(ctx context.Context, sm codevaldagency.AgencySchemaManager, agencyID string) error {
-	_, err := sm.GetActive(ctx, agencyID)
-	if err == nil {
-		return nil // already active — idempotent
-	}
-	if !errors.Is(err, entitygraph.ErrSchemaNotFound) {
-		return fmt.Errorf("seedSchemaIfNeeded %s: check active: %w", agencyID, err)
-	}
-	schema := codevaldagency.DefaultAgencySchema()
-	schema.AgencyID = agencyID
-	if err := sm.SetSchema(ctx, schema); err != nil {
-		return fmt.Errorf("seedSchemaIfNeeded %s: set schema: %w", agencyID, err)
-	}
-	if err := sm.Publish(ctx, agencyID); err != nil {
-		return fmt.Errorf("seedSchemaIfNeeded %s: publish: %w", agencyID, err)
-	}
-	if err := sm.Activate(ctx, agencyID, 1); err != nil {
-		return fmt.Errorf("seedSchemaIfNeeded %s: activate: %w", agencyID, err)
-	}
-	log.Printf("codevaldagency: schema seeded for agency %s", agencyID)
-	return nil
 }

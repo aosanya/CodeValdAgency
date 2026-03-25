@@ -22,6 +22,9 @@
 | Activation snapshot | `AgencySnapshot` entity written on `draft → active` | Immutable entity type (`Immutable: true`) — audit record |
 | Publications | `AgencyPublication` entity written on explicit publish | Immutable entity type; version auto-incremented |
 | Pre-delivered schema | `DefaultAgencySchema()` seeded on startup (idempotent) | All TypeDefinitions for Agency, Goal, Workflow, WorkItem, ConfiguredRole, AgencySnapshot, AgencyPublication |
+| EntityService gRPC handler | `egserver.NewEntityServer` from SharedLib `entitygraph/server` | Generic CRUD over entitygraph; identical across all services; single source of truth — no Agency-specific handler code |
+| Schema seed | `entitygraph.SeedSchema` from SharedLib | Idempotent startup helper; replaces per-service `seedSchemaIfNeeded`; reusable by all services |
+| Entity gRPC route path | `egserver.GRPCServicePath` (`/entitygraph.v1.EntityService`) | Constant from SharedLib; registrar uses it when advertising entity HTTP routes to Cross |
 | Error types | `errors.go` at module root | All exported errors in one place; no scattered sentinels |
 | Value types | `models.go` at module root | Pure data structs; no methods except `AgencyLifecycle.CanTransitionTo` |
 
@@ -43,19 +46,18 @@ CodeValdAgency/
 │   │   └── config.go            # Config struct + loader (env / YAML)
 │   ├── registrar/
 │   │   └── registrar.go         # Cross registration heartbeat loop + CrossPublisher impl
+│   │                            # Uses egserver.GRPCServicePath for entity route declarations
 │   └── server/
-        ├── server.go            # Inbound gRPC server — AgencyService handlers
-        ├── entity_server.go     # EntityService handlers — delegates to entitygraph.DataManager
-        └── errors.go            # gRPC status code mapping (toGRPCError, toEntityGRPCError)
+│       ├── server.go            # AgencyService gRPC handlers — delegates to AgencyManager
+│       ├── entity_server.go     # 14-line re-export of egserver.NewEntityServer from SharedLib
+│       ├── import_server.go     # ImportDraft handler
+│       └── errors.go            # AgencyService-domain gRPC error mapping (no EntityService mapping)
 ├── storage/
 │   └── arangodb/
-│       ├── storage.go   # Config, Backend struct, constructors, ensureCollection
-│       ├── docs.go      # ArangoDB document types and domain↔document conversions
-│       └── ops.go       # Backend interface method implementations
-│       (008-D will split further into entities.go, relationships.go, schemaops.go)
+│       └── storage.go           # Config, Backend struct, ArangoDB implementation (thin wrapper over entitygraph)
 ├── proto/
 │   └── codevaldagency/
-│       └── agency.proto         # AgencyService gRPC definition
+│       └── agency.proto         # AgencyService only — EntityService moved to SharedLib proto/entitygraph/v1/
 ├── gen/
 │   └── go/                      # Generated protobuf code (buf generate — do not hand-edit)
 └── bin/

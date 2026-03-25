@@ -10,6 +10,7 @@ import (
 	"time"
 
 	codevaldagency "github.com/aosanya/CodeValdAgency"
+	egserver "github.com/aosanya/CodeValdSharedLib/entitygraph/server"
 	sharedregistrar "github.com/aosanya/CodeValdSharedLib/registrar"
 	"github.com/aosanya/CodeValdSharedLib/schemaroutes"
 	"github.com/aosanya/CodeValdSharedLib/types"
@@ -167,7 +168,7 @@ func agencyRoutes() []types.RouteInfo {
 		codevaldagency.DefaultAgencySchema(),
 		"/agency/{agencyId}",
 		"agencyId",
-		"/codevaldagency.v1.EntityService",
+		egserver.GRPCServicePath,
 	)
 
 	return append(static, dynamic...)

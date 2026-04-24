@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm info *)",
+      "Bash(xargs -I{} sh -c 'echo \"--- {} ---\" && grep -B1 \"IsWrite:\" {} | grep -E \"Capability|IsWrite\" | paste - -')",
+      "Bash(awk '/Method:/{m=$0} /Capability:/{c=$0} /IsWrite: true/{w=1} /},/{if\\(m~/\"POST\"/ && !w\\){print FILENAME\": \"m\" | \"c} m=\"\";c=\"\";w=0}' FILENAME=branch_routes.go branch_routes.go repo_routes.go tag_routes.go file_routes.go history_routes.go import_routes.go fetch_branch_routes.go docs_routes.go smart_http_routes.go)",
+      "Bash(go list *)",
+      "Bash(curl -s -o /dev/null -w \"GET  /health                                                     → %{http_code}\\\\n\" http://localhost:8080/health)",
+      "Bash(curl -s -o /dev/null -w \"POST /git/agency-123/repositories/gittesting/branches \\(NO creds\\) → %{http_code}\\\\n\" -X POST http://localhost:8080/git/agency-123/repositories/gittesting/branches -H \"Content-Type: application/json\" -d '{\"branch\":{\"name\":\"auth-test-branch\"}}')",
+      "Bash(curl -s -o /dev/null -w \"POST /git/agency-123/repositories/gittesting/branches \\(CREDS\\)    → %{http_code}\\\\n\" -X POST http://localhost:8080/git/agency-123/repositories/gittesting/branches -u 'codevald:chanuisosnnau@geme' -H \"Content-Type: application/json\" -d '{\"branch\":{\"name\":\"auth-test-branch\"}}')",
+      "Bash(curl -s -i -X POST http://localhost:8080/git/agency-123/repositories/gittesting/branches -H \"Content-Type: application/json\" -d '{\"branch\":{\"name\":\"auth-test-branch\"}}')",
+      "Bash(curl -s -i -X POST 'http://localhost:8080/git/agency-123/repositories/gittesting/branches/main/graph/query' -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(git rm *)"
+    ]
+  }
+}

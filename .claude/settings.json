@@ -10,7 +10,11 @@
       "Bash(curl -s -o /dev/null -w \"POST /git/agency-123/repositories/gittesting/branches \\(CREDS\\)    → %{http_code}\\\\n\" -X POST http://localhost:8080/git/agency-123/repositories/gittesting/branches -u 'codevald:chanuisosnnau@geme' -H \"Content-Type: application/json\" -d '{\"branch\":{\"name\":\"auth-test-branch\"}}')",
       "Bash(curl -s -i -X POST http://localhost:8080/git/agency-123/repositories/gittesting/branches -H \"Content-Type: application/json\" -d '{\"branch\":{\"name\":\"auth-test-branch\"}}')",
       "Bash(curl -s -i -X POST 'http://localhost:8080/git/agency-123/repositories/gittesting/branches/main/graph/query' -H \"Content-Type: application/json\" -d '{}')",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(git -C /workspaces/CodeVald-AIProject/CodeValdSharedLib status --short)",
+      "Bash(git -C /workspaces/CodeVald-AIProject/CodeValdSharedLib diff --cached --stat)",
+      "Bash(git -C /workspaces/CodeVald-AIProject/CodeValdSharedLib status)",
+      "Bash(git -C /workspaces/CodeVald-AIProject/CodeValdSharedLib log --oneline -5)"
     ]
   }
 }

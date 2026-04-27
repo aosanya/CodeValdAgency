@@ -3,143 +3,123 @@
 ## Design Decision: Single-Agency Database
 
 Each CodeValdAgency database instance holds **exactly one agency**. There is no
-listing, no multi-tenancy, and no deletion. The `agency_details` collection always
-contains a single document keyed by the agency's own ID.
+listing, no multi-tenancy, and no deletion.
 
-`SetAgencyDetails` is the authoritative write path. It accepts a full JSON
-representation of the agency, validates structure, and upserts the document.
-`UpdateAgency` remains for incremental field edits with lifecycle-guarded transitions.
+`SetAgencyDetails` is the **bootstrap-only** write path: it creates or updates
+the root `Agency` entity *until the first draft has been promoted*. After that,
+the live agency is read-only — direct calls to `SetAgencyDetails` return
+`ErrAgencyReadOnly` and all further changes flow through `CreateDraft` +
+`PromoteDraft` (see [agency-drafts.md](agency-drafts.md)).
+
+> **Historical note.** Tasks MVP-AGENCY-001 → 005 below were originally written
+> against an `AgencyLifecycle` (`draft → active → achieved`) model with a
+> separate `Backend` interface. Both were superseded:
+> - `AgencyLifecycle` was replaced by `Enabled bool` + draft-based authoring in MVP-AGENCY-009.
+> - The bespoke `Backend` interface was replaced by `entitygraph.DataManager` in MVP-AGENCY-008.
+>
+> Sections below have been trimmed to the parts that still match the shipped
+> code; the lifecycle-transition rules, the `UpdateAgency` RPC, and the
+> `agency_details` collection are gone.
 
 ---
 
 ## MVP-AGENCY-001 — Library Scaffolding & Agency Model
 
-**Status**: 🔲 Not Started  
+**Status**: ✅ Done — see [mvp_done.md](../mvp_done.md)
 **Branch**: `feature/AGENCY-001_library_scaffolding`
 
 ### Goal
 
-Scaffold the Go module with the `AgencyManager` interface, `Agency` domain type,
-lifecycle enforcement, and exported errors.
+Scaffold the Go module with the `AgencyManager` interface, `Agency` domain
+type, and exported errors. The shipped surface (post MVP-AGENCY-008/009) is
+the canonical reference — see [agency.go](../../../agency.go),
+[models.go](../../../models.go), [errors.go](../../../errors.go).
 
-### Files to Create/Modify
+### Files
 
 | File | Purpose |
 |---|---|
 | `go.mod` | Module declaration (`github.com/aosanya/CodeValdAgency`) |
-| `agency.go` | `AgencyManager` interface, `Backend` interface, `agencyManager` implementation |
-| `models.go` | `Agency`, `Goal`, `Workflow`, `WorkItem`, `RoleAssignment`, `AgencyRole`, `RACILabel`, `AgencyLifecycle`, `AgencySnapshot`, `UpdateAgencyRequest` |
-| `errors.go` | `ErrAgencyNotFound`, `ErrInvalidLifecycleTransition`, `ErrInvalidAgency`, `ErrInvalidJSON` |
+| `agency.go` | `AgencyManager` interface + `agencyManager` implementation (wraps `entitygraph.DataManager` — no bespoke `Backend`) |
+| `drafts.go` | Draft-specific manager methods (added in MVP-AGENCY-009) |
+| `models.go` | `Agency`, `Goal`, `Workflow`, `WorkItem`, `ConfiguredRole`, `AgencyDraft`, `AgencyDraftStatus`, `AgencySnapshot`, `AgencyPublication` |
+| `errors.go` | `ErrAgencyNotFound`, `ErrAgencyNotPublished`, `ErrAgencyReadOnly`, `ErrInvalidAgency`, `ErrInvalidJSON`, `ErrDraftNotFound`, `ErrDraftNotOpen`, `ErrPublicationNotFound`, `ErrInvalidPublicationStatus`, `ErrNoChangesDetected` |
 
-### AgencyManager Interface
+### AgencyManager Interface (shipped)
 
 ```go
 type AgencyManager interface {
-    // SetAgencyDetails replaces the full agency document from raw JSON.
-    // Returns ErrInvalidJSON (→ INVALID_ARGUMENT) if the payload cannot be
-    // parsed or if the id field is missing. Lifecycle validation is NOT applied.
-    // Publishes cross.agency.created after every successful write.
+    // SetAgencyDetails — bootstrap-only write path.
+    // Returns ErrInvalidJSON if the payload cannot be parsed or "id" is missing.
+    // Returns ErrAgencyReadOnly once the live agency has been published.
+    // Publishes cross.agency.created on success.
     SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
 
-    // GetAgency retrieves the single agency by its ID.
-    // Returns ErrAgencyNotFound if no agency document exists yet.
-    GetAgency(ctx context.Context, agencyID string) (Agency, error)
+    // GetAgency retrieves the single live agency.
+    // Returns ErrAgencyNotFound if no agency entity exists yet.
+    GetAgency(ctx context.Context) (Agency, error)
 
-    // UpdateAgency applies incremental field edits with lifecycle validation.
-    // Returns ErrInvalidLifecycleTransition on invalid status change.
-    // Returns ErrAgencyNotFound if the agency does not exist.
-    UpdateAgency(ctx context.Context, agencyID string, req UpdateAgencyRequest) (Agency, error)
+    // Convenience accessors over the live sub-graph.
+    GetGoals(ctx context.Context) ([]Goal, error)
+    GetWorkflows(ctx context.Context) ([]Workflow, error)
+    GetConfiguredRoles(ctx context.Context) ([]ConfiguredRole, error)
+
+    // Drafts — see agency-drafts.md
+    CreateDraft(ctx context.Context, description, forkedFromID, forkedFromType string) (AgencyDraft, error)
+    GetDraft(ctx context.Context, draftID string) (AgencyDraft, error)
+    ListDrafts(ctx context.Context) ([]AgencyDraft, error)
+    UpdateDraftDescription(ctx context.Context, draftID, description string) (AgencyDraft, error)
+    PromoteDraft(ctx context.Context, draftID string) (Agency, error)
+    ArchiveDraft(ctx context.Context, draftID string) (AgencyDraft, error)
+
+    // Publications — see "MVP-AGENCY-007" section below.
+    PublishAgency(ctx context.Context, draftID string) (AgencyPublication, error)
+    GetPublication(ctx context.Context, version int) (AgencyPublication, error)
+    ListPublications(ctx context.Context) ([]AgencyPublication, error)
+    UpdatePublicationStatus(ctx context.Context, version int, status string) (AgencyPublication, error)
 }
 ```
 
-### Lifecycle Transition Rules (UpdateAgency only)
+There is **no `UpdateAgency` method** — incremental field edits on a published
+agency must go through a draft.
 
-| From | To | Allowed |
-|---|---|---|
-| `draft` | `active` | ✅ |
-| `active` | `achieved` | ✅ |
-| `active` | `draft` | ❌ |
-| `achieved` | anything | ❌ (terminal) |
-
-> `SetAgencyDetails` bypasses lifecycle validation entirely — any status value
-> in the JSON is written as-is.
-
-### Acceptance Tests
+### Acceptance Tests (current)
 
 - `SetAgencyDetails` with invalid JSON returns `ErrInvalidJSON`
 - `SetAgencyDetails` with missing `id` field returns `ErrInvalidJSON`
 - `SetAgencyDetails` with valid JSON returns the stored agency
 - `GetAgency` after `SetAgencyDetails` returns matching data
-- `SetAgencyDetails` called twice replaces the document
-- `UpdateAgency` with `active → draft` returns `ErrInvalidLifecycleTransition`
-- `UpdateAgency` with `draft → active` succeeds and triggers snapshot write
-- `UpdateAgency` on an `achieved` agency returns `ErrInvalidLifecycleTransition`
-- `NewAgencyManager(nil)` returns an error
+- `SetAgencyDetails` called twice replaces the document while no draft has been promoted
+- `SetAgencyDetails` on a published agency (`Enabled == true`) returns `ErrAgencyReadOnly`
+- Direct mutations against a published agency return `ErrAgencyReadOnly`
 
 ---
 
 ## MVP-AGENCY-002 — ArangoDB Backend
 
-**Status**: 🔲 Not Started  
+**Status**: ✅ Done — superseded by MVP-AGENCY-008-D
 **Branch**: `feature/AGENCY-002_arangodb_backend`
 
-### Goal
-
-Implement `codevaldagency.Backend` backed by ArangoDB. The single agency document
-is stored in the `agency_details` collection, keyed by agency ID. Activation
-snapshots are written to `agency_snapshots`.
-
-### Files to Create/Modify
-
-| File | Purpose |
-|---|---|
-| `storage/arangodb/storage.go` | `Backend` implementing `codevaldagency.Backend` |
-| `storage/arangodb/storage_test.go` | Integration tests (skip when `AGENCY_ARANGO_ENDPOINT` not set) |
-
-### Backend Interface
-
-```go
-type Backend interface {
-    // SetDetails parses the raw JSON and upserts the agency document at
-    // _key = agency.id in the agency_details collection.
-    // Returns ErrInvalidJSON if the JSON is malformed or id is missing.
-    SetDetails(ctx context.Context, jsonStr string) (Agency, error)
-
-    // Get retrieves the agency document by its ID.
-    // Returns ErrAgencyNotFound if the document does not exist.
-    Get(ctx context.Context, agencyID string) (Agency, error)
-
-    // Update applies a partial field merge and returns the updated agency.
-    // Returns ErrAgencyNotFound if the document does not exist.
-    Update(ctx context.Context, agencyID string, req UpdateAgencyRequest) (Agency, error)
-
-    // InsertSnapshot writes an immutable activation snapshot to agency_snapshots.
-    InsertSnapshot(ctx context.Context, snapshot AgencySnapshot) error
-}
-```
-
-### Collections
+The bespoke `Backend` interface from this task was retired in MVP-AGENCY-008.
+Storage now goes through `entitygraph.DataManager` from CodeValdSharedLib;
+`storage/arangodb/storage.go` provides the ArangoDB implementation of that
+interface. The agency-specific collections used today are:
 
 | Collection | Purpose |
 |---|---|
-| `agency_details` | Single agency document (keyed by agency ID) |
-| `agency_snapshots` | Immutable activation snapshots |
+| `agency_entities` | All live entities (Agency, Goal, Workflow, WorkItem, ConfiguredRole, Instruction, Deliverable) |
+| `agency_draft_entities` | Draft copies of the same types, scoped by `draft_id` |
+| `agency_drafts` | `AgencyDraft` root entities |
+| `agency_relationships` | Edge collection — spans both vertex collections |
+| `agency_schemas` | Pre-delivered schema versions seeded on startup |
+| `agency_snapshots` | Immutable promotion snapshots (written on `PromoteDraft`) |
+| `agency_publications` | Immutable versioned publications |
 
-### Key Behaviours
+There is no `agency_details` collection. Snapshots are written by
+`PromoteDraft`, not by any lifecycle transition.
 
-- `SetDetails` upserts using `_key = agency.id` — creates on first call, replaces on subsequent calls
-- `Get` returns `ErrAgencyNotFound` if key is missing
-- `Update` — partial field merge with refreshed `updated_at`
-- `InsertSnapshot` writes to `agency_snapshots` on `draft → active` transition
-
-### Acceptance Tests
-
-- `SetDetails` with valid JSON → document upserted; `Get` returns same data
-- `SetDetails` with invalid JSON → `ErrInvalidJSON`
-- `SetDetails` called twice → second call replaces document; `Get` returns latest
-- `Get` on non-existent agency → `ErrAgencyNotFound`
-- `Update` on non-existent agency → `ErrAgencyNotFound`
-- `InsertSnapshot` → snapshot is retrievable with the same agency ID
+See [architecture-storage.md](../../2-SoftwareDesignAndArchitecture/architecture-storage.md)
+for the canonical schema layout.
 
 ---
 
@@ -163,20 +143,21 @@ Generate proto stubs and implement the `AgencyService` gRPC handler in `internal
 
 ### Proto Service
 
+The full `AgencyService` definition (drafts + publications + convenience
+accessors) is documented in
+[architecture-flows.md §6](../../2-SoftwareDesignAndArchitecture/architecture-flows.md#6-grpc-service-definition).
+The bootstrap-only RPCs introduced by this task are:
+
 ```protobuf
 service AgencyService {
   // SetAgencyDetails replaces the full agency document from a JSON string.
   // Error: INVALID_ARGUMENT if the JSON is malformed or id is missing.
+  // Error: FAILED_PRECONDITION (ErrAgencyReadOnly) once the live agency is published.
   rpc SetAgencyDetails(SetAgencyDetailsRequest) returns (Agency);
 
-  // GetAgency retrieves the single agency by its ID.
-  // Error: NOT_FOUND if no agency document exists.
+  // GetAgency retrieves the single live agency.
+  // Error: NOT_FOUND if no agency entity exists.
   rpc GetAgency(GetAgencyRequest) returns (Agency);
-
-  // UpdateAgency applies incremental field edits with lifecycle validation.
-  // Error: FAILED_PRECONDITION on invalid lifecycle transition.
-  // Error: NOT_FOUND if the agency does not exist.
-  rpc UpdateAgency(UpdateAgencyRequest) returns (Agency);
 }
 
 message SetAgencyDetailsRequest {
@@ -190,17 +171,21 @@ message SetAgencyDetailsRequest {
 
 | Domain Error | gRPC Code | Trigger |
 |---|---|---|
-| `ErrAgencyNotFound` | `NOT_FOUND` | `GetAgency`, `UpdateAgency` |
-| `ErrInvalidLifecycleTransition` | `FAILED_PRECONDITION` | `UpdateAgency` |
-| `ErrInvalidAgency` | `INVALID_ARGUMENT` | `UpdateAgency` (empty name) |
+| `ErrAgencyNotFound` | `NOT_FOUND` | `GetAgency` |
+| `ErrAgencyReadOnly` | `FAILED_PRECONDITION` | `SetAgencyDetails` after first promotion |
+| `ErrInvalidAgency` | `INVALID_ARGUMENT` | `SetAgencyDetails` (missing required field) |
 | `ErrInvalidJSON` | `INVALID_ARGUMENT` | `SetAgencyDetails` (bad JSON) |
+
+> Full error → gRPC code mapping for drafts, publications, and EntityService
+> errors lives in
+> [architecture-flows.md §8](../../2-SoftwareDesignAndArchitecture/architecture-flows.md#8-error-types).
 
 ### Acceptance Tests
 
 - `SetAgencyDetails` RPC with valid JSON → returns populated `Agency`
 - `SetAgencyDetails` RPC with invalid JSON → `INVALID_ARGUMENT`
-- `UpdateAgency` RPC returns `FAILED_PRECONDITION` on invalid lifecycle transition
-- `GetAgency` RPC returns `NOT_FOUND` for unknown agency
+- `SetAgencyDetails` RPC on a published agency → `FAILED_PRECONDITION`
+- `GetAgency` RPC returns `NOT_FOUND` when no agency entity exists
 
 ---
 

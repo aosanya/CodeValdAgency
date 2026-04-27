@@ -14,7 +14,41 @@
       "Bash(git -C /workspaces/CodeVald-AIProject/CodeValdSharedLib status --short)",
       "Bash(git -C /workspaces/CodeVald-AIProject/CodeValdSharedLib diff --cached --stat)",
       "Bash(git -C /workspaces/CodeVald-AIProject/CodeValdSharedLib status)",
-      "Bash(git -C /workspaces/CodeVald-AIProject/CodeValdSharedLib log --oneline -5)"
+      "Bash(git -C /workspaces/CodeVald-AIProject/CodeValdSharedLib log --oneline -5)",
+      "Bash(make -C /workspaces/CodeVald-AIProject/Deployment/staging/arangodb -n deploy ARANGO_ROOT_PASSWORD=test)",
+      "Bash(git -C /workspaces/CodeVald-AIProject/Deployment init)",
+      "Bash(git -C /workspaces/CodeVald-AIProject/Deployment status)",
+      "Bash(git -C /workspaces/CodeVald-AIProject/Deployment branch -m master main)",
+      "Read(//usr/local/bin/**)",
+      "Bash(command -v snap apt)",
+      "Bash(git check-ignore *)",
+      "Bash(echo \"=== staging/.env \\(ignored: $\\(git check-ignore staging/.env || echo NO\\)\\) ===\")",
+      "Bash(kubectl version *)",
+      "Bash(kubectl cluster-info *)",
+      "Bash(kubectl config *)",
+      "Read(//usr/bin/**)",
+      "Read(//var/run/**)",
+      "Read(//workspaces/**)",
+      "Bash(find / -maxdepth 4 -name 'docker' -type f)",
+      "Read(//proc/1/**)",
+      "Read(//run/**)",
+      "Bash(sudo -n apk info docker-cli)",
+      "Bash(sudo apk *)",
+      "Bash(docker version *)",
+      "Bash(getent group *)",
+      "Bash(sudo chmod *)",
+      "Bash(kubectl logs *)",
+      "Bash(docker buildx *)",
+      "Bash(docker info *)",
+      "Read(//usr/libexec/docker/**)",
+      "Read(//home/vscode/.docker/**)",
+      "Bash(kubectl get *)",
+      "Bash(kubectl describe *)",
+      "Bash(chmod +x /workspaces/CodeVald-AIProject/Deployment/staging/arangodb/ensure-database.sh)"
+    ],
+    "additionalDirectories": [
+      "/workspaces/CodeVald-AIProject/.devcontainer",
+      "/tmp"
     ]
   }
 }

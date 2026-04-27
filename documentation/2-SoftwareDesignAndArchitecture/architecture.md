@@ -18,15 +18,15 @@
 | Single-agency-per-database | One `Agency` entity per database; `agencyID` injected at startup | Preserves the existing deployment model; no multi-tenancy in v1 |
 | Downstream communication | gRPC only — no direct Go imports | Stable, versioned contracts; independent deployment |
 | Cross registration | `OrchestratorService.Register` RPC on startup + heartbeat | Standard CodeVald onboarding pattern; liveness via repeat calls |
-| Lifecycle enforcement | Forward-only (`draft → active → achieved`) | Prevents rollback; `achieved` is terminal and read-only |
-| Activation snapshot | `AgencySnapshot` entity written on `draft → active` | Immutable entity type (`Immutable: true`) — audit record |
+| Live agency mutability | Read-only once published; all edits flow through `AgencyDraft` + `PromoteDraft` | Prevents divergent edits; provides an authoring audit trail |
+| Promotion snapshot | `AgencySnapshot` entity written on every `PromoteDraft` | Immutable entity type (`Immutable: true`) — promotion record |
 | Publications | `AgencyPublication` entity written on explicit publish | Immutable entity type; version auto-incremented |
 | Pre-delivered schema | `DefaultAgencySchema()` seeded on startup (idempotent) | All TypeDefinitions for Agency, Goal, Workflow, WorkItem, ConfiguredRole, AgencySnapshot, AgencyPublication |
 | EntityService gRPC handler | `egserver.NewEntityServer` from SharedLib `entitygraph/server` | Generic CRUD over entitygraph; identical across all services; single source of truth — no Agency-specific handler code |
 | Schema seed | `entitygraph.SeedSchema` from SharedLib | Idempotent startup helper; replaces per-service `seedSchemaIfNeeded`; reusable by all services |
 | Entity gRPC route path | `egserver.GRPCServicePath` (`/entitygraph.v1.EntityService`) | Constant from SharedLib; registrar uses it when advertising entity HTTP routes to Cross |
 | Error types | `errors.go` at module root | All exported errors in one place; no scattered sentinels |
-| Value types | `models.go` at module root | Pure data structs; no methods except `AgencyLifecycle.CanTransitionTo` |
+| Value types | `models.go` at module root | Pure data structs; no methods except `AgencyDraftStatus.CanTransitionTo` |
 
 ---
 
@@ -38,7 +38,7 @@ CodeValdAgency/
 │   └── main.go                  # Wires dependencies; seeds schema; reads agencyID at startup
 ├── go.mod
 ├── errors.go                    # All exported error types
-├── models.go                    # Agency, Goal, Workflow, WorkItem, ConfiguredRole, lifecycle consts
+├── models.go                    # Agency, Goal, Workflow, WorkItem, ConfiguredRole, AgencyDraft, AgencyDraftStatus consts
 ├── agency.go                    # AgencyManager interface + agencyManager implementation
 ├── schema.go                    # DefaultAgencySchema() — pre-delivered TypeDefinitions
 ├── internal/

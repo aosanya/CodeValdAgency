@@ -10,7 +10,7 @@ Deliver a production-ready agency lifecycle management gRPC microservice with Ar
 
 The MVP delivers:
 1. The `AgencyManager` Go interface (convenience-method facade over `entitygraph.DataManager`) and its `agencyManager` implementation
-2. The `Agency` domain model with lifecycle enforcement (`draft → active → achieved`)
+2. The `Agency` domain model with `Enabled` flag and read-only enforcement once published (edits flow through `AgencyDraft` + `PromoteDraft`)
 3. An ArangoDB `entitygraph.DataManager` + `entitygraph.SchemaManager` implementation with `agency_` prefixed collections
 4. A pre-delivered agency schema (TypeDefinitions for Agency, Goal, Workflow, WorkItem, ConfiguredRole, AgencySnapshot, AgencyPublication) seeded on first use
 5. An `AgencyService` gRPC service exposing all CRUD + convenience operations
@@ -56,8 +56,9 @@ The MVP delivers:
 - [ ] `go vet ./...` shows 0 issues
 - [ ] All `AgencyService` RPCs work end-to-end with ArangoDB
 - [ ] CodeValdCross registration fires on startup and repeats on heartbeat
-- [ ] `draft → active` transition writes a snapshot to `agency_snapshots`
-- [ ] Invalid lifecycle transitions return `FAILED_PRECONDITION` from gRPC
+- [ ] `PromoteDraft` writes a snapshot to `agency_snapshots`
+- [ ] Direct edits to a published agency return `ErrAgencyReadOnly` → `FAILED_PRECONDITION`
+- [ ] Invalid draft-status transitions (`promoted`/`archived` → anything) return `ErrDraftNotOpen` → `FAILED_PRECONDITION`
 - [ ] `cross.agency.created` is published after every successful `SetAgencyDetails`
 - [ ] Routes declared in `RegisterRequest` and proxied via CodeValdCross dynamic proxy
 - [ ] `PublishAgency` creates an immutable versioned publication (`v1`, `v2`, …) without touching agency status

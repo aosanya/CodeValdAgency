@@ -55,8 +55,9 @@ github.com/aosanya/CodeValdAgency    ← module root
 │   └── main.go                      # Wires dependencies only — no business logic
 ├── go.mod
 ├── errors.go                        # ErrAgencyNotFound, ErrAgencyAlreadyExists
-├── models.go                        # Agency, Goal, Workflow, WorkItem, RoleAssignment,
-│                                    # AgencyRole, RACILabel, AgencyLifecycle, request types
+├── models.go                        # Agency, Goal, Workflow, WorkItem, ConfiguredRole,
+│                                    # AgencyDraft, AgencyDraftStatus, AgencySnapshot,
+│                                    # AgencyPublication
 ├── internal/
 │   ├── config/
 │   │   └── config.go                # Configuration struct + loader (env / YAML)

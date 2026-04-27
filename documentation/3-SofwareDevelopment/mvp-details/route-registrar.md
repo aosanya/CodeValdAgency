@@ -27,14 +27,32 @@ each service owns its route declarations and CodeValdCross acts purely as a prox
 
 ### Routes to Declare
 
-| Method | Pattern | gRPC Method | Description |
-|--------|---------|-------------|-------------|
-| `POST` | `/{agencyId}/agency` | `SetAgencyDetails` | Replace (or create) the full agency document from a JSON body |
-| `GET`  | `/{agencyId}/agency` | `GetAgency` | Retrieve the single agency for this database |
-| `PUT`  | `/{agencyId}/agency` | `UpdateAgency` | Apply incremental field edits with lifecycle validation |
-| `POST` | `/{agencyId}/agency/publish` | `PublishAgency` | Create an immutable versioned publication of the current agency |
-| `GET`  | `/{agencyId}/agency/publications` | `ListPublications` | List all publications in ascending version order |
-| `GET`  | `/{agencyId}/agency/publications/{version}` | `GetPublication` | Retrieve a specific publication by version number |
+The original AGENCY-006 task declared three routes (`SetAgencyDetails`,
+`GetAgency`, `UpdateAgency`) and the publishing additions from AGENCY-007.
+The `UpdateAgency` route was removed in AGENCY-009 — direct edits to a
+published agency are no longer permitted; changes flow through drafts. The
+authoritative, current route list lives in
+[architecture-flows.md §7](../../2-SoftwareDesignAndArchitecture/architecture-flows.md#7-codevaldcross-registration);
+the headline static routes are:
+
+| Method | Pattern | gRPC Method |
+|--------|---------|-------------|
+| `POST` | `/agency/{agencyId}` | `SetAgencyDetails` |
+| `GET`  | `/agency/{agencyId}` | `GetAgency` |
+| `POST` | `/agency/{agencyId}/drafts` | `CreateDraft` |
+| `GET`  | `/agency/{agencyId}/drafts` | `ListDrafts` |
+| `GET`  | `/agency/{agencyId}/drafts/{draftId}` | `GetDraft` |
+| `PUT`  | `/agency/{agencyId}/drafts/{draftId}` | `UpdateDraftDescription` |
+| `POST` | `/agency/{agencyId}/drafts/{draftId}/promote` | `PromoteDraft` |
+| `POST` | `/agency/{agencyId}/drafts/{draftId}/archive` | `ArchiveDraft` |
+| `POST` | `/agency/{agencyId}/publish` | `PublishAgency` |
+| `GET`  | `/agency/{agencyId}/publications` | `ListPublications` |
+| `GET`  | `/agency/{agencyId}/publications/{version}` | `GetPublication` |
+| `PUT`  | `/agency/{agencyId}/publications/{version}/status` | `UpdatePublicationStatus` |
+
+EntityService CRUD routes for each schema type (Goal, Workflow, etc.) are
+generated dynamically by `schemaroutes.RoutesFromSchema` and registered
+alongside the static set on every heartbeat.
 
 ---
 
@@ -42,14 +60,14 @@ each service owns its route declarations and CodeValdCross acts purely as a prox
 
 #### `internal/registrar/registrar.go` (updated)
 
-- [x] `RegisterRequest` includes a `DeclaredRoutes` field listing all six routes
+- [x] `RegisterRequest` includes a `DeclaredRoutes` field listing all routes
   above, each with `Method`, `Pattern`, `GrpcMethod`, and `PathBindings`
-- [x] `PathBindings` maps `{version}` → gRPC field `version` for the
-  `GetPublication` route
+- [x] `PathBindings` maps `{draftId}` → gRPC field `draft_id` for draft routes
+  and `{version}` → gRPC field `version` for publication routes
 
 #### CodeValdCross (no changes to CodeValdAgency repo)
 
-- [ ] The dynamic proxy in CodeValdCross forwards the six route patterns to the
+- [ ] The dynamic proxy in CodeValdCross forwards the route patterns to the
   registered `codevaldagency` service without any hardcoded handler
 
 ---

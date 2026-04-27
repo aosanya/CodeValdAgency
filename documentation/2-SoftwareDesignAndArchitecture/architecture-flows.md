@@ -150,21 +150,34 @@ AgencyManager.ArchiveDraft(ctx, draftID)
 ## 7. PublishAgency Flow
 
 ```
-AgencyManager.PublishAgency(ctx)
+AgencyManager.PublishAgency(ctx, draftID)
     │
-    ├─ GetAgency(ctx) → Agency (must be active or achieved)
+    ├─ GetAgency(ctx) → Agency
+    │     → ErrAgencyNotFound if no agency entity exists
     │
-    ├─ auto-increment version:
-    │       ListPublications → len(pubs) + 1
+    ├─ nextPublicationVersion → MAX(version) + 1 (or 1 if none)
+    │
+    ├─ if draftID != "":
+    │       contentHash = draftContentHash(ctx, draftID)
+    │       for each existing publication p:
+    │           p.ContentHash == contentHash?  → ErrNoChangesDetected
     │
     ├─ dataManager.CreateEntity — AgencyPublication{
     │       TypeID:    "AgencyPublication",
     │       AgencyID:  agencyID,
-    │       Properties: {version, tag, published_at},
-    │   }  → stored in agency_publications (Immutable: true)
+    │       Properties: {version, tag, published_at, draft_id, content_hash},
+    │   }  → immutable
+    │
+    ├─ dataManager.CreateEntity — AgencyPublicationStatus{status: "draft"}
+    ├─ dataManager.CreateRelationship — has_status: publication → status
     │
     └─ publisher.Publish(ctx, "cross.agency.published", agencyID)
 ```
+
+`UpdatePublicationStatus(version, status)` mutates the linked
+`AgencyPublicationStatus` entity only — the immutable `AgencyPublication`
+record is never updated. Allowed transitions: `draft → active`,
+`active → archived`. `archived` is terminal.
 
 ---
 

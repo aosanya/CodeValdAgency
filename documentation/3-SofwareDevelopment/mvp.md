@@ -40,12 +40,12 @@ The MVP delivers:
 | MVP-AGENCY-008-G | Test rewrite — `fakeDataManager` replacing `fakeBackend` | ✅ Done | MVP-AGENCY-008-D |
 | MVP-AGENCY-008-H | Type-specific URL params — `EntityIDParam` on all schema types; adopt `schemaroutes.RoutesFromSchema` in registrar | ✅ Done | MVP-AGENCY-008-B, ~~SHAREDLIB-011~~ 🚀 |
 | **MVP-AGENCY-009 — Agency Drafts** | | | |
-| MVP-AGENCY-009-A | Models & errors update — `AgencyDraft`, `AgencyDraftStatus`, remove `AgencyLifecycle`, add `enabled` to `Agency`, add `ErrAgencyNotPublished / ErrDraftNotFound / ErrDraftNotOpen / ErrAgencyReadOnly` | 🔲 Not Started | — |
-| MVP-AGENCY-009-B | Schema update — `AgencyDraft` TypeDefinition, update `Agency` / `Goal` / `Workflow` / `ConfiguredRole` TypeDefinitions | 🔲 Not Started | MVP-AGENCY-009-A |
-| MVP-AGENCY-009-C | `AgencyManager` draft methods — `CreateDraft`, `GetDraft`, `ListDrafts`, `UpdateDraftDescription`, `PromoteDraft`, `ArchiveDraft`; enforce `ErrAgencyReadOnly` on direct edits | 🔲 Not Started | MVP-AGENCY-009-A |
-| MVP-AGENCY-009-D | ArangoDB storage — `agency_drafts` collection, fork deep-copy logic in `PromoteDraft` | 🔲 Not Started | MVP-AGENCY-009-C |
-| MVP-AGENCY-009-E | gRPC handlers — new RPCs for all draft operations; update `Agency` proto message | 🔲 Not Started | MVP-AGENCY-009-C |
-| MVP-AGENCY-009-F | Tests — full acceptance test suite for all draft flows | 🔲 Not Started | MVP-AGENCY-009-C, MVP-AGENCY-009-D |
+| MVP-AGENCY-009-A | Models & errors update — `AgencyDraft`, `AgencyDraftStatus`, remove `AgencyLifecycle`, add `enabled` to `Agency`, add `ErrAgencyNotPublished / ErrDraftNotFound / ErrDraftNotOpen / ErrAgencyReadOnly` | ✅ Done | — |
+| MVP-AGENCY-009-B | Schema update — `AgencyDraft` TypeDefinition, update `Agency` / `Goal` / `Workflow` / `ConfiguredRole` TypeDefinitions | ✅ Done | ~~MVP-AGENCY-009-A~~ ✅ |
+| MVP-AGENCY-009-C | `AgencyManager` draft methods — `CreateDraft`, `GetDraft`, `ListDrafts`, `UpdateDraftDescription`, `PromoteDraft`, `ArchiveDraft`; enforce `ErrAgencyReadOnly` on direct edits | ✅ Done | ~~MVP-AGENCY-009-A~~ ✅ |
+| MVP-AGENCY-009-D | ArangoDB storage — fork deep-copy logic in `PromoteDraft` (drafts share the unified `agency_entities` collection scoped by `TypeID="AgencyDraft"`; the separate `agency_draft_entities` design was dropped during implementation) | ✅ Done | ~~MVP-AGENCY-009-C~~ ✅ |
+| MVP-AGENCY-009-E | gRPC handlers — new RPCs for all draft operations; update `Agency` proto message | ✅ Done | ~~MVP-AGENCY-009-C~~ ✅ |
+| MVP-AGENCY-009-F | Tests — full acceptance test suite for all draft flows | ✅ Done | ~~MVP-AGENCY-009-C~~ ✅, ~~MVP-AGENCY-009-D~~ ✅ |
 
 ---
 

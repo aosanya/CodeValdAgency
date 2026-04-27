@@ -56,7 +56,7 @@ The MVP delivers:
 - [ ] `go vet ./...` shows 0 issues
 - [ ] All `AgencyService` RPCs work end-to-end with ArangoDB
 - [ ] CodeValdCross registration fires on startup and repeats on heartbeat
-- [ ] `PromoteDraft` writes a snapshot to `agency_snapshots`
+- [ ] `PromoteDraft` writes an `AgencySnapshot` entity to `agency_entities`
 - [ ] Direct edits to a published agency return `ErrAgencyReadOnly` → `FAILED_PRECONDITION`
 - [ ] Invalid draft-status transitions (`promoted`/`archived` → anything) return `ErrDraftNotOpen` → `FAILED_PRECONDITION`
 - [ ] `cross.agency.created` is published after every successful `SetAgencyDetails`

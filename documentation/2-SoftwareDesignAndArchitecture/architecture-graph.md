@@ -109,25 +109,32 @@ Edges are stored in `agency_relationships`. Each edge has `_from`, `_to`, `name`
 
 | Type | Immutable | StorageCollection |
 |---|---|---|
-| `Agency` | — | `agency_entities` |
-| `Goal` | — | `agency_entities` (live) / `agency_draft_entities` (draft copy) |
-| `Workflow` | — | `agency_entities` (live) / `agency_draft_entities` (draft copy) |
-| `WorkItem` | — | `agency_entities` (live) / `agency_draft_entities` (draft copy) |
-| `Instruction` | — | `agency_entities` (live) / `agency_draft_entities` (draft copy) |
-| `Deliverable` | — | `agency_entities` (live) / `agency_draft_entities` (draft copy) |
-| `DeliverableResult` | **true** | `deliverable_results` |
-| `ContentRef` | **true** | `content_refs` |
-| `ConfiguredRole` | — | `agency_entities` (live) / `agency_draft_entities` (draft copy) |
-| `AgencyDraft` | — | `agency_drafts` |
-| `AgencySnapshot` | **true** | `agency_snapshots` |
-| `AgencyPublication` | **true** | `agency_publications` |
-| `AgencyPublicationStatus` | — | `publication_statuses` |
+| `Agency` | — | `agency_entities` (default) |
+| `Goal` | — | `agency_entities` (default) |
+| `Workflow` | — | `agency_entities` (default) |
+| `WorkItem` | — | `agency_entities` (default) |
+| `Instruction` | — | `agency_entities` (default) |
+| `Deliverable` | — | `agency_entities` (default) |
+| `DeliverableResult` | **true** | `agency_entities` (default) |
+| `ContentRef` | **true** | `agency_entities` (default) |
+| `ConfiguredRole` | — | `agency_entities` (default) |
+| `AgencyDraft` | — | `agency_drafts` (explicit) |
+| `DraftGoal` | — | `agency_draft_entities` (explicit) |
+| `DraftWorkflow` | — | `agency_draft_entities` (explicit) |
+| `DraftWorkItem` | — | `agency_draft_entities` (explicit) |
+| `DraftConfiguredRole` | — | `agency_draft_entities` (explicit) |
+| `DraftInstruction` | — | `agency_draft_entities` (explicit) |
+| `DraftDeliverable` | — | `agency_draft_entities` (explicit) |
+| `DraftDeliverableResult` | — | `agency_draft_entities` (explicit) |
+| `AgencySnapshot` | **true** | `agency_entities` (default) |
+| `AgencyPublication` | **true** | `agency_entities` (default) |
+| `AgencyPublicationStatus` | — | `agency_entities` (default) |
 
-> Draft copies of `Goal`, `Workflow`, `WorkItem`, `ConfiguredRole`,
-> `Instruction`, and `Deliverable` are scoped by `draft_id` inside
-> `agency_draft_entities`. Live copies in `agency_entities` are scoped by
-> `agency_id`. The single `agency_relationships` edge collection spans both
-> vertex collections via full ArangoDB document handles.
+> Drafts use **dedicated `Draft*` types**, not the live types scoped by
+> `draft_id`. Each draft sub-entity carries a `draft_ref_code` property that
+> ties it to its `AgencyDraft` root. The single `agency_relationships` edge
+> collection spans every vertex collection via full ArangoDB document
+> handles.
 
 **`Immutable: true`** — `UpdateEntity` returns `ErrImmutableType` for these types. Each submission or review decision creates a new record, giving a full audit trail.
 

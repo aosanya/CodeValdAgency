@@ -237,7 +237,7 @@ instance. Tests skip when `AGENCY_ARANGO_ENDPOINT` is not set.
 - `SetAgencyDetails` called twice (pre-promotion) → `GetAgency` returns latest data
 - `SetAgencyDetails` with invalid JSON → `INVALID_ARGUMENT`
 - `SetAgencyDetails` → `CreateDraft` → edit sub-graph → `PromoteDraft` → `GetAgency` returns the promoted state and `Enabled == true`
-- `PromoteDraft` writes a row to `agency_snapshots`
+- `PromoteDraft` writes an `AgencySnapshot` entity into `agency_entities`
 - `SetAgencyDetails` after a successful `PromoteDraft` → `FAILED_PRECONDITION` (`ErrAgencyReadOnly`)
 - `PromoteDraft` on an already-promoted or archived draft → `FAILED_PRECONDITION` (`ErrDraftNotOpen`)
 - `GetAgency` on empty database → `NOT_FOUND`

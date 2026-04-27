@@ -190,35 +190,49 @@ bootstrap path for populating the very first draft when no live agency exists.
 
 ---
 
-## Schema Changes
+## Schema (shipped — see [schema.go](../../../schema.go))
 
-### New TypeDefinition: `AgencyDraft`
+The implementation uses **dedicated draft sub-types** instead of attaching a
+`belongs_to_draft` edge to the live types. A draft sub-graph and the live
+sub-graph never share an entity record.
+
+### `AgencyDraft` — root entity
 
 - **Mutable**
-- Properties: `description`(req), `status`(req), `forked_from_id`, `forked_from_type`, `created_at`, `updated_at`
-- Relationships mirror the live `Agency` sub-graph:
-  - `has_goal` → `Goal` (ToMany, Inverse: `belongs_to_draft`)
-  - `has_workflow` → `Workflow` (ToMany, Inverse: `belongs_to_draft`)
-  - `has_configured_role` → `ConfiguredRole` (ToMany, Inverse: `belongs_to_draft`)
-- Inverse from Agency: `belongs_to_agency` (ToMany=false, Required=true)
+- `StorageCollection: "agency_drafts"`
+- Properties: `ref_code`(req), `code`, `description`, `status`(req — `open`/`promoted`/`archived`), `forked_from_ref_code`, `forked_from_type` (`live`|`draft`)
+- Relationship: `belongs_to_agency` → `Agency` (ToMany=false, Required=true)
 
-The live `Agency` entity holds a **`has_draft` (ToMany)** edge to every draft ever
-created for it — open, promoted, and archived. There is no single
-"active draft" pointer. Callers retrieve open drafts via `ListDrafts` filtered
-by `status=open`. This keeps the graph model simple and the draft history
-complete.
+The live `Agency` entity carries a `has_draft` (ToMany) edge that lists every
+draft ever created — open, promoted, and archived alike. There is no
+"active draft" pointer; `ListDrafts` filters by `status=open` when needed.
+
+### Draft sub-types — `DraftGoal`, `DraftWorkflow`, `DraftWorkItem`, `DraftConfiguredRole`, `DraftInstruction`, `DraftDeliverable`, `DraftDeliverableResult`
+
+Each is a separate `TypeDefinition` with `StorageCollection: "agency_draft_entities"`
+and a `(draft_ref_code, code)` unique key. They mirror the property set of
+their live counterparts plus a `draft_ref_code` scope key (and, where
+applicable, parent ref-codes — `draft_workflow_ref_code` on `DraftWorkItem`,
+`draft_work_item_ref_code` on `DraftDeliverable`, etc.).
+
+`PathSegment` on each draft type is namespaced as
+`drafts/{draftRefCode}/<plural>` so `schemaroutes.RoutesFromSchema` produces
+draft-scoped CRUD endpoints (e.g. `/agency/{agencyId}/drafts/{draftId}/goals`)
+without colliding with the live routes.
 
 ### Updated TypeDefinition: `Agency`
 
-- Remove `status` property (was `AgencyLifecycle`)
-- Add `enabled` boolean property
-- Add relationship: `has_draft` → `AgencyDraft` (ToMany=true, Inverse: `belongs_to_agency`)
+- Removed `status` property (was `AgencyLifecycle`)
+- Added `enabled` boolean property
+- Added `has_draft` → `AgencyDraft` (ToMany=true, Inverse: `belongs_to_agency`)
 
-### Updated TypeDefinitions: `Goal`, `Workflow`, `ConfiguredRole`
+### Live sub-types (`Goal`, `Workflow`, `ConfiguredRole`, …)
 
-Each gains an optional inverse relationship `belongs_to_draft` → `AgencyDraft`
-(ToMany=false, Required=false) alongside the existing `belongs_to_agency`.
-This follows the same multi-parent pattern used by `Instruction`.
+Unchanged from their pre-drafts shape. The original design floated an optional
+`belongs_to_draft` inverse on each live type so a single record could serve
+both contexts; that path was **not taken** — the dedicated `Draft*` types
+proved cleaner and let `PromoteDraft` use a straightforward read-from-one-
+collection / write-to-the-other deep copy.
 
 ---
 
@@ -252,31 +266,30 @@ provides the internal authoring audit trail.
 
 ## Storage
 
-**Decision: Option B — separate `agency_draft_entities` collection.**
-
-Draft sub-entities are stored in a **dedicated `agency_draft_entities` document
-collection**, completely isolated from the live `agency_entities` collection.
-The single `agency_relationships` edge collection spans both vertex collections
-natively (ArangoDB full document handles: `_from: "agency_draft_entities/<uuid>"`).
+Draft data lives in two dedicated document collections, completely isolated
+from the live `agency_entities` collection. Routing is driven by
+`TypeDefinition.StorageCollection`.
 
 | Collection | Holds |
 |---|---|
-| `agency_entities` | Live entity types only (Agency, Goal, Workflow, WorkItem, ConfiguredRole, Instruction, Deliverable) |
-| `agency_draft_entities` | Draft copies of the same types, scoped by `draft_id` |
+| `agency_entities` | Live entity types only (Agency, Goal, Workflow, WorkItem, ConfiguredRole, Instruction, Deliverable, …) |
 | `agency_drafts` | `AgencyDraft` root entities (description, status, fork metadata) |
-| `agency_relationships` | All edges — live-to-live, draft-to-draft, and agency-to-draft root |
-
-Draft entities carry a `draft_id` property (not `agency_id`) as their primary
-scope key. `agency_id` is still present for cross-cutting queries.
+| `agency_draft_entities` | Draft sub-entity types — `DraftGoal`, `DraftWorkflow`, `DraftWorkItem`, `DraftConfiguredRole`, `DraftInstruction`, `DraftDeliverable`, `DraftDeliverableResult`. Each carries a `draft_ref_code` property as its primary scope key; `agency_id` is retained for cross-cutting queries. |
+| `agency_relationships` | All edges — live-to-live, draft-to-draft, and agency-to-draft root. Spans every vertex collection via ArangoDB full document handles (`_from: "agency_draft_entities/<uuid>"`). |
 
 ```json
 // agency_draft_entities/{key}
 {
   "_key":      "<uuid>",
-  "type_id":   "Goal",
-  "draft_id":  "<draftID>",
+  "type_id":   "DraftGoal",
   "agency_id": "<agencyID>",
-  "properties": { "title": "Reduce onboarding time", "ordinality": 1 },
+  "properties": {
+    "ref_code":       "<uuid>",
+    "code":           "reduce-onboarding",
+    "draft_ref_code": "<draftRefCode>",
+    "title":          "Reduce onboarding time",
+    "ordinality":     1
+  },
   "created_at": "...",
   "updated_at": "..."
 }
@@ -285,9 +298,9 @@ scope key. `agency_id` is still present for cross-cutting queries.
 ### Why this is the right model
 
 - **Zero contamination** — `agency_entities` exclusively holds live data; no filter can accidentally leak draft entities into a live context.
-- **`PromoteDraft` is a clean copy** — read from `agency_draft_entities` where `draft_id=X`, write to `agency_entities`. No field patching.
-- **`ArchiveDraft` cleanup** — delete all `agency_draft_entities` documents where `draft_id=X` in a single AQL statement.
-- **No second edge collection** — ArangoDB edge `_from`/`_to` use full handles, so `agency_relationships` works across both vertex collections.
+- **`PromoteDraft` is a clean copy** — read from `agency_draft_entities` where `draft_ref_code=X`, write the live counterpart (`Goal`, `Workflow`, …) to `agency_entities`. No field patching.
+- **`ArchiveDraft` cleanup** — delete all `agency_draft_entities` documents where `draft_ref_code=X` in a single AQL statement.
+- **No second edge collection** — ArangoDB edge `_from`/`_to` use full handles, so `agency_relationships` works across all vertex collections.
 
 ---
 
@@ -303,7 +316,7 @@ scope key. `agency_id` is still present for cross-cutting queries.
 
 ## MVP-AGENCY-009-A — Models & Errors Update
 
-**Status**: 🔲 Not Started
+**Status**: ✅ Done
 **Branch**: `feature/AGENCY-009-A_agency_draft_models`
 
 ### Files to Modify
@@ -322,7 +335,7 @@ scope key. `agency_id` is still present for cross-cutting queries.
 
 ## MVP-AGENCY-009-B — Schema Update
 
-**Status**: 🔲 Not Started
+**Status**: ✅ Done
 **Branch**: `feature/AGENCY-009-B_agency_draft_schema`
 **Depends on**: MVP-AGENCY-009-A
 
@@ -336,7 +349,7 @@ scope key. `agency_id` is still present for cross-cutting queries.
 
 ## MVP-AGENCY-009-C — AgencyManager Draft Methods
 
-**Status**: 🔲 Not Started
+**Status**: ✅ Done
 **Branch**: `feature/AGENCY-009-C_agency_draft_manager`
 **Depends on**: MVP-AGENCY-009-A
 
@@ -350,7 +363,7 @@ scope key. `agency_id` is still present for cross-cutting queries.
 
 ## MVP-AGENCY-009-D — ArangoDB Storage
 
-**Status**: 🔲 Not Started
+**Status**: ✅ Done
 **Branch**: `feature/AGENCY-009-D_agency_draft_storage`
 **Depends on**: MVP-AGENCY-009-C
 
@@ -370,7 +383,7 @@ then re-creates all edges in `agency_relationships` under the live `agency_id` s
 
 ## MVP-AGENCY-009-E — gRPC Handlers
 
-**Status**: 🔲 Not Started
+**Status**: ✅ Done
 **Branch**: `feature/AGENCY-009-E_agency_draft_grpc`
 **Depends on**: MVP-AGENCY-009-C
 
@@ -389,7 +402,7 @@ then re-creates all edges in `agency_relationships` under the live `agency_id` s
 
 ## MVP-AGENCY-009-F — Tests
 
-**Status**: 🔲 Not Started
+**Status**: ✅ Done
 **Branch**: `feature/AGENCY-009-F_agency_draft_tests`
 **Depends on**: MVP-AGENCY-009-C, MVP-AGENCY-009-D
 

@@ -65,8 +65,8 @@ The MVP delivers:
 - [ ] `cross.agency.published` is fired after every successful publish
 - [ ] `POST /agency/publish` is proxied through CodeValdCross
 - [ ] `AgencyManager` is a convenience facade over `entitygraph.DataManager` — no bespoke `Backend` interface
-- [ ] Storage uses `agency_entities`, `agency_relationships` (edge), `agency_schemas`, `agency_snapshots`, `agency_publications` collections
-- [ ] Pre-delivered schema is seeded into `agency_schemas` on first use (idempotent)
+- [ ] Storage uses `agency_entities`, `agency_drafts`, `agency_draft_entities`, `agency_relationships` (edge), `agency_schemas_draft`, and `agency_schemas_published` collections (snapshots and publications live as `TypeID`s within `agency_entities`)
+- [ ] Pre-delivered schema is seeded into `agency_schemas_published` on first use (idempotent)
 - [ ] `GetWorkflows`, `GetGoals`, `GetConfiguredRoles` convenience methods work end-to-end
 
 ---

@@ -5,6 +5,7 @@
 > - [architecture-graph.md](architecture-graph.md) — graph topology, entity types, pre-delivered schema
 > - [architecture-storage.md](architecture-storage.md) — ArangoDB collections, document shapes, indexes
 > - [architecture-flows.md](architecture-flows.md) — lifecycle rules, flows, error types, gRPC service
+> - [architecture-configuration.md](architecture-configuration.md) — env vars, boot sequence, local dev
 
 ---
 
@@ -71,3 +72,4 @@ CodeValdAgency/
 > - **Graph topology & schema** → [architecture-graph.md](architecture-graph.md)
 > - **ArangoDB storage** → [architecture-storage.md](architecture-storage.md)
 > - **Lifecycle, flows & errors** → [architecture-flows.md](architecture-flows.md)
+> - **Runtime configuration** → [architecture-configuration.md](architecture-configuration.md)

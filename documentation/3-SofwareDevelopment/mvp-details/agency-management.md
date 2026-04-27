@@ -102,24 +102,25 @@ agency must go through a draft.
 
 The bespoke `Backend` interface from this task was retired in MVP-AGENCY-008.
 Storage now goes through `entitygraph.DataManager` from CodeValdSharedLib;
-`storage/arangodb/storage.go` provides the ArangoDB implementation of that
-interface. The agency-specific collections used today are:
+`storage/arangodb/storage.go` is a thin adapter that fixes the agency-specific
+collection and graph names.
 
-| Collection | Purpose |
+| Collection | Holds |
 |---|---|
-| `agency_entities` | All live entities (Agency, Goal, Workflow, WorkItem, ConfiguredRole, Instruction, Deliverable) |
-| `agency_draft_entities` | Draft copies of the same types, scoped by `draft_id` |
-| `agency_drafts` | `AgencyDraft` root entities |
-| `agency_relationships` | Edge collection — spans both vertex collections |
-| `agency_schemas` | Pre-delivered schema versions seeded on startup |
-| `agency_snapshots` | Immutable promotion snapshots (written on `PromoteDraft`) |
-| `agency_publications` | Immutable versioned publications |
+| `agency_entities` | Live entities of every non-draft type — Agency, Goal, Workflow, WorkItem, ConfiguredRole, Instruction, Deliverable, DeliverableResult, ContentRef, AgencySnapshot, AgencyPublication, AgencyPublicationStatus |
+| `agency_drafts` | `AgencyDraft` root entities (routed by `TypeDefinition.StorageCollection`) |
+| `agency_draft_entities` | Draft sub-entities — dedicated types `DraftGoal`, `DraftWorkflow`, `DraftWorkItem`, `DraftConfiguredRole`, `DraftInstruction`, `DraftDeliverable`, `DraftDeliverableResult` (each routed by `StorageCollection`) |
+| `agency_relationships` | Edge collection — spans all vertex collections via full ArangoDB document handles |
+| `agency_schemas_draft` | In-progress schema versions managed by `SchemaManager` |
+| `agency_schemas_published` | Published, versioned schema documents seeded on startup |
 
-There is no `agency_details` collection. Snapshots are written by
+There is no `agency_details` collection (retired with the bespoke `Backend`).
+There are no separate `agency_snapshots` or `agency_publications` collections —
+those are `TypeID`s within `agency_entities`. Snapshots are written by
 `PromoteDraft`, not by any lifecycle transition.
 
 See [architecture-storage.md](../../2-SoftwareDesignAndArchitecture/architecture-storage.md)
-for the canonical schema layout.
+for document shapes, indexes, and the named graph definition.
 
 ---
 

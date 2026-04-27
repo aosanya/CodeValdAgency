@@ -18,7 +18,7 @@ var, with sensible defaults for everything except `CODEVALDAGENCY_GRPC_PORT`
 | `AGENCY_ARANGO_ENDPOINT` | no | `http://localhost:8529` | ArangoDB HTTP endpoint. |
 | `AGENCY_ARANGO_USER` | no | `root` | ArangoDB username. |
 | `AGENCY_ARANGO_PASSWORD` | no | `""` | ArangoDB password. |
-| `AGENCY_ARANGO_DATABASE` | no | `codevaldagency` | ArangoDB database name. The collections (`agency_entities`, `agency_relationships`, `agency_schemas`, `agency_snapshots`, `agency_publications`) live inside this database — see [architecture-storage.md](architecture-storage.md). |
+| `AGENCY_ARANGO_DATABASE` | no | `codevaldagency` | ArangoDB database name. All agency collections live inside this database — see [architecture-storage.md](architecture-storage.md) for the full list. |
 | `CROSS_GRPC_ADDR` | no | `""` | CodeValdCross gRPC address for registration heartbeats. **Empty string disables registration entirely** — the service runs standalone. |
 | `AGENCY_GRPC_ADVERTISE_ADDR` | no | `:${CODEVALDAGENCY_GRPC_PORT}` | Address that CodeValdCross dials back on. Override when running behind a NAT or a sidecar. |
 | `CROSS_PING_INTERVAL` | no | `20s` | Heartbeat cadence to CodeValdCross. Parsed as a Go `time.Duration`. |

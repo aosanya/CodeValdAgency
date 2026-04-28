@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
+	"github.com/aosanya/CodeValdSharedLib/eventbus"
 )
 
 // ── CreateDraft ────────────────────────────────────────────────────────────────
@@ -391,9 +392,10 @@ func (m *agencyManager) PromoteDraft(ctx context.Context, draftID string) (Agenc
 	}
 
 	// 9. Publish event.
-	if m.publisher != nil {
-		_ = m.publisher.Publish(ctx, "cross.agency.promoted", agencyEntity.ID)
-	}
+	eventbus.SafePublish(ctx, m.publisher, eventbus.Event{
+		Topic:    "cross.agency.promoted",
+		AgencyID: agencyEntity.ID,
+	})
 
 	return entityToAgency(updatedAgencyEntity), nil
 }

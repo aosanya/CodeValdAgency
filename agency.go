@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
+	"github.com/aosanya/CodeValdSharedLib/eventbus"
 )
 
 // AgencyManager is the primary interface for agency lifecycle management.
@@ -116,15 +117,14 @@ type AgencyManager interface {
 // It is a type alias for [entitygraph.SchemaManager] from CodeValdSharedLib.
 type AgencySchemaManager = entitygraph.SchemaManager
 
-// CrossPublisher publishes agency lifecycle events to CodeValdCross.
-// Implementations must be safe for concurrent use. A nil CrossPublisher is
-// valid — publish calls are silently skipped.
-type CrossPublisher interface {
-	// Publish delivers an event for the given topic and agencyID to
-	// CodeValdCross. Errors are non-fatal: implementations should log and
-	// return nil for best-effort delivery.
-	Publish(ctx context.Context, topic string, agencyID string) error
-}
+// CrossPublisher is the historical name for the event-publishing contract
+// CodeValdAgency callers inject. As of MVP-WORK-014 it is a type alias for
+// [eventbus.Publisher] — the SharedLib package that unifies the publish
+// contract across CodeValdAgency, CodeValdComm, CodeValdDT, and CodeValdWork.
+//
+// New callers should refer to [eventbus.Publisher] directly; this alias
+// remains for source compatibility.
+type CrossPublisher = eventbus.Publisher
 
 // agencyManager is the concrete implementation of [AgencyManager].
 // It wraps [entitygraph.DataManager] to expose agency-specific convenience
@@ -133,7 +133,7 @@ type CrossPublisher interface {
 type agencyManager struct {
 	dm        entitygraph.DataManager // graph CRUD — injected by cmd/main.go
 	sm        AgencySchemaManager     // schema versioning — injected by cmd/main.go
-	publisher CrossPublisher          // optional; nil = skip event publishing
+	publisher eventbus.Publisher      // optional; nil = skip event publishing
 	agencyID  string                  // the single agency ID for this database
 }
 
@@ -145,7 +145,7 @@ type agencyManager struct {
 func NewAgencyManager(
 	dm entitygraph.DataManager,
 	sm AgencySchemaManager,
-	pub CrossPublisher,
+	pub eventbus.Publisher,
 	agencyID string,
 ) AgencyManager {
 	return &agencyManager{dm: dm, sm: sm, publisher: pub, agencyID: agencyID}
@@ -206,9 +206,10 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 
 	agency := entityToAgency(entity)
 
-	if m.publisher != nil {
-		_ = m.publisher.Publish(ctx, "cross.agency.created", agency.ID)
-	}
+	eventbus.SafePublish(ctx, m.publisher, eventbus.Event{
+		Topic:    "cross.agency.created",
+		AgencyID: agency.ID,
+	})
 	return agency, nil
 }
 
@@ -373,9 +374,10 @@ func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (Agen
 		Status:      "draft",
 	}
 
-	if m.publisher != nil {
-		_ = m.publisher.Publish(ctx, "cross.agency.published", agency.ID)
-	}
+	eventbus.SafePublish(ctx, m.publisher, eventbus.Event{
+		Topic:    "cross.agency.published",
+		AgencyID: agency.ID,
+	})
 	return pub, nil
 }
 

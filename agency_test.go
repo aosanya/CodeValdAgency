@@ -9,6 +9,7 @@ import (
 
 	codevaldagency "github.com/aosanya/CodeValdAgency"
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
+	"github.com/aosanya/CodeValdSharedLib/eventbus"
 )
 
 // fakeDataManager is an in-memory entitygraph.DataManager used for unit tests.
@@ -211,8 +212,8 @@ type fakePublisher struct {
 	events []struct{ topic, id string }
 }
 
-func (fp *fakePublisher) Publish(_ context.Context, topic, agencyID string) error {
-	fp.events = append(fp.events, struct{ topic, id string }{topic, agencyID})
+func (fp *fakePublisher) Publish(_ context.Context, e eventbus.Event) error {
+	fp.events = append(fp.events, struct{ topic, id string }{e.Topic, e.AgencyID})
 	return nil
 }
 

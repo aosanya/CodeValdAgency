@@ -379,6 +379,78 @@ type RoleMatch struct {
 	ContextSources []ContextSource
 }
 
+// CreateRoleRequest carries the fields for creating a new [Role].
+type CreateRoleRequest struct {
+	// Name is a human-readable label for the role.
+	Name string
+
+	// Description is the role brief.
+	Description string
+
+	// EventTopic is a Go regex matched against the incoming Cross event topic.
+	EventTopic string
+
+	// PayloadCondition is a Go regex matched against the raw JSON payload.
+	// Empty string matches all payloads.
+	PayloadCondition string
+
+	// Instructions is the prompt template injected into the triggered AgentRun.
+	Instructions string
+
+	// AgentID is a cross-service reference to a CodeValdAI Agent entity ID.
+	AgentID string
+
+	// Enabled controls whether this role participates in MatchRoles dispatch.
+	Enabled bool
+
+	// Ordinality controls ascending sort order when multiple roles match.
+	Ordinality int
+}
+
+// UpdateRoleRequest carries the fields that may be changed on an existing [Role].
+type UpdateRoleRequest struct {
+	// Name is a human-readable label for the role.
+	Name string
+
+	// Description is the role brief.
+	Description string
+
+	// EventTopic is a Go regex matched against the incoming Cross event topic.
+	EventTopic string
+
+	// PayloadCondition is a Go regex matched against the raw JSON payload.
+	// Empty string matches all payloads.
+	PayloadCondition string
+
+	// Instructions is the prompt template injected into the triggered AgentRun.
+	Instructions string
+
+	// AgentID is a cross-service reference to a CodeValdAI Agent entity ID.
+	AgentID string
+
+	// Enabled controls whether this role participates in MatchRoles dispatch.
+	Enabled bool
+
+	// Ordinality controls ascending sort order when multiple roles match.
+	Ordinality int
+}
+
+// AddContextSourceRequest carries the typed configuration for a new [ContextSource].
+// Exactly one of Git, Comm, or Work must be non-nil, matching SourceType.
+type AddContextSourceRequest struct {
+	// SourceType identifies which service this source fetches from.
+	SourceType ContextSourceType
+
+	// Git is non-nil when SourceType == ContextSourceGit.
+	Git *GitContextSourceConfig
+
+	// Comm is non-nil when SourceType == ContextSourceComm.
+	Comm *CommContextSourceConfig
+
+	// Work is non-nil when SourceType == ContextSourceWork.
+	Work *WorkContextSourceConfig
+}
+
 // AgencyDraft is a parallel, editable copy of an agency's sub-graph. Drafts
 // are forked from the live agency or from another open draft, edited freely,
 // then promoted to become the new live state — or archived if discarded.

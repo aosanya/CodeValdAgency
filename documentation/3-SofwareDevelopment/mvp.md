@@ -48,7 +48,7 @@ The MVP delivers:
 | MVP-AGENCY-009-F | Tests — full acceptance test suite for all draft flows | ✅ Done | ~~MVP-AGENCY-009-C~~ ✅, ~~MVP-AGENCY-009-D~~ ✅ |
 
 | **MVP-AGENCY-010 — RACI Schema** | | | |
-| MVP-AGENCY-010 | RACI Schema: Role + ContextSource entity types | 🚀 In Progress | — |
+| MVP-AGENCY-010 | RACI Schema: Role + ContextSource entity types | ✅ Done | — |
 | MVP-AGENCY-011 | RACI AgencyManager: CRUD + MatchRoles query | 📋 Not Started | MVP-AGENCY-010 |
 | MVP-AGENCY-012 | RACI gRPC RPCs | 📋 Not Started | MVP-AGENCY-011 |
 | MVP-AGENCY-013 | RACI Cross Registration & Route Declarations | 📋 Not Started | MVP-AGENCY-012 |

@@ -4,7 +4,7 @@
 // [types.Schema] for CodeValdAgency. cmd/main.go seeds this schema
 // idempotently on startup via AgencySchemaManager.SetSchema.
 //
-// The schema declares twenty TypeDefinitions:
+// The schema declares twenty-four TypeDefinitions:
 //   - Agency                    — root entity (mutable)
 //   - Goal                      — strategic objective (mutable)
 //   - Workflow                  — ordered container of WorkItems (mutable)
@@ -25,6 +25,10 @@
 //   - AgencySnapshot            — immutable activation record (draft → active)
 //   - AgencyPublication         — immutable versioned publication snapshot
 //   - AgencyPublicationStatus   — mutable status node for a publication (draft → active → archived)
+//   - Role                      — RACI dispatch role; regex-matched against Cross event topics (mutable)
+//   - GitContextSource          — context source: CodeValdGit file signals (mutable)
+//   - CommContextSource         — context source: CodeValdComm thread lookback (mutable)
+//   - WorkContextSource         — context source: CodeValdWork task details (mutable)
 //
 // Relationship graph:
 //
@@ -128,6 +132,7 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "has_draft", Label: "Drafts", PathSegment: "drafts", ToType: "AgencyDraft", ToMany: true, Inverse: "belongs_to_agency"},
 					{Name: "has_snapshot", Label: "Snapshots", PathSegment: "snapshots", ToType: "AgencySnapshot", ToMany: true, Inverse: "belongs_to_agency"},
 					{Name: "has_publication", Label: "Publications", PathSegment: "publications", ToType: "AgencyPublication", ToMany: true, Inverse: "belongs_to_agency"},
+					{Name: "has_role", Label: "Roles", PathSegment: "roles", ToType: "Role", ToMany: true, Inverse: "belongs_to_agency"},
 				},
 			},
 			{
@@ -573,6 +578,106 @@ func DefaultAgencySchema() types.Schema {
 					// Required=false: the link is created via an explicit CreateRelationship
 					// call in PublishAgency immediately after entity creation.
 					{Name: "belongs_to_publication", Label: "Publication", PathSegment: "publication", ToType: "AgencyPublication", ToMany: false, Required: false, Inverse: "has_status"},
+				},
+			},
+			// Role is a RACI dispatch role. CodeValdAI calls MatchRoles with the
+			// incoming Cross topic and raw JSON payload; the agency returns all enabled
+			// roles whose event_topic regex matches the topic and whose
+			// payload_condition regex (if set) matches the payload string.
+			{
+				Name:          "Role",
+				DisplayName:   "Role",
+				PathSegment:   "roles",
+				EntityIDParam: "roleId",
+				UniqueKey:     []string{"code"},
+				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
+					{Name: "name", Type: types.PropertyTypeString, Required: true},
+					{Name: "description", Type: types.PropertyTypeString, Required: false},
+					// event_topic is a Go regex matched against the incoming Cross topic.
+					{Name: "event_topic", Type: types.PropertyTypeString, Required: true},
+					// payload_condition is a Go regex matched against the raw JSON payload.
+					// Empty string means match all payloads.
+					{Name: "payload_condition", Type: types.PropertyTypeString, Required: false},
+					// instructions is a prompt template injected into the triggered AgentRun.
+					{Name: "instructions", Type: types.PropertyTypeString, Required: false},
+					// agent_id is a cross-service reference to a CodeValdAI Agent entity ID.
+					{Name: "agent_id", Type: types.PropertyTypeString, Required: false},
+					{Name: "enabled", Type: types.PropertyTypeBoolean, Required: true},
+					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
+				},
+				Relationships: []types.RelationshipDefinition{
+					// ToMany=false, Required=true: a Role must belong to exactly one Agency.
+					// Inverse of Agency.has_role — auto-created by CreateRelationship.
+					{Name: "belongs_to_agency", Label: "Agency", PathSegment: "agency", ToType: "Agency", ToMany: false, Required: true},
+					// ToMany=true: context sources linked to this role for assembling the AgentRun bundle.
+					// Inverse written on each ContextSource type as belongs_to_role.
+					{Name: "has_context_source", Label: "Context Sources", PathSegment: "context-sources", ToType: "GitContextSource", ToMany: true},
+				},
+			},
+			// GitContextSource configures what to fetch from CodeValdGit when this
+			// role is dispatched. Multiple sources may be linked to a single Role.
+			{
+				Name:          "GitContextSource",
+				DisplayName:   "Git Context Source",
+				PathSegment:   "context-sources",
+				EntityIDParam: "sourceId",
+				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
+					// signals is a comma-separated list of signal layers, e.g. "authority,contributor".
+					{Name: "signals", Type: types.PropertyTypeString, Required: false},
+					// max_results caps the number of files returned (default 20).
+					{Name: "max_results", Type: types.PropertyTypeInteger, Required: false},
+					// match_mode is "AND" or "OR" (default "OR").
+					{Name: "match_mode", Type: types.PropertyTypeString, Required: false},
+					// cascade expands keywords to taxonomy descendants when true.
+					{Name: "cascade", Type: types.PropertyTypeBoolean, Required: false},
+					// file_types is a comma-separated extension filter, e.g. ".go,.ts".
+					{Name: "file_types", Type: types.PropertyTypeString, Required: false},
+				},
+				Relationships: []types.RelationshipDefinition{
+					// ToMany=false, Required=true: a GitContextSource must belong to exactly one Role.
+					{Name: "belongs_to_role", Label: "Role", PathSegment: "role", ToType: "Role", ToMany: false, Required: true},
+				},
+			},
+			// CommContextSource configures what to fetch from CodeValdComm (conversation
+			// threads) when this role is dispatched.
+			{
+				Name:          "CommContextSource",
+				DisplayName:   "Comm Context Source",
+				PathSegment:   "context-sources",
+				EntityIDParam: "sourceId",
+				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
+					// lookback_days controls how far back to search for threads.
+					{Name: "lookback_days", Type: types.PropertyTypeInteger, Required: false},
+					// max_results caps the number of threads returned.
+					{Name: "max_results", Type: types.PropertyTypeInteger, Required: false},
+				},
+				Relationships: []types.RelationshipDefinition{
+					{Name: "belongs_to_role", Label: "Role", PathSegment: "role", ToType: "Role", ToMany: false, Required: true},
+				},
+			},
+			// WorkContextSource configures what to fetch from CodeValdWork (task details)
+			// when this role is dispatched.
+			{
+				Name:          "WorkContextSource",
+				DisplayName:   "Work Context Source",
+				PathSegment:   "context-sources",
+				EntityIDParam: "sourceId",
+				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: false},
+					// include_description includes the full task description in the context bundle.
+					{Name: "include_description", Type: types.PropertyTypeBoolean, Required: false},
+					// include_history includes the status transition history in the context bundle.
+					{Name: "include_history", Type: types.PropertyTypeBoolean, Required: false},
+				},
+				Relationships: []types.RelationshipDefinition{
+					{Name: "belongs_to_role", Label: "Role", PathSegment: "role", ToType: "Role", ToMany: false, Required: true},
 				},
 			},
 		},

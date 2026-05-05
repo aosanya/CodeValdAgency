@@ -260,6 +260,125 @@ type ContentRef struct {
 	Path string
 }
 
+// ContextSourceType identifies the service a ContextSource fetches from.
+type ContextSourceType string
+
+const (
+	// ContextSourceGit fetches file-signal context from CodeValdGit.
+	ContextSourceGit ContextSourceType = "GitContextSource"
+
+	// ContextSourceComm fetches conversation-thread context from CodeValdComm.
+	ContextSourceComm ContextSourceType = "CommContextSource"
+
+	// ContextSourceWork fetches task-detail context from CodeValdWork.
+	ContextSourceWork ContextSourceType = "WorkContextSource"
+)
+
+// Role is a RACI dispatch role linked to an Agency via a has_role edge.
+// CodeValdAI calls MatchRoles with the incoming Cross event topic and raw JSON
+// payload; the agency returns all enabled roles whose EventTopic regex matches
+// and whose PayloadCondition regex (if non-empty) also matches.
+type Role struct {
+	// ID is the unique identifier for this role.
+	ID string
+
+	// AgencyID is the identifier of the owning agency.
+	AgencyID string
+
+	// Name is a human-readable label for the role.
+	Name string
+
+	// Description is the role brief.
+	Description string
+
+	// EventTopic is a Go regex matched against the incoming Cross event topic.
+	EventTopic string
+
+	// PayloadCondition is a Go regex matched against the raw JSON payload string.
+	// An empty string matches all payloads.
+	PayloadCondition string
+
+	// Instructions is the prompt template injected into the triggered AgentRun context.
+	Instructions string
+
+	// AgentID is a cross-service reference to a CodeValdAI Agent entity ID.
+	AgentID string
+
+	// Enabled controls whether this role is included in MatchRoles results.
+	Enabled bool
+
+	// Ordinality controls the ascending sort order when multiple roles match.
+	Ordinality int
+}
+
+// GitContextSourceConfig holds the configuration for a GitContextSource entity.
+type GitContextSourceConfig struct {
+	// Signals is a comma-separated list of signal layers, e.g. "authority,contributor".
+	Signals string
+
+	// MaxResults caps the number of files returned (default 20).
+	MaxResults int
+
+	// MatchMode is "AND" or "OR" (default "OR").
+	MatchMode string
+
+	// Cascade expands keywords to taxonomy descendants when true.
+	Cascade bool
+
+	// FileTypes is a comma-separated extension filter, e.g. ".go,.ts".
+	FileTypes string
+}
+
+// CommContextSourceConfig holds the configuration for a CommContextSource entity.
+type CommContextSourceConfig struct {
+	// LookbackDays controls how far back to search for threads.
+	LookbackDays int
+
+	// MaxResults caps the number of threads returned.
+	MaxResults int
+}
+
+// WorkContextSourceConfig holds the configuration for a WorkContextSource entity.
+type WorkContextSourceConfig struct {
+	// IncludeDescription includes the full task description in the context bundle.
+	IncludeDescription bool
+
+	// IncludeHistory includes the status transition history in the context bundle.
+	IncludeHistory bool
+}
+
+// ContextSource is a polymorphic wrapper for a typed context source entity.
+// Exactly one of Git, Comm, or Work is non-nil, indicated by SourceType.
+type ContextSource struct {
+	// ID is the unique identifier for this context source.
+	ID string
+
+	// RoleID is the identifier of the owning role.
+	RoleID string
+
+	// SourceType identifies which service this source fetches from.
+	SourceType ContextSourceType
+
+	// Git is non-nil when SourceType == ContextSourceGit.
+	Git *GitContextSourceConfig
+
+	// Comm is non-nil when SourceType == ContextSourceComm.
+	Comm *CommContextSourceConfig
+
+	// Work is non-nil when SourceType == ContextSourceWork.
+	Work *WorkContextSourceConfig
+}
+
+// RoleMatch pairs a matched Role with all its linked ContextSource entities.
+// Returned by AgencyManager.MatchRoles, ordered by Role.Ordinality ascending.
+type RoleMatch struct {
+	// Role is the matched dispatch role.
+	Role Role
+
+	// ContextSources are all context source entities linked to the role.
+	ContextSources []ContextSource
+}
+
 // AgencyDraft is a parallel, editable copy of an agency's sub-graph. Drafts
 // are forked from the live agency or from another open draft, edited freely,
 // then promoted to become the new live state — or archived if discarded.

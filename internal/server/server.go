@@ -10,6 +10,7 @@ import (
 	codevaldagency "github.com/aosanya/CodeValdAgency"
 	pb "github.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1"
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -205,6 +206,195 @@ func draftToProto(d codevaldagency.AgencyDraft) *pb.AgencyDraft {
 		CreatedAt:      timeToProto(d.CreatedAt),
 		UpdatedAt:      timeToProto(d.UpdatedAt),
 	}
+}
+
+// ── RACI RPC handlers ─────────────────────────────────────────────────────────
+
+// CreateRole implements pb.AgencyServiceServer.
+func (s *Server) CreateRole(ctx context.Context, req *pb.CreateRoleRequest) (*pb.Role, error) {
+	role, err := s.mgr.CreateRole(ctx, codevaldagency.CreateRoleRequest{
+		Name:             req.GetName(),
+		Description:      req.GetDescription(),
+		EventTopic:       req.GetEventTopic(),
+		PayloadCondition: req.GetPayloadCondition(),
+		Instructions:     req.GetInstructions(),
+		AgentID:          req.GetAgentId(),
+		Enabled:          req.GetEnabled(),
+		Ordinality:       int(req.GetOrdinality()),
+	})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return roleToProto(role), nil
+}
+
+// GetRole implements pb.AgencyServiceServer.
+func (s *Server) GetRole(ctx context.Context, req *pb.GetRoleRequest) (*pb.Role, error) {
+	role, err := s.mgr.GetRole(ctx, req.GetRoleId())
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return roleToProto(role), nil
+}
+
+// ListRoles implements pb.AgencyServiceServer.
+func (s *Server) ListRoles(ctx context.Context, _ *pb.ListRolesRequest) (*pb.ListRolesResponse, error) {
+	roles, err := s.mgr.ListRoles(ctx)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	out := make([]*pb.Role, len(roles))
+	for i, r := range roles {
+		out[i] = roleToProto(r)
+	}
+	return &pb.ListRolesResponse{Roles: out}, nil
+}
+
+// UpdateRole implements pb.AgencyServiceServer.
+func (s *Server) UpdateRole(ctx context.Context, req *pb.UpdateRoleRequest) (*pb.Role, error) {
+	role, err := s.mgr.UpdateRole(ctx, req.GetRoleId(), codevaldagency.UpdateRoleRequest{
+		Name:             req.GetName(),
+		Description:      req.GetDescription(),
+		EventTopic:       req.GetEventTopic(),
+		PayloadCondition: req.GetPayloadCondition(),
+		Instructions:     req.GetInstructions(),
+		AgentID:          req.GetAgentId(),
+		Enabled:          req.GetEnabled(),
+		Ordinality:       int(req.GetOrdinality()),
+	})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return roleToProto(role), nil
+}
+
+// DeleteRole implements pb.AgencyServiceServer.
+func (s *Server) DeleteRole(ctx context.Context, req *pb.DeleteRoleRequest) (*emptypb.Empty, error) {
+	if err := s.mgr.DeleteRole(ctx, req.GetRoleId()); err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+// AddContextSource implements pb.AgencyServiceServer.
+func (s *Server) AddContextSource(ctx context.Context, req *pb.AddContextSourceRequest) (*pb.ContextSource, error) {
+	domReq := codevaldagency.AddContextSourceRequest{
+		SourceType: codevaldagency.ContextSourceType(req.GetSourceType()),
+	}
+	if g := req.GetGit(); g != nil {
+		domReq.Git = &codevaldagency.GitContextSourceConfig{
+			Signals:    g.GetSignals(),
+			MaxResults: int(g.GetMaxResults()),
+			MatchMode:  g.GetMatchMode(),
+			Cascade:    g.GetCascade(),
+			FileTypes:  g.GetFileTypes(),
+		}
+	}
+	if c := req.GetComm(); c != nil {
+		domReq.Comm = &codevaldagency.CommContextSourceConfig{
+			LookbackDays: int(c.GetLookbackDays()),
+			MaxResults:   int(c.GetMaxResults()),
+		}
+	}
+	if w := req.GetWork(); w != nil {
+		domReq.Work = &codevaldagency.WorkContextSourceConfig{
+			IncludeDescription: w.GetIncludeDescription(),
+			IncludeHistory:     w.GetIncludeHistory(),
+		}
+	}
+	src, err := s.mgr.AddContextSource(ctx, req.GetRoleId(), domReq)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return contextSourceToProto(src), nil
+}
+
+// ListContextSources implements pb.AgencyServiceServer.
+func (s *Server) ListContextSources(ctx context.Context, req *pb.ListContextSourcesRequest) (*pb.ListContextSourcesResponse, error) {
+	sources, err := s.mgr.ListContextSources(ctx, req.GetRoleId())
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	out := make([]*pb.ContextSource, len(sources))
+	for i, src := range sources {
+		out[i] = contextSourceToProto(src)
+	}
+	return &pb.ListContextSourcesResponse{ContextSources: out}, nil
+}
+
+// RemoveContextSource implements pb.AgencyServiceServer.
+func (s *Server) RemoveContextSource(ctx context.Context, req *pb.RemoveContextSourceRequest) (*emptypb.Empty, error) {
+	if err := s.mgr.RemoveContextSource(ctx, req.GetRoleId(), req.GetSourceId()); err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
+// MatchRoles implements pb.AgencyServiceServer.
+func (s *Server) MatchRoles(ctx context.Context, req *pb.MatchRolesRequest) (*pb.MatchRolesResponse, error) {
+	matches, err := s.mgr.MatchRoles(ctx, req.GetTopic(), req.GetPayload())
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	out := make([]*pb.RoleMatch, len(matches))
+	for i, m := range matches {
+		srcs := make([]*pb.ContextSource, len(m.ContextSources))
+		for j, src := range m.ContextSources {
+			srcs[j] = contextSourceToProto(src)
+		}
+		out[i] = &pb.RoleMatch{
+			Role:           roleToProto(m.Role),
+			ContextSources: srcs,
+		}
+	}
+	return &pb.MatchRolesResponse{Matches: out}, nil
+}
+
+// ── RACI domain → proto converters ───────────────────────────────────────────
+
+func roleToProto(r codevaldagency.Role) *pb.Role {
+	return &pb.Role{
+		Id:               r.ID,
+		AgencyId:         r.AgencyID,
+		Name:             r.Name,
+		Description:      r.Description,
+		EventTopic:       r.EventTopic,
+		PayloadCondition: r.PayloadCondition,
+		Instructions:     r.Instructions,
+		AgentId:          r.AgentID,
+		Enabled:          r.Enabled,
+		Ordinality:       int32(r.Ordinality),
+	}
+}
+
+func contextSourceToProto(src codevaldagency.ContextSource) *pb.ContextSource {
+	cs := &pb.ContextSource{
+		Id:         src.ID,
+		RoleId:     src.RoleID,
+		SourceType: string(src.SourceType),
+	}
+	if src.Git != nil {
+		cs.Git = &pb.GitContextSource{
+			Signals:    src.Git.Signals,
+			MaxResults: int32(src.Git.MaxResults),
+			MatchMode:  src.Git.MatchMode,
+			Cascade:    src.Git.Cascade,
+			FileTypes:  src.Git.FileTypes,
+		}
+	}
+	if src.Comm != nil {
+		cs.Comm = &pb.CommContextSource{
+			LookbackDays: int32(src.Comm.LookbackDays),
+			MaxResults:   int32(src.Comm.MaxResults),
+		}
+	}
+	if src.Work != nil {
+		cs.Work = &pb.WorkContextSource{
+			IncludeDescription: src.Work.IncludeDescription,
+			IncludeHistory:     src.Work.IncludeHistory,
+		}
+	}
+	return cs
 }
 
 func draftStatusToProto(s codevaldagency.AgencyDraftStatus) pb.AgencyDraftStatus {

@@ -4,6 +4,7 @@ package codevaldagency.v1;
 
 option go_package = "github.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1;codevaldagencyv1";
 
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
 
@@ -218,6 +219,151 @@ message ArchiveDraftRequest {
   string draft_id = 1;
 }
 
+// ── RACI messages ──────────────────────────────────────────────────────────────
+
+// Role is a RACI dispatch role linked to an Agency. CodeValdAI calls MatchRoles
+// on every inbound Cross event; the agency returns all enabled roles whose
+// event_topic regex matches the topic and whose payload_condition matches the
+// raw JSON payload.
+message Role {
+  string id                = 1;
+  string agency_id         = 2;
+  string name              = 3;
+  string description       = 4;
+  // event_topic is a Go regex matched against the Cross event topic.
+  string event_topic       = 5;
+  // payload_condition is a Go regex matched against the raw JSON payload.
+  // Empty string matches all payloads.
+  string payload_condition = 6;
+  // instructions is the prompt template injected into the triggered AgentRun.
+  string instructions      = 7;
+  // agent_id is a cross-service reference to a CodeValdAI Agent entity ID.
+  string agent_id          = 8;
+  bool   enabled           = 9;
+  int32  ordinality        = 10;
+}
+
+// GitContextSource configures what to fetch from CodeValdGit when a role matches.
+message GitContextSource {
+  string signals     = 1;
+  int32  max_results = 2;
+  string match_mode  = 3;
+  bool   cascade     = 4;
+  string file_types  = 5;
+}
+
+// CommContextSource configures what to fetch from CodeValdComm when a role matches.
+message CommContextSource {
+  int32 lookback_days = 1;
+  int32 max_results   = 2;
+}
+
+// WorkContextSource configures what to fetch from CodeValdWork when a role matches.
+message WorkContextSource {
+  bool include_description = 1;
+  bool include_history     = 2;
+}
+
+// ContextSource is a polymorphic wrapper for a typed context source entity.
+// Exactly one of git, comm, or work is populated, matching source_type.
+message ContextSource {
+  string              id          = 1;
+  string              role_id     = 2;
+  // source_type is "GitContextSource", "CommContextSource", or "WorkContextSource".
+  string              source_type = 3;
+  GitContextSource    git         = 4;
+  CommContextSource   comm        = 5;
+  WorkContextSource   work        = 6;
+}
+
+// RoleMatch pairs a matched Role with all its linked ContextSource entities.
+// Returned by MatchRoles ordered by role.ordinality ascending.
+message RoleMatch {
+  Role                    role            = 1;
+  repeated ContextSource  context_sources = 2;
+}
+
+// CreateRoleRequest carries the fields for creating a new Role.
+message CreateRoleRequest {
+  string name              = 1;
+  string description       = 2;
+  string event_topic       = 3;
+  string payload_condition = 4;
+  string instructions      = 5;
+  string agent_id          = 6;
+  bool   enabled           = 7;
+  int32  ordinality        = 8;
+}
+
+// GetRoleRequest selects a Role by its entity ID.
+message GetRoleRequest {
+  string role_id = 1;
+}
+
+// ListRolesRequest is intentionally empty — roles are scoped to the single agency.
+message ListRolesRequest {}
+
+// ListRolesResponse wraps the list of Roles.
+message ListRolesResponse {
+  repeated Role roles = 1;
+}
+
+// UpdateRoleRequest carries the fields that may be changed on an existing Role.
+message UpdateRoleRequest {
+  string role_id           = 1;
+  string name              = 2;
+  string description       = 3;
+  string event_topic       = 4;
+  string payload_condition = 5;
+  string instructions      = 6;
+  string agent_id          = 7;
+  bool   enabled           = 8;
+  int32  ordinality        = 9;
+}
+
+// DeleteRoleRequest selects a Role by its entity ID.
+message DeleteRoleRequest {
+  string role_id = 1;
+}
+
+// AddContextSourceRequest carries the typed configuration for a new ContextSource.
+message AddContextSourceRequest {
+  string            role_id     = 1;
+  string            source_type = 2;
+  GitContextSource  git         = 3;
+  CommContextSource comm        = 4;
+  WorkContextSource work        = 5;
+}
+
+// ListContextSourcesRequest selects all sources linked to a Role.
+message ListContextSourcesRequest {
+  string role_id = 1;
+}
+
+// ListContextSourcesResponse wraps the list of ContextSources.
+message ListContextSourcesResponse {
+  repeated ContextSource context_sources = 1;
+}
+
+// RemoveContextSourceRequest identifies the source to remove.
+message RemoveContextSourceRequest {
+  string role_id   = 1;
+  string source_id = 2;
+}
+
+// MatchRolesRequest carries the Cross event topic and raw JSON payload to match.
+message MatchRolesRequest {
+  // topic is the Cross event topic, e.g. "work.task.status.changed".
+  string topic   = 1;
+  // payload is the raw JSON payload from the Cross event.
+  string payload = 2;
+}
+
+// MatchRolesResponse wraps the list of matched roles with their context sources.
+message MatchRolesResponse {
+  repeated RoleMatch matches = 1;
+}
+
 // ── Import messages ─────────────────────────────────────────────────────────
 
 // ImportDraftRequest carries the raw YAML (or JSON) body of an agency.yaml file.
@@ -309,4 +455,42 @@ service AgencyService {
   // HTTP request body into this field automatically.
   // Error: INVALID_ARGUMENT if the body cannot be parsed.
   rpc ImportDraft(ImportDraftRequest) returns (ImportDraftResponse);
+
+  // ── RACI RPCs ────────────────────────────────────────────────────────────────
+
+  // CreateRole stores a new Role and links it to the Agency.
+  // Error: INVALID_ARGUMENT if event_topic or payload_condition is not a valid Go regex.
+  rpc CreateRole(CreateRoleRequest) returns (Role);
+
+  // GetRole retrieves a single Role by its entity ID.
+  // Error: NOT_FOUND if no Role with that ID exists.
+  rpc GetRole(GetRoleRequest) returns (Role);
+
+  // ListRoles returns all Roles linked to this Agency.
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+
+  // UpdateRole applies the request fields to an existing Role.
+  // Error: NOT_FOUND if no Role with that ID exists.
+  // Error: INVALID_ARGUMENT if event_topic or payload_condition is not a valid Go regex.
+  rpc UpdateRole(UpdateRoleRequest) returns (Role);
+
+  // DeleteRole removes a Role by its entity ID.
+  // Error: NOT_FOUND if no Role with that ID exists.
+  rpc DeleteRole(DeleteRoleRequest) returns (google.protobuf.Empty);
+
+  // AddContextSource creates a typed ContextSource entity and links it to a Role.
+  // Error: NOT_FOUND if no Role with that ID exists.
+  rpc AddContextSource(AddContextSourceRequest) returns (ContextSource);
+
+  // ListContextSources returns all ContextSource entities linked to a Role.
+  // Error: NOT_FOUND if no Role with that ID exists.
+  rpc ListContextSources(ListContextSourcesRequest) returns (ListContextSourcesResponse);
+
+  // RemoveContextSource deletes a ContextSource and removes its edge from the Role.
+  // Error: NOT_FOUND if the ContextSource does not exist.
+  rpc RemoveContextSource(RemoveContextSourceRequest) returns (google.protobuf.Empty);
+
+  // MatchRoles evaluates the topic and payload against all enabled Roles.
+  // Returns matching roles with their ContextSources, ordered by ordinality.
+  rpc MatchRoles(MatchRolesRequest) returns (MatchRolesResponse);
 }

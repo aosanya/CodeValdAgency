@@ -9,6 +9,7 @@ package codevaldagencyv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	_ "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
@@ -1669,6 +1670,1157 @@ func (x *ArchiveDraftRequest) GetDraftId() string {
 	return ""
 }
 
+// Role is a RACI dispatch role linked to an Agency. CodeValdAI calls MatchRoles
+// on every inbound Cross event; the agency returns all enabled roles whose
+// event_topic regex matches the topic and whose payload_condition matches the
+// raw JSON payload.
+type Role struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AgencyId    string                 `protobuf:"bytes,2,opt,name=agency_id,json=agencyId,proto3" json:"agency_id,omitempty"`
+	Name        string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Description string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// event_topic is a Go regex matched against the Cross event topic.
+	EventTopic string `protobuf:"bytes,5,opt,name=event_topic,json=eventTopic,proto3" json:"event_topic,omitempty"`
+	// payload_condition is a Go regex matched against the raw JSON payload.
+	// Empty string matches all payloads.
+	PayloadCondition string `protobuf:"bytes,6,opt,name=payload_condition,json=payloadCondition,proto3" json:"payload_condition,omitempty"`
+	// instructions is the prompt template injected into the triggered AgentRun.
+	Instructions string `protobuf:"bytes,7,opt,name=instructions,proto3" json:"instructions,omitempty"`
+	// agent_id is a cross-service reference to a CodeValdAI Agent entity ID.
+	AgentId       string `protobuf:"bytes,8,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Enabled       bool   `protobuf:"varint,9,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Ordinality    int32  `protobuf:"varint,10,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Role) Reset() {
+	*x = Role{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Role) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Role) ProtoMessage() {}
+
+func (x *Role) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Role.ProtoReflect.Descriptor instead.
+func (*Role) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *Role) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Role) GetAgencyId() string {
+	if x != nil {
+		return x.AgencyId
+	}
+	return ""
+}
+
+func (x *Role) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Role) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Role) GetEventTopic() string {
+	if x != nil {
+		return x.EventTopic
+	}
+	return ""
+}
+
+func (x *Role) GetPayloadCondition() string {
+	if x != nil {
+		return x.PayloadCondition
+	}
+	return ""
+}
+
+func (x *Role) GetInstructions() string {
+	if x != nil {
+		return x.Instructions
+	}
+	return ""
+}
+
+func (x *Role) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *Role) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *Role) GetOrdinality() int32 {
+	if x != nil {
+		return x.Ordinality
+	}
+	return 0
+}
+
+// GitContextSource configures what to fetch from CodeValdGit when a role matches.
+type GitContextSource struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Signals       string                 `protobuf:"bytes,1,opt,name=signals,proto3" json:"signals,omitempty"`
+	MaxResults    int32                  `protobuf:"varint,2,opt,name=max_results,json=maxResults,proto3" json:"max_results,omitempty"`
+	MatchMode     string                 `protobuf:"bytes,3,opt,name=match_mode,json=matchMode,proto3" json:"match_mode,omitempty"`
+	Cascade       bool                   `protobuf:"varint,4,opt,name=cascade,proto3" json:"cascade,omitempty"`
+	FileTypes     string                 `protobuf:"bytes,5,opt,name=file_types,json=fileTypes,proto3" json:"file_types,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GitContextSource) Reset() {
+	*x = GitContextSource{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GitContextSource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GitContextSource) ProtoMessage() {}
+
+func (x *GitContextSource) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GitContextSource.ProtoReflect.Descriptor instead.
+func (*GitContextSource) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *GitContextSource) GetSignals() string {
+	if x != nil {
+		return x.Signals
+	}
+	return ""
+}
+
+func (x *GitContextSource) GetMaxResults() int32 {
+	if x != nil {
+		return x.MaxResults
+	}
+	return 0
+}
+
+func (x *GitContextSource) GetMatchMode() string {
+	if x != nil {
+		return x.MatchMode
+	}
+	return ""
+}
+
+func (x *GitContextSource) GetCascade() bool {
+	if x != nil {
+		return x.Cascade
+	}
+	return false
+}
+
+func (x *GitContextSource) GetFileTypes() string {
+	if x != nil {
+		return x.FileTypes
+	}
+	return ""
+}
+
+// CommContextSource configures what to fetch from CodeValdComm when a role matches.
+type CommContextSource struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LookbackDays  int32                  `protobuf:"varint,1,opt,name=lookback_days,json=lookbackDays,proto3" json:"lookback_days,omitempty"`
+	MaxResults    int32                  `protobuf:"varint,2,opt,name=max_results,json=maxResults,proto3" json:"max_results,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommContextSource) Reset() {
+	*x = CommContextSource{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommContextSource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommContextSource) ProtoMessage() {}
+
+func (x *CommContextSource) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommContextSource.ProtoReflect.Descriptor instead.
+func (*CommContextSource) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *CommContextSource) GetLookbackDays() int32 {
+	if x != nil {
+		return x.LookbackDays
+	}
+	return 0
+}
+
+func (x *CommContextSource) GetMaxResults() int32 {
+	if x != nil {
+		return x.MaxResults
+	}
+	return 0
+}
+
+// WorkContextSource configures what to fetch from CodeValdWork when a role matches.
+type WorkContextSource struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	IncludeDescription bool                   `protobuf:"varint,1,opt,name=include_description,json=includeDescription,proto3" json:"include_description,omitempty"`
+	IncludeHistory     bool                   `protobuf:"varint,2,opt,name=include_history,json=includeHistory,proto3" json:"include_history,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *WorkContextSource) Reset() {
+	*x = WorkContextSource{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkContextSource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkContextSource) ProtoMessage() {}
+
+func (x *WorkContextSource) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkContextSource.ProtoReflect.Descriptor instead.
+func (*WorkContextSource) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *WorkContextSource) GetIncludeDescription() bool {
+	if x != nil {
+		return x.IncludeDescription
+	}
+	return false
+}
+
+func (x *WorkContextSource) GetIncludeHistory() bool {
+	if x != nil {
+		return x.IncludeHistory
+	}
+	return false
+}
+
+// ContextSource is a polymorphic wrapper for a typed context source entity.
+// Exactly one of git, comm, or work is populated, matching source_type.
+type ContextSource struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Id     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	RoleId string                 `protobuf:"bytes,2,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	// source_type is "GitContextSource", "CommContextSource", or "WorkContextSource".
+	SourceType    string             `protobuf:"bytes,3,opt,name=source_type,json=sourceType,proto3" json:"source_type,omitempty"`
+	Git           *GitContextSource  `protobuf:"bytes,4,opt,name=git,proto3" json:"git,omitempty"`
+	Comm          *CommContextSource `protobuf:"bytes,5,opt,name=comm,proto3" json:"comm,omitempty"`
+	Work          *WorkContextSource `protobuf:"bytes,6,opt,name=work,proto3" json:"work,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContextSource) Reset() {
+	*x = ContextSource{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContextSource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContextSource) ProtoMessage() {}
+
+func (x *ContextSource) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContextSource.ProtoReflect.Descriptor instead.
+func (*ContextSource) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ContextSource) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ContextSource) GetRoleId() string {
+	if x != nil {
+		return x.RoleId
+	}
+	return ""
+}
+
+func (x *ContextSource) GetSourceType() string {
+	if x != nil {
+		return x.SourceType
+	}
+	return ""
+}
+
+func (x *ContextSource) GetGit() *GitContextSource {
+	if x != nil {
+		return x.Git
+	}
+	return nil
+}
+
+func (x *ContextSource) GetComm() *CommContextSource {
+	if x != nil {
+		return x.Comm
+	}
+	return nil
+}
+
+func (x *ContextSource) GetWork() *WorkContextSource {
+	if x != nil {
+		return x.Work
+	}
+	return nil
+}
+
+// RoleMatch pairs a matched Role with all its linked ContextSource entities.
+// Returned by MatchRoles ordered by role.ordinality ascending.
+type RoleMatch struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Role           *Role                  `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
+	ContextSources []*ContextSource       `protobuf:"bytes,2,rep,name=context_sources,json=contextSources,proto3" json:"context_sources,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RoleMatch) Reset() {
+	*x = RoleMatch{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RoleMatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RoleMatch) ProtoMessage() {}
+
+func (x *RoleMatch) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RoleMatch.ProtoReflect.Descriptor instead.
+func (*RoleMatch) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *RoleMatch) GetRole() *Role {
+	if x != nil {
+		return x.Role
+	}
+	return nil
+}
+
+func (x *RoleMatch) GetContextSources() []*ContextSource {
+	if x != nil {
+		return x.ContextSources
+	}
+	return nil
+}
+
+// CreateRoleRequest carries the fields for creating a new Role.
+type CreateRoleRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Name             string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description      string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	EventTopic       string                 `protobuf:"bytes,3,opt,name=event_topic,json=eventTopic,proto3" json:"event_topic,omitempty"`
+	PayloadCondition string                 `protobuf:"bytes,4,opt,name=payload_condition,json=payloadCondition,proto3" json:"payload_condition,omitempty"`
+	Instructions     string                 `protobuf:"bytes,5,opt,name=instructions,proto3" json:"instructions,omitempty"`
+	AgentId          string                 `protobuf:"bytes,6,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Enabled          bool                   `protobuf:"varint,7,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Ordinality       int32                  `protobuf:"varint,8,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CreateRoleRequest) Reset() {
+	*x = CreateRoleRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateRoleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateRoleRequest) ProtoMessage() {}
+
+func (x *CreateRoleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateRoleRequest.ProtoReflect.Descriptor instead.
+func (*CreateRoleRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *CreateRoleRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateRoleRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateRoleRequest) GetEventTopic() string {
+	if x != nil {
+		return x.EventTopic
+	}
+	return ""
+}
+
+func (x *CreateRoleRequest) GetPayloadCondition() string {
+	if x != nil {
+		return x.PayloadCondition
+	}
+	return ""
+}
+
+func (x *CreateRoleRequest) GetInstructions() string {
+	if x != nil {
+		return x.Instructions
+	}
+	return ""
+}
+
+func (x *CreateRoleRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *CreateRoleRequest) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *CreateRoleRequest) GetOrdinality() int32 {
+	if x != nil {
+		return x.Ordinality
+	}
+	return 0
+}
+
+// GetRoleRequest selects a Role by its entity ID.
+type GetRoleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RoleId        string                 `protobuf:"bytes,1,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRoleRequest) Reset() {
+	*x = GetRoleRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRoleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRoleRequest) ProtoMessage() {}
+
+func (x *GetRoleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRoleRequest.ProtoReflect.Descriptor instead.
+func (*GetRoleRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *GetRoleRequest) GetRoleId() string {
+	if x != nil {
+		return x.RoleId
+	}
+	return ""
+}
+
+// ListRolesRequest is intentionally empty — roles are scoped to the single agency.
+type ListRolesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRolesRequest) Reset() {
+	*x = ListRolesRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRolesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRolesRequest) ProtoMessage() {}
+
+func (x *ListRolesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRolesRequest.ProtoReflect.Descriptor instead.
+func (*ListRolesRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{35}
+}
+
+// ListRolesResponse wraps the list of Roles.
+type ListRolesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Roles         []*Role                `protobuf:"bytes,1,rep,name=roles,proto3" json:"roles,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRolesResponse) Reset() {
+	*x = ListRolesResponse{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRolesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRolesResponse) ProtoMessage() {}
+
+func (x *ListRolesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRolesResponse.ProtoReflect.Descriptor instead.
+func (*ListRolesResponse) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *ListRolesResponse) GetRoles() []*Role {
+	if x != nil {
+		return x.Roles
+	}
+	return nil
+}
+
+// UpdateRoleRequest carries the fields that may be changed on an existing Role.
+type UpdateRoleRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	RoleId           string                 `protobuf:"bytes,1,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	Name             string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description      string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	EventTopic       string                 `protobuf:"bytes,4,opt,name=event_topic,json=eventTopic,proto3" json:"event_topic,omitempty"`
+	PayloadCondition string                 `protobuf:"bytes,5,opt,name=payload_condition,json=payloadCondition,proto3" json:"payload_condition,omitempty"`
+	Instructions     string                 `protobuf:"bytes,6,opt,name=instructions,proto3" json:"instructions,omitempty"`
+	AgentId          string                 `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Enabled          bool                   `protobuf:"varint,8,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Ordinality       int32                  `protobuf:"varint,9,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *UpdateRoleRequest) Reset() {
+	*x = UpdateRoleRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateRoleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateRoleRequest) ProtoMessage() {}
+
+func (x *UpdateRoleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateRoleRequest.ProtoReflect.Descriptor instead.
+func (*UpdateRoleRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *UpdateRoleRequest) GetRoleId() string {
+	if x != nil {
+		return x.RoleId
+	}
+	return ""
+}
+
+func (x *UpdateRoleRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpdateRoleRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *UpdateRoleRequest) GetEventTopic() string {
+	if x != nil {
+		return x.EventTopic
+	}
+	return ""
+}
+
+func (x *UpdateRoleRequest) GetPayloadCondition() string {
+	if x != nil {
+		return x.PayloadCondition
+	}
+	return ""
+}
+
+func (x *UpdateRoleRequest) GetInstructions() string {
+	if x != nil {
+		return x.Instructions
+	}
+	return ""
+}
+
+func (x *UpdateRoleRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *UpdateRoleRequest) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *UpdateRoleRequest) GetOrdinality() int32 {
+	if x != nil {
+		return x.Ordinality
+	}
+	return 0
+}
+
+// DeleteRoleRequest selects a Role by its entity ID.
+type DeleteRoleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RoleId        string                 `protobuf:"bytes,1,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteRoleRequest) Reset() {
+	*x = DeleteRoleRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteRoleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteRoleRequest) ProtoMessage() {}
+
+func (x *DeleteRoleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteRoleRequest.ProtoReflect.Descriptor instead.
+func (*DeleteRoleRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *DeleteRoleRequest) GetRoleId() string {
+	if x != nil {
+		return x.RoleId
+	}
+	return ""
+}
+
+// AddContextSourceRequest carries the typed configuration for a new ContextSource.
+type AddContextSourceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RoleId        string                 `protobuf:"bytes,1,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	SourceType    string                 `protobuf:"bytes,2,opt,name=source_type,json=sourceType,proto3" json:"source_type,omitempty"`
+	Git           *GitContextSource      `protobuf:"bytes,3,opt,name=git,proto3" json:"git,omitempty"`
+	Comm          *CommContextSource     `protobuf:"bytes,4,opt,name=comm,proto3" json:"comm,omitempty"`
+	Work          *WorkContextSource     `protobuf:"bytes,5,opt,name=work,proto3" json:"work,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddContextSourceRequest) Reset() {
+	*x = AddContextSourceRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddContextSourceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddContextSourceRequest) ProtoMessage() {}
+
+func (x *AddContextSourceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddContextSourceRequest.ProtoReflect.Descriptor instead.
+func (*AddContextSourceRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *AddContextSourceRequest) GetRoleId() string {
+	if x != nil {
+		return x.RoleId
+	}
+	return ""
+}
+
+func (x *AddContextSourceRequest) GetSourceType() string {
+	if x != nil {
+		return x.SourceType
+	}
+	return ""
+}
+
+func (x *AddContextSourceRequest) GetGit() *GitContextSource {
+	if x != nil {
+		return x.Git
+	}
+	return nil
+}
+
+func (x *AddContextSourceRequest) GetComm() *CommContextSource {
+	if x != nil {
+		return x.Comm
+	}
+	return nil
+}
+
+func (x *AddContextSourceRequest) GetWork() *WorkContextSource {
+	if x != nil {
+		return x.Work
+	}
+	return nil
+}
+
+// ListContextSourcesRequest selects all sources linked to a Role.
+type ListContextSourcesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RoleId        string                 `protobuf:"bytes,1,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListContextSourcesRequest) Reset() {
+	*x = ListContextSourcesRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListContextSourcesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListContextSourcesRequest) ProtoMessage() {}
+
+func (x *ListContextSourcesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListContextSourcesRequest.ProtoReflect.Descriptor instead.
+func (*ListContextSourcesRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *ListContextSourcesRequest) GetRoleId() string {
+	if x != nil {
+		return x.RoleId
+	}
+	return ""
+}
+
+// ListContextSourcesResponse wraps the list of ContextSources.
+type ListContextSourcesResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ContextSources []*ContextSource       `protobuf:"bytes,1,rep,name=context_sources,json=contextSources,proto3" json:"context_sources,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListContextSourcesResponse) Reset() {
+	*x = ListContextSourcesResponse{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListContextSourcesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListContextSourcesResponse) ProtoMessage() {}
+
+func (x *ListContextSourcesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListContextSourcesResponse.ProtoReflect.Descriptor instead.
+func (*ListContextSourcesResponse) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *ListContextSourcesResponse) GetContextSources() []*ContextSource {
+	if x != nil {
+		return x.ContextSources
+	}
+	return nil
+}
+
+// RemoveContextSourceRequest identifies the source to remove.
+type RemoveContextSourceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RoleId        string                 `protobuf:"bytes,1,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
+	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveContextSourceRequest) Reset() {
+	*x = RemoveContextSourceRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveContextSourceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveContextSourceRequest) ProtoMessage() {}
+
+func (x *RemoveContextSourceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveContextSourceRequest.ProtoReflect.Descriptor instead.
+func (*RemoveContextSourceRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *RemoveContextSourceRequest) GetRoleId() string {
+	if x != nil {
+		return x.RoleId
+	}
+	return ""
+}
+
+func (x *RemoveContextSourceRequest) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+// MatchRolesRequest carries the Cross event topic and raw JSON payload to match.
+type MatchRolesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// topic is the Cross event topic, e.g. "work.task.status.changed".
+	Topic string `protobuf:"bytes,1,opt,name=topic,proto3" json:"topic,omitempty"`
+	// payload is the raw JSON payload from the Cross event.
+	Payload       string `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MatchRolesRequest) Reset() {
+	*x = MatchRolesRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MatchRolesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MatchRolesRequest) ProtoMessage() {}
+
+func (x *MatchRolesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MatchRolesRequest.ProtoReflect.Descriptor instead.
+func (*MatchRolesRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *MatchRolesRequest) GetTopic() string {
+	if x != nil {
+		return x.Topic
+	}
+	return ""
+}
+
+func (x *MatchRolesRequest) GetPayload() string {
+	if x != nil {
+		return x.Payload
+	}
+	return ""
+}
+
+// MatchRolesResponse wraps the list of matched roles with their context sources.
+type MatchRolesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Matches       []*RoleMatch           `protobuf:"bytes,1,rep,name=matches,proto3" json:"matches,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MatchRolesResponse) Reset() {
+	*x = MatchRolesResponse{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MatchRolesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MatchRolesResponse) ProtoMessage() {}
+
+func (x *MatchRolesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MatchRolesResponse.ProtoReflect.Descriptor instead.
+func (*MatchRolesResponse) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *MatchRolesResponse) GetMatches() []*RoleMatch {
+	if x != nil {
+		return x.Matches
+	}
+	return nil
+}
+
 // ImportDraftRequest carries the raw YAML (or JSON) body of an agency.yaml file.
 // CodeValdCross wraps the raw request body into the body field automatically —
 // HTTP callers send the file content as the raw request body.
@@ -1682,7 +2834,7 @@ type ImportDraftRequest struct {
 
 func (x *ImportDraftRequest) Reset() {
 	*x = ImportDraftRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[27]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1694,7 +2846,7 @@ func (x *ImportDraftRequest) String() string {
 func (*ImportDraftRequest) ProtoMessage() {}
 
 func (x *ImportDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[27]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1707,7 +2859,7 @@ func (x *ImportDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportDraftRequest.ProtoReflect.Descriptor instead.
 func (*ImportDraftRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{27}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *ImportDraftRequest) GetBody() string {
@@ -1730,7 +2882,7 @@ type ImportDraftResponse struct {
 
 func (x *ImportDraftResponse) Reset() {
 	*x = ImportDraftResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[28]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1742,7 +2894,7 @@ func (x *ImportDraftResponse) String() string {
 func (*ImportDraftResponse) ProtoMessage() {}
 
 func (x *ImportDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[28]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1755,7 +2907,7 @@ func (x *ImportDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportDraftResponse.ProtoReflect.Descriptor instead.
 func (*ImportDraftResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{28}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *ImportDraftResponse) GetAgencyId() string {
@@ -1776,7 +2928,7 @@ var File_codevaldagency_v1_agency_proto protoreflect.FileDescriptor
 
 const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\n" +
-	"\x1ecodevaldagency/v1/agency.proto\x12\x11codevaldagency.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"V\n" +
+	"\x1ecodevaldagency/v1/agency.proto\x12\x11codevaldagency.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"V\n" +
 	"\x0eRoleAssignment\x12\x12\n" +
 	"\x04role\x18\x01 \x01(\tR\x04role\x120\n" +
 	"\x04raci\x18\x02 \x01(\x0e2\x1c.codevaldagency.v1.RACILabelR\x04raci\"a\n" +
@@ -1871,7 +3023,100 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x13PromoteDraftRequest\x12\x19\n" +
 	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"0\n" +
 	"\x13ArchiveDraftRequest\x12\x19\n" +
-	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"(\n" +
+	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"\xb0\x02\n" +
+	"\x04Role\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tagency_id\x18\x02 \x01(\tR\bagencyId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1f\n" +
+	"\vevent_topic\x18\x05 \x01(\tR\n" +
+	"eventTopic\x12+\n" +
+	"\x11payload_condition\x18\x06 \x01(\tR\x10payloadCondition\x12\"\n" +
+	"\finstructions\x18\a \x01(\tR\finstructions\x12\x19\n" +
+	"\bagent_id\x18\b \x01(\tR\aagentId\x12\x18\n" +
+	"\aenabled\x18\t \x01(\bR\aenabled\x12\x1e\n" +
+	"\n" +
+	"ordinality\x18\n" +
+	" \x01(\x05R\n" +
+	"ordinality\"\xa5\x01\n" +
+	"\x10GitContextSource\x12\x18\n" +
+	"\asignals\x18\x01 \x01(\tR\asignals\x12\x1f\n" +
+	"\vmax_results\x18\x02 \x01(\x05R\n" +
+	"maxResults\x12\x1d\n" +
+	"\n" +
+	"match_mode\x18\x03 \x01(\tR\tmatchMode\x12\x18\n" +
+	"\acascade\x18\x04 \x01(\bR\acascade\x12\x1d\n" +
+	"\n" +
+	"file_types\x18\x05 \x01(\tR\tfileTypes\"Y\n" +
+	"\x11CommContextSource\x12#\n" +
+	"\rlookback_days\x18\x01 \x01(\x05R\flookbackDays\x12\x1f\n" +
+	"\vmax_results\x18\x02 \x01(\x05R\n" +
+	"maxResults\"m\n" +
+	"\x11WorkContextSource\x12/\n" +
+	"\x13include_description\x18\x01 \x01(\bR\x12includeDescription\x12'\n" +
+	"\x0finclude_history\x18\x02 \x01(\bR\x0eincludeHistory\"\x84\x02\n" +
+	"\rContextSource\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\arole_id\x18\x02 \x01(\tR\x06roleId\x12\x1f\n" +
+	"\vsource_type\x18\x03 \x01(\tR\n" +
+	"sourceType\x125\n" +
+	"\x03git\x18\x04 \x01(\v2#.codevaldagency.v1.GitContextSourceR\x03git\x128\n" +
+	"\x04comm\x18\x05 \x01(\v2$.codevaldagency.v1.CommContextSourceR\x04comm\x128\n" +
+	"\x04work\x18\x06 \x01(\v2$.codevaldagency.v1.WorkContextSourceR\x04work\"\x83\x01\n" +
+	"\tRoleMatch\x12+\n" +
+	"\x04role\x18\x01 \x01(\v2\x17.codevaldagency.v1.RoleR\x04role\x12I\n" +
+	"\x0fcontext_sources\x18\x02 \x03(\v2 .codevaldagency.v1.ContextSourceR\x0econtextSources\"\x90\x02\n" +
+	"\x11CreateRoleRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x1f\n" +
+	"\vevent_topic\x18\x03 \x01(\tR\n" +
+	"eventTopic\x12+\n" +
+	"\x11payload_condition\x18\x04 \x01(\tR\x10payloadCondition\x12\"\n" +
+	"\finstructions\x18\x05 \x01(\tR\finstructions\x12\x19\n" +
+	"\bagent_id\x18\x06 \x01(\tR\aagentId\x12\x18\n" +
+	"\aenabled\x18\a \x01(\bR\aenabled\x12\x1e\n" +
+	"\n" +
+	"ordinality\x18\b \x01(\x05R\n" +
+	"ordinality\")\n" +
+	"\x0eGetRoleRequest\x12\x17\n" +
+	"\arole_id\x18\x01 \x01(\tR\x06roleId\"\x12\n" +
+	"\x10ListRolesRequest\"B\n" +
+	"\x11ListRolesResponse\x12-\n" +
+	"\x05roles\x18\x01 \x03(\v2\x17.codevaldagency.v1.RoleR\x05roles\"\xa9\x02\n" +
+	"\x11UpdateRoleRequest\x12\x17\n" +
+	"\arole_id\x18\x01 \x01(\tR\x06roleId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1f\n" +
+	"\vevent_topic\x18\x04 \x01(\tR\n" +
+	"eventTopic\x12+\n" +
+	"\x11payload_condition\x18\x05 \x01(\tR\x10payloadCondition\x12\"\n" +
+	"\finstructions\x18\x06 \x01(\tR\finstructions\x12\x19\n" +
+	"\bagent_id\x18\a \x01(\tR\aagentId\x12\x18\n" +
+	"\aenabled\x18\b \x01(\bR\aenabled\x12\x1e\n" +
+	"\n" +
+	"ordinality\x18\t \x01(\x05R\n" +
+	"ordinality\",\n" +
+	"\x11DeleteRoleRequest\x12\x17\n" +
+	"\arole_id\x18\x01 \x01(\tR\x06roleId\"\xfe\x01\n" +
+	"\x17AddContextSourceRequest\x12\x17\n" +
+	"\arole_id\x18\x01 \x01(\tR\x06roleId\x12\x1f\n" +
+	"\vsource_type\x18\x02 \x01(\tR\n" +
+	"sourceType\x125\n" +
+	"\x03git\x18\x03 \x01(\v2#.codevaldagency.v1.GitContextSourceR\x03git\x128\n" +
+	"\x04comm\x18\x04 \x01(\v2$.codevaldagency.v1.CommContextSourceR\x04comm\x128\n" +
+	"\x04work\x18\x05 \x01(\v2$.codevaldagency.v1.WorkContextSourceR\x04work\"4\n" +
+	"\x19ListContextSourcesRequest\x12\x17\n" +
+	"\arole_id\x18\x01 \x01(\tR\x06roleId\"g\n" +
+	"\x1aListContextSourcesResponse\x12I\n" +
+	"\x0fcontext_sources\x18\x01 \x03(\v2 .codevaldagency.v1.ContextSourceR\x0econtextSources\"R\n" +
+	"\x1aRemoveContextSourceRequest\x12\x17\n" +
+	"\arole_id\x18\x01 \x01(\tR\x06roleId\x12\x1b\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"C\n" +
+	"\x11MatchRolesRequest\x12\x14\n" +
+	"\x05topic\x18\x01 \x01(\tR\x05topic\x12\x18\n" +
+	"\apayload\x18\x02 \x01(\tR\apayload\"L\n" +
+	"\x12MatchRolesResponse\x126\n" +
+	"\amatches\x18\x01 \x03(\v2\x1c.codevaldagency.v1.RoleMatchR\amatches\"(\n" +
 	"\x12ImportDraftRequest\x12\x12\n" +
 	"\x04body\x18\x01 \x01(\tR\x04body\"M\n" +
 	"\x13ImportDraftResponse\x12\x1b\n" +
@@ -1892,7 +3137,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x16ACTOR_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10ACTOR_TYPE_HUMAN\x10\x01\x12\x11\n" +
 	"\rACTOR_TYPE_AI\x10\x02\x12\x15\n" +
-	"\x11ACTOR_TYPE_EITHER\x10\x032\x85\v\n" +
+	"\x11ACTOR_TYPE_EITHER\x10\x032\x98\x11\n" +
 	"\rAgencyService\x12Y\n" +
 	"\x10SetAgencyDetails\x12*.codevaldagency.v1.SetAgencyDetailsRequest\x1a\x19.codevaldagency.v1.Agency\x12K\n" +
 	"\tGetAgency\x12#.codevaldagency.v1.GetAgencyRequest\x1a\x19.codevaldagency.v1.Agency\x12^\n" +
@@ -1909,7 +3154,20 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x16UpdateDraftDescription\x120.codevaldagency.v1.UpdateDraftDescriptionRequest\x1a\x1e.codevaldagency.v1.AgencyDraft\x12Q\n" +
 	"\fPromoteDraft\x12&.codevaldagency.v1.PromoteDraftRequest\x1a\x19.codevaldagency.v1.Agency\x12V\n" +
 	"\fArchiveDraft\x12&.codevaldagency.v1.ArchiveDraftRequest\x1a\x1e.codevaldagency.v1.AgencyDraft\x12\\\n" +
-	"\vImportDraft\x12%.codevaldagency.v1.ImportDraftRequest\x1a&.codevaldagency.v1.ImportDraftResponseBMZKgithub.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1;codevaldagencyv1b\x06proto3"
+	"\vImportDraft\x12%.codevaldagency.v1.ImportDraftRequest\x1a&.codevaldagency.v1.ImportDraftResponse\x12K\n" +
+	"\n" +
+	"CreateRole\x12$.codevaldagency.v1.CreateRoleRequest\x1a\x17.codevaldagency.v1.Role\x12E\n" +
+	"\aGetRole\x12!.codevaldagency.v1.GetRoleRequest\x1a\x17.codevaldagency.v1.Role\x12V\n" +
+	"\tListRoles\x12#.codevaldagency.v1.ListRolesRequest\x1a$.codevaldagency.v1.ListRolesResponse\x12K\n" +
+	"\n" +
+	"UpdateRole\x12$.codevaldagency.v1.UpdateRoleRequest\x1a\x17.codevaldagency.v1.Role\x12J\n" +
+	"\n" +
+	"DeleteRole\x12$.codevaldagency.v1.DeleteRoleRequest\x1a\x16.google.protobuf.Empty\x12`\n" +
+	"\x10AddContextSource\x12*.codevaldagency.v1.AddContextSourceRequest\x1a .codevaldagency.v1.ContextSource\x12q\n" +
+	"\x12ListContextSources\x12,.codevaldagency.v1.ListContextSourcesRequest\x1a-.codevaldagency.v1.ListContextSourcesResponse\x12\\\n" +
+	"\x13RemoveContextSource\x12-.codevaldagency.v1.RemoveContextSourceRequest\x1a\x16.google.protobuf.Empty\x12Y\n" +
+	"\n" +
+	"MatchRoles\x12$.codevaldagency.v1.MatchRolesRequest\x1a%.codevaldagency.v1.MatchRolesResponseBMZKgithub.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1;codevaldagencyv1b\x06proto3"
 
 var (
 	file_codevaldagency_v1_agency_proto_rawDescOnce sync.Once
@@ -1924,7 +3182,7 @@ func file_codevaldagency_v1_agency_proto_rawDescGZIP() []byte {
 }
 
 var file_codevaldagency_v1_agency_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_codevaldagency_v1_agency_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_codevaldagency_v1_agency_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
 var file_codevaldagency_v1_agency_proto_goTypes = []any{
 	(AgencyDraftStatus)(0),                // 0: codevaldagency.v1.AgencyDraftStatus
 	(RACILabel)(0),                        // 1: codevaldagency.v1.RACILabel
@@ -1956,9 +3214,28 @@ var file_codevaldagency_v1_agency_proto_goTypes = []any{
 	(*UpdateDraftDescriptionRequest)(nil), // 27: codevaldagency.v1.UpdateDraftDescriptionRequest
 	(*PromoteDraftRequest)(nil),           // 28: codevaldagency.v1.PromoteDraftRequest
 	(*ArchiveDraftRequest)(nil),           // 29: codevaldagency.v1.ArchiveDraftRequest
-	(*ImportDraftRequest)(nil),            // 30: codevaldagency.v1.ImportDraftRequest
-	(*ImportDraftResponse)(nil),           // 31: codevaldagency.v1.ImportDraftResponse
-	(*timestamppb.Timestamp)(nil),         // 32: google.protobuf.Timestamp
+	(*Role)(nil),                          // 30: codevaldagency.v1.Role
+	(*GitContextSource)(nil),              // 31: codevaldagency.v1.GitContextSource
+	(*CommContextSource)(nil),             // 32: codevaldagency.v1.CommContextSource
+	(*WorkContextSource)(nil),             // 33: codevaldagency.v1.WorkContextSource
+	(*ContextSource)(nil),                 // 34: codevaldagency.v1.ContextSource
+	(*RoleMatch)(nil),                     // 35: codevaldagency.v1.RoleMatch
+	(*CreateRoleRequest)(nil),             // 36: codevaldagency.v1.CreateRoleRequest
+	(*GetRoleRequest)(nil),                // 37: codevaldagency.v1.GetRoleRequest
+	(*ListRolesRequest)(nil),              // 38: codevaldagency.v1.ListRolesRequest
+	(*ListRolesResponse)(nil),             // 39: codevaldagency.v1.ListRolesResponse
+	(*UpdateRoleRequest)(nil),             // 40: codevaldagency.v1.UpdateRoleRequest
+	(*DeleteRoleRequest)(nil),             // 41: codevaldagency.v1.DeleteRoleRequest
+	(*AddContextSourceRequest)(nil),       // 42: codevaldagency.v1.AddContextSourceRequest
+	(*ListContextSourcesRequest)(nil),     // 43: codevaldagency.v1.ListContextSourcesRequest
+	(*ListContextSourcesResponse)(nil),    // 44: codevaldagency.v1.ListContextSourcesResponse
+	(*RemoveContextSourceRequest)(nil),    // 45: codevaldagency.v1.RemoveContextSourceRequest
+	(*MatchRolesRequest)(nil),             // 46: codevaldagency.v1.MatchRolesRequest
+	(*MatchRolesResponse)(nil),            // 47: codevaldagency.v1.MatchRolesResponse
+	(*ImportDraftRequest)(nil),            // 48: codevaldagency.v1.ImportDraftRequest
+	(*ImportDraftResponse)(nil),           // 49: codevaldagency.v1.ImportDraftResponse
+	(*timestamppb.Timestamp)(nil),         // 50: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                 // 51: google.protobuf.Empty
 }
 var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	1,  // 0: codevaldagency.v1.RoleAssignment.raci:type_name -> codevaldagency.v1.RACILabel
@@ -1968,53 +3245,82 @@ var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	7,  // 4: codevaldagency.v1.Agency.goals:type_name -> codevaldagency.v1.Goal
 	6,  // 5: codevaldagency.v1.Agency.workflows:type_name -> codevaldagency.v1.Workflow
 	4,  // 6: codevaldagency.v1.Agency.configured_roles:type_name -> codevaldagency.v1.ConfiguredRole
-	32, // 7: codevaldagency.v1.Agency.created_at:type_name -> google.protobuf.Timestamp
-	32, // 8: codevaldagency.v1.Agency.updated_at:type_name -> google.protobuf.Timestamp
+	50, // 7: codevaldagency.v1.Agency.created_at:type_name -> google.protobuf.Timestamp
+	50, // 8: codevaldagency.v1.Agency.updated_at:type_name -> google.protobuf.Timestamp
 	8,  // 9: codevaldagency.v1.AgencyPublication.agency:type_name -> codevaldagency.v1.Agency
-	32, // 10: codevaldagency.v1.AgencyPublication.published_at:type_name -> google.protobuf.Timestamp
+	50, // 10: codevaldagency.v1.AgencyPublication.published_at:type_name -> google.protobuf.Timestamp
 	11, // 11: codevaldagency.v1.ListPublicationsResponse.publications:type_name -> codevaldagency.v1.AgencyPublication
 	7,  // 12: codevaldagency.v1.GetGoalsResponse.goals:type_name -> codevaldagency.v1.Goal
 	6,  // 13: codevaldagency.v1.GetWorkflowsResponse.workflows:type_name -> codevaldagency.v1.Workflow
 	4,  // 14: codevaldagency.v1.GetConfiguredRolesResponse.configured_roles:type_name -> codevaldagency.v1.ConfiguredRole
 	0,  // 15: codevaldagency.v1.AgencyDraft.status:type_name -> codevaldagency.v1.AgencyDraftStatus
-	32, // 16: codevaldagency.v1.AgencyDraft.created_at:type_name -> google.protobuf.Timestamp
-	32, // 17: codevaldagency.v1.AgencyDraft.updated_at:type_name -> google.protobuf.Timestamp
+	50, // 16: codevaldagency.v1.AgencyDraft.created_at:type_name -> google.protobuf.Timestamp
+	50, // 17: codevaldagency.v1.AgencyDraft.updated_at:type_name -> google.protobuf.Timestamp
 	22, // 18: codevaldagency.v1.ListDraftsResponse.drafts:type_name -> codevaldagency.v1.AgencyDraft
-	10, // 19: codevaldagency.v1.AgencyService.SetAgencyDetails:input_type -> codevaldagency.v1.SetAgencyDetailsRequest
-	9,  // 20: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
-	12, // 21: codevaldagency.v1.AgencyService.PublishAgency:input_type -> codevaldagency.v1.PublishAgencyRequest
-	13, // 22: codevaldagency.v1.AgencyService.GetPublication:input_type -> codevaldagency.v1.GetPublicationRequest
-	14, // 23: codevaldagency.v1.AgencyService.ListPublications:input_type -> codevaldagency.v1.ListPublicationsRequest
-	16, // 24: codevaldagency.v1.AgencyService.GetGoals:input_type -> codevaldagency.v1.GetGoalsRequest
-	18, // 25: codevaldagency.v1.AgencyService.GetWorkflows:input_type -> codevaldagency.v1.GetWorkflowsRequest
-	20, // 26: codevaldagency.v1.AgencyService.GetConfiguredRoles:input_type -> codevaldagency.v1.GetConfiguredRolesRequest
-	23, // 27: codevaldagency.v1.AgencyService.CreateDraft:input_type -> codevaldagency.v1.CreateDraftRequest
-	24, // 28: codevaldagency.v1.AgencyService.GetDraft:input_type -> codevaldagency.v1.GetDraftRequest
-	25, // 29: codevaldagency.v1.AgencyService.ListDrafts:input_type -> codevaldagency.v1.ListDraftsRequest
-	27, // 30: codevaldagency.v1.AgencyService.UpdateDraftDescription:input_type -> codevaldagency.v1.UpdateDraftDescriptionRequest
-	28, // 31: codevaldagency.v1.AgencyService.PromoteDraft:input_type -> codevaldagency.v1.PromoteDraftRequest
-	29, // 32: codevaldagency.v1.AgencyService.ArchiveDraft:input_type -> codevaldagency.v1.ArchiveDraftRequest
-	30, // 33: codevaldagency.v1.AgencyService.ImportDraft:input_type -> codevaldagency.v1.ImportDraftRequest
-	8,  // 34: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
-	8,  // 35: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
-	11, // 36: codevaldagency.v1.AgencyService.PublishAgency:output_type -> codevaldagency.v1.AgencyPublication
-	11, // 37: codevaldagency.v1.AgencyService.GetPublication:output_type -> codevaldagency.v1.AgencyPublication
-	15, // 38: codevaldagency.v1.AgencyService.ListPublications:output_type -> codevaldagency.v1.ListPublicationsResponse
-	17, // 39: codevaldagency.v1.AgencyService.GetGoals:output_type -> codevaldagency.v1.GetGoalsResponse
-	19, // 40: codevaldagency.v1.AgencyService.GetWorkflows:output_type -> codevaldagency.v1.GetWorkflowsResponse
-	21, // 41: codevaldagency.v1.AgencyService.GetConfiguredRoles:output_type -> codevaldagency.v1.GetConfiguredRolesResponse
-	22, // 42: codevaldagency.v1.AgencyService.CreateDraft:output_type -> codevaldagency.v1.AgencyDraft
-	22, // 43: codevaldagency.v1.AgencyService.GetDraft:output_type -> codevaldagency.v1.AgencyDraft
-	26, // 44: codevaldagency.v1.AgencyService.ListDrafts:output_type -> codevaldagency.v1.ListDraftsResponse
-	22, // 45: codevaldagency.v1.AgencyService.UpdateDraftDescription:output_type -> codevaldagency.v1.AgencyDraft
-	8,  // 46: codevaldagency.v1.AgencyService.PromoteDraft:output_type -> codevaldagency.v1.Agency
-	22, // 47: codevaldagency.v1.AgencyService.ArchiveDraft:output_type -> codevaldagency.v1.AgencyDraft
-	31, // 48: codevaldagency.v1.AgencyService.ImportDraft:output_type -> codevaldagency.v1.ImportDraftResponse
-	34, // [34:49] is the sub-list for method output_type
-	19, // [19:34] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	31, // 19: codevaldagency.v1.ContextSource.git:type_name -> codevaldagency.v1.GitContextSource
+	32, // 20: codevaldagency.v1.ContextSource.comm:type_name -> codevaldagency.v1.CommContextSource
+	33, // 21: codevaldagency.v1.ContextSource.work:type_name -> codevaldagency.v1.WorkContextSource
+	30, // 22: codevaldagency.v1.RoleMatch.role:type_name -> codevaldagency.v1.Role
+	34, // 23: codevaldagency.v1.RoleMatch.context_sources:type_name -> codevaldagency.v1.ContextSource
+	30, // 24: codevaldagency.v1.ListRolesResponse.roles:type_name -> codevaldagency.v1.Role
+	31, // 25: codevaldagency.v1.AddContextSourceRequest.git:type_name -> codevaldagency.v1.GitContextSource
+	32, // 26: codevaldagency.v1.AddContextSourceRequest.comm:type_name -> codevaldagency.v1.CommContextSource
+	33, // 27: codevaldagency.v1.AddContextSourceRequest.work:type_name -> codevaldagency.v1.WorkContextSource
+	34, // 28: codevaldagency.v1.ListContextSourcesResponse.context_sources:type_name -> codevaldagency.v1.ContextSource
+	35, // 29: codevaldagency.v1.MatchRolesResponse.matches:type_name -> codevaldagency.v1.RoleMatch
+	10, // 30: codevaldagency.v1.AgencyService.SetAgencyDetails:input_type -> codevaldagency.v1.SetAgencyDetailsRequest
+	9,  // 31: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
+	12, // 32: codevaldagency.v1.AgencyService.PublishAgency:input_type -> codevaldagency.v1.PublishAgencyRequest
+	13, // 33: codevaldagency.v1.AgencyService.GetPublication:input_type -> codevaldagency.v1.GetPublicationRequest
+	14, // 34: codevaldagency.v1.AgencyService.ListPublications:input_type -> codevaldagency.v1.ListPublicationsRequest
+	16, // 35: codevaldagency.v1.AgencyService.GetGoals:input_type -> codevaldagency.v1.GetGoalsRequest
+	18, // 36: codevaldagency.v1.AgencyService.GetWorkflows:input_type -> codevaldagency.v1.GetWorkflowsRequest
+	20, // 37: codevaldagency.v1.AgencyService.GetConfiguredRoles:input_type -> codevaldagency.v1.GetConfiguredRolesRequest
+	23, // 38: codevaldagency.v1.AgencyService.CreateDraft:input_type -> codevaldagency.v1.CreateDraftRequest
+	24, // 39: codevaldagency.v1.AgencyService.GetDraft:input_type -> codevaldagency.v1.GetDraftRequest
+	25, // 40: codevaldagency.v1.AgencyService.ListDrafts:input_type -> codevaldagency.v1.ListDraftsRequest
+	27, // 41: codevaldagency.v1.AgencyService.UpdateDraftDescription:input_type -> codevaldagency.v1.UpdateDraftDescriptionRequest
+	28, // 42: codevaldagency.v1.AgencyService.PromoteDraft:input_type -> codevaldagency.v1.PromoteDraftRequest
+	29, // 43: codevaldagency.v1.AgencyService.ArchiveDraft:input_type -> codevaldagency.v1.ArchiveDraftRequest
+	48, // 44: codevaldagency.v1.AgencyService.ImportDraft:input_type -> codevaldagency.v1.ImportDraftRequest
+	36, // 45: codevaldagency.v1.AgencyService.CreateRole:input_type -> codevaldagency.v1.CreateRoleRequest
+	37, // 46: codevaldagency.v1.AgencyService.GetRole:input_type -> codevaldagency.v1.GetRoleRequest
+	38, // 47: codevaldagency.v1.AgencyService.ListRoles:input_type -> codevaldagency.v1.ListRolesRequest
+	40, // 48: codevaldagency.v1.AgencyService.UpdateRole:input_type -> codevaldagency.v1.UpdateRoleRequest
+	41, // 49: codevaldagency.v1.AgencyService.DeleteRole:input_type -> codevaldagency.v1.DeleteRoleRequest
+	42, // 50: codevaldagency.v1.AgencyService.AddContextSource:input_type -> codevaldagency.v1.AddContextSourceRequest
+	43, // 51: codevaldagency.v1.AgencyService.ListContextSources:input_type -> codevaldagency.v1.ListContextSourcesRequest
+	45, // 52: codevaldagency.v1.AgencyService.RemoveContextSource:input_type -> codevaldagency.v1.RemoveContextSourceRequest
+	46, // 53: codevaldagency.v1.AgencyService.MatchRoles:input_type -> codevaldagency.v1.MatchRolesRequest
+	8,  // 54: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
+	8,  // 55: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
+	11, // 56: codevaldagency.v1.AgencyService.PublishAgency:output_type -> codevaldagency.v1.AgencyPublication
+	11, // 57: codevaldagency.v1.AgencyService.GetPublication:output_type -> codevaldagency.v1.AgencyPublication
+	15, // 58: codevaldagency.v1.AgencyService.ListPublications:output_type -> codevaldagency.v1.ListPublicationsResponse
+	17, // 59: codevaldagency.v1.AgencyService.GetGoals:output_type -> codevaldagency.v1.GetGoalsResponse
+	19, // 60: codevaldagency.v1.AgencyService.GetWorkflows:output_type -> codevaldagency.v1.GetWorkflowsResponse
+	21, // 61: codevaldagency.v1.AgencyService.GetConfiguredRoles:output_type -> codevaldagency.v1.GetConfiguredRolesResponse
+	22, // 62: codevaldagency.v1.AgencyService.CreateDraft:output_type -> codevaldagency.v1.AgencyDraft
+	22, // 63: codevaldagency.v1.AgencyService.GetDraft:output_type -> codevaldagency.v1.AgencyDraft
+	26, // 64: codevaldagency.v1.AgencyService.ListDrafts:output_type -> codevaldagency.v1.ListDraftsResponse
+	22, // 65: codevaldagency.v1.AgencyService.UpdateDraftDescription:output_type -> codevaldagency.v1.AgencyDraft
+	8,  // 66: codevaldagency.v1.AgencyService.PromoteDraft:output_type -> codevaldagency.v1.Agency
+	22, // 67: codevaldagency.v1.AgencyService.ArchiveDraft:output_type -> codevaldagency.v1.AgencyDraft
+	49, // 68: codevaldagency.v1.AgencyService.ImportDraft:output_type -> codevaldagency.v1.ImportDraftResponse
+	30, // 69: codevaldagency.v1.AgencyService.CreateRole:output_type -> codevaldagency.v1.Role
+	30, // 70: codevaldagency.v1.AgencyService.GetRole:output_type -> codevaldagency.v1.Role
+	39, // 71: codevaldagency.v1.AgencyService.ListRoles:output_type -> codevaldagency.v1.ListRolesResponse
+	30, // 72: codevaldagency.v1.AgencyService.UpdateRole:output_type -> codevaldagency.v1.Role
+	51, // 73: codevaldagency.v1.AgencyService.DeleteRole:output_type -> google.protobuf.Empty
+	34, // 74: codevaldagency.v1.AgencyService.AddContextSource:output_type -> codevaldagency.v1.ContextSource
+	44, // 75: codevaldagency.v1.AgencyService.ListContextSources:output_type -> codevaldagency.v1.ListContextSourcesResponse
+	51, // 76: codevaldagency.v1.AgencyService.RemoveContextSource:output_type -> google.protobuf.Empty
+	47, // 77: codevaldagency.v1.AgencyService.MatchRoles:output_type -> codevaldagency.v1.MatchRolesResponse
+	54, // [54:78] is the sub-list for method output_type
+	30, // [30:54] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_codevaldagency_v1_agency_proto_init() }
@@ -2028,7 +3334,7 @@ func file_codevaldagency_v1_agency_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_codevaldagency_v1_agency_proto_rawDesc), len(file_codevaldagency_v1_agency_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   29,
+			NumMessages:   47,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

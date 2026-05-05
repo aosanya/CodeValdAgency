@@ -46,6 +46,13 @@ type mockManager struct {
 	promoteDraftErr       error
 	archiveDraftResult    codevaldagency.AgencyDraft
 	archiveDraftErr       error
+
+	createRoleResult   codevaldagency.Role
+	createRoleErr      error
+	getRoleResult      codevaldagency.Role
+	getRoleErr         error
+	matchRolesResult   []codevaldagency.RoleMatch
+	matchRolesErr      error
 }
 
 func (m *mockManager) SetAgencyDetails(_ context.Context, _ string) (codevaldagency.Agency, error) {
@@ -96,10 +103,10 @@ func (m *mockManager) GetConfiguredRoles(_ context.Context) ([]codevaldagency.Co
 	return m.rolesResult, m.rolesErr
 }
 func (m *mockManager) CreateRole(_ context.Context, _ codevaldagency.CreateRoleRequest) (codevaldagency.Role, error) {
-	return codevaldagency.Role{}, nil
+	return m.createRoleResult, m.createRoleErr
 }
 func (m *mockManager) GetRole(_ context.Context, _ string) (codevaldagency.Role, error) {
-	return codevaldagency.Role{}, nil
+	return m.getRoleResult, m.getRoleErr
 }
 func (m *mockManager) ListRoles(_ context.Context) ([]codevaldagency.Role, error) {
 	return nil, nil
@@ -120,7 +127,7 @@ func (m *mockManager) RemoveContextSource(_ context.Context, _, _ string) error 
 	return nil
 }
 func (m *mockManager) MatchRoles(_ context.Context, _, _ string) ([]codevaldagency.RoleMatch, error) {
-	return nil, nil
+	return m.matchRolesResult, m.matchRolesErr
 }
 
 // requireCode asserts that err is a gRPC status error with the expected code.

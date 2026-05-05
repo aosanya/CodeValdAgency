@@ -56,7 +56,7 @@ func (f *fakeDataManager) CreateEntity(_ context.Context, req entitygraph.Create
 
 func (f *fakeDataManager) GetEntity(_ context.Context, agencyID, entityID string) (entitygraph.Entity, error) {
 	e, ok := f.entities[entityID]
-	if !ok || e.AgencyID != agencyID {
+	if !ok || e.AgencyID != agencyID || e.Deleted {
 		return entitygraph.Entity{}, errors.New("entity not found")
 	}
 	return e, nil

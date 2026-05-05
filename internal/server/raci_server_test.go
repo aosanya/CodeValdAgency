@@ -85,7 +85,7 @@ func TestServer_MatchRoles_ReturnsMatchesWithSources(t *testing.T) {
 						RoleID:     "role-1",
 						SourceType: codevaldagency.ContextSourceGit,
 						Git: &codevaldagency.GitContextSourceConfig{
-							Signals:    []string{"commit", "pr"},
+							Signals:    "commit,pr",
 							MaxResults: 10,
 						},
 					},

@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -34,6 +35,15 @@ const (
 	AgencyService_PromoteDraft_FullMethodName           = "/codevaldagency.v1.AgencyService/PromoteDraft"
 	AgencyService_ArchiveDraft_FullMethodName           = "/codevaldagency.v1.AgencyService/ArchiveDraft"
 	AgencyService_ImportDraft_FullMethodName            = "/codevaldagency.v1.AgencyService/ImportDraft"
+	AgencyService_CreateRole_FullMethodName             = "/codevaldagency.v1.AgencyService/CreateRole"
+	AgencyService_GetRole_FullMethodName                = "/codevaldagency.v1.AgencyService/GetRole"
+	AgencyService_ListRoles_FullMethodName              = "/codevaldagency.v1.AgencyService/ListRoles"
+	AgencyService_UpdateRole_FullMethodName             = "/codevaldagency.v1.AgencyService/UpdateRole"
+	AgencyService_DeleteRole_FullMethodName             = "/codevaldagency.v1.AgencyService/DeleteRole"
+	AgencyService_AddContextSource_FullMethodName       = "/codevaldagency.v1.AgencyService/AddContextSource"
+	AgencyService_ListContextSources_FullMethodName     = "/codevaldagency.v1.AgencyService/ListContextSources"
+	AgencyService_RemoveContextSource_FullMethodName    = "/codevaldagency.v1.AgencyService/RemoveContextSource"
+	AgencyService_MatchRoles_FullMethodName             = "/codevaldagency.v1.AgencyService/MatchRoles"
 )
 
 // AgencyServiceClient is the client API for AgencyService service.
@@ -97,6 +107,33 @@ type AgencyServiceClient interface {
 	// HTTP request body into this field automatically.
 	// Error: INVALID_ARGUMENT if the body cannot be parsed.
 	ImportDraft(ctx context.Context, in *ImportDraftRequest, opts ...grpc.CallOption) (*ImportDraftResponse, error)
+	// CreateRole stores a new Role and links it to the Agency.
+	// Error: INVALID_ARGUMENT if event_topic or payload_condition is not a valid Go regex.
+	CreateRole(ctx context.Context, in *CreateRoleRequest, opts ...grpc.CallOption) (*Role, error)
+	// GetRole retrieves a single Role by its entity ID.
+	// Error: NOT_FOUND if no Role with that ID exists.
+	GetRole(ctx context.Context, in *GetRoleRequest, opts ...grpc.CallOption) (*Role, error)
+	// ListRoles returns all Roles linked to this Agency.
+	ListRoles(ctx context.Context, in *ListRolesRequest, opts ...grpc.CallOption) (*ListRolesResponse, error)
+	// UpdateRole applies the request fields to an existing Role.
+	// Error: NOT_FOUND if no Role with that ID exists.
+	// Error: INVALID_ARGUMENT if event_topic or payload_condition is not a valid Go regex.
+	UpdateRole(ctx context.Context, in *UpdateRoleRequest, opts ...grpc.CallOption) (*Role, error)
+	// DeleteRole removes a Role by its entity ID.
+	// Error: NOT_FOUND if no Role with that ID exists.
+	DeleteRole(ctx context.Context, in *DeleteRoleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// AddContextSource creates a typed ContextSource entity and links it to a Role.
+	// Error: NOT_FOUND if no Role with that ID exists.
+	AddContextSource(ctx context.Context, in *AddContextSourceRequest, opts ...grpc.CallOption) (*ContextSource, error)
+	// ListContextSources returns all ContextSource entities linked to a Role.
+	// Error: NOT_FOUND if no Role with that ID exists.
+	ListContextSources(ctx context.Context, in *ListContextSourcesRequest, opts ...grpc.CallOption) (*ListContextSourcesResponse, error)
+	// RemoveContextSource deletes a ContextSource and removes its edge from the Role.
+	// Error: NOT_FOUND if the ContextSource does not exist.
+	RemoveContextSource(ctx context.Context, in *RemoveContextSourceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// MatchRoles evaluates the topic and payload against all enabled Roles.
+	// Returns matching roles with their ContextSources, ordered by ordinality.
+	MatchRoles(ctx context.Context, in *MatchRolesRequest, opts ...grpc.CallOption) (*MatchRolesResponse, error)
 }
 
 type agencyServiceClient struct {
@@ -257,6 +294,96 @@ func (c *agencyServiceClient) ImportDraft(ctx context.Context, in *ImportDraftRe
 	return out, nil
 }
 
+func (c *agencyServiceClient) CreateRole(ctx context.Context, in *CreateRoleRequest, opts ...grpc.CallOption) (*Role, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Role)
+	err := c.cc.Invoke(ctx, AgencyService_CreateRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) GetRole(ctx context.Context, in *GetRoleRequest, opts ...grpc.CallOption) (*Role, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Role)
+	err := c.cc.Invoke(ctx, AgencyService_GetRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) ListRoles(ctx context.Context, in *ListRolesRequest, opts ...grpc.CallOption) (*ListRolesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRolesResponse)
+	err := c.cc.Invoke(ctx, AgencyService_ListRoles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) UpdateRole(ctx context.Context, in *UpdateRoleRequest, opts ...grpc.CallOption) (*Role, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Role)
+	err := c.cc.Invoke(ctx, AgencyService_UpdateRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) DeleteRole(ctx context.Context, in *DeleteRoleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AgencyService_DeleteRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) AddContextSource(ctx context.Context, in *AddContextSourceRequest, opts ...grpc.CallOption) (*ContextSource, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ContextSource)
+	err := c.cc.Invoke(ctx, AgencyService_AddContextSource_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) ListContextSources(ctx context.Context, in *ListContextSourcesRequest, opts ...grpc.CallOption) (*ListContextSourcesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListContextSourcesResponse)
+	err := c.cc.Invoke(ctx, AgencyService_ListContextSources_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) RemoveContextSource(ctx context.Context, in *RemoveContextSourceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AgencyService_RemoveContextSource_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) MatchRoles(ctx context.Context, in *MatchRolesRequest, opts ...grpc.CallOption) (*MatchRolesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MatchRolesResponse)
+	err := c.cc.Invoke(ctx, AgencyService_MatchRoles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgencyServiceServer is the server API for AgencyService service.
 // All implementations must embed UnimplementedAgencyServiceServer
 // for forward compatibility.
@@ -318,6 +445,33 @@ type AgencyServiceServer interface {
 	// HTTP request body into this field automatically.
 	// Error: INVALID_ARGUMENT if the body cannot be parsed.
 	ImportDraft(context.Context, *ImportDraftRequest) (*ImportDraftResponse, error)
+	// CreateRole stores a new Role and links it to the Agency.
+	// Error: INVALID_ARGUMENT if event_topic or payload_condition is not a valid Go regex.
+	CreateRole(context.Context, *CreateRoleRequest) (*Role, error)
+	// GetRole retrieves a single Role by its entity ID.
+	// Error: NOT_FOUND if no Role with that ID exists.
+	GetRole(context.Context, *GetRoleRequest) (*Role, error)
+	// ListRoles returns all Roles linked to this Agency.
+	ListRoles(context.Context, *ListRolesRequest) (*ListRolesResponse, error)
+	// UpdateRole applies the request fields to an existing Role.
+	// Error: NOT_FOUND if no Role with that ID exists.
+	// Error: INVALID_ARGUMENT if event_topic or payload_condition is not a valid Go regex.
+	UpdateRole(context.Context, *UpdateRoleRequest) (*Role, error)
+	// DeleteRole removes a Role by its entity ID.
+	// Error: NOT_FOUND if no Role with that ID exists.
+	DeleteRole(context.Context, *DeleteRoleRequest) (*emptypb.Empty, error)
+	// AddContextSource creates a typed ContextSource entity and links it to a Role.
+	// Error: NOT_FOUND if no Role with that ID exists.
+	AddContextSource(context.Context, *AddContextSourceRequest) (*ContextSource, error)
+	// ListContextSources returns all ContextSource entities linked to a Role.
+	// Error: NOT_FOUND if no Role with that ID exists.
+	ListContextSources(context.Context, *ListContextSourcesRequest) (*ListContextSourcesResponse, error)
+	// RemoveContextSource deletes a ContextSource and removes its edge from the Role.
+	// Error: NOT_FOUND if the ContextSource does not exist.
+	RemoveContextSource(context.Context, *RemoveContextSourceRequest) (*emptypb.Empty, error)
+	// MatchRoles evaluates the topic and payload against all enabled Roles.
+	// Returns matching roles with their ContextSources, ordered by ordinality.
+	MatchRoles(context.Context, *MatchRolesRequest) (*MatchRolesResponse, error)
 	mustEmbedUnimplementedAgencyServiceServer()
 }
 
@@ -372,6 +526,33 @@ func (UnimplementedAgencyServiceServer) ArchiveDraft(context.Context, *ArchiveDr
 }
 func (UnimplementedAgencyServiceServer) ImportDraft(context.Context, *ImportDraftRequest) (*ImportDraftResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ImportDraft not implemented")
+}
+func (UnimplementedAgencyServiceServer) CreateRole(context.Context, *CreateRoleRequest) (*Role, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateRole not implemented")
+}
+func (UnimplementedAgencyServiceServer) GetRole(context.Context, *GetRoleRequest) (*Role, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetRole not implemented")
+}
+func (UnimplementedAgencyServiceServer) ListRoles(context.Context, *ListRolesRequest) (*ListRolesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRoles not implemented")
+}
+func (UnimplementedAgencyServiceServer) UpdateRole(context.Context, *UpdateRoleRequest) (*Role, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateRole not implemented")
+}
+func (UnimplementedAgencyServiceServer) DeleteRole(context.Context, *DeleteRoleRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteRole not implemented")
+}
+func (UnimplementedAgencyServiceServer) AddContextSource(context.Context, *AddContextSourceRequest) (*ContextSource, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddContextSource not implemented")
+}
+func (UnimplementedAgencyServiceServer) ListContextSources(context.Context, *ListContextSourcesRequest) (*ListContextSourcesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListContextSources not implemented")
+}
+func (UnimplementedAgencyServiceServer) RemoveContextSource(context.Context, *RemoveContextSourceRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveContextSource not implemented")
+}
+func (UnimplementedAgencyServiceServer) MatchRoles(context.Context, *MatchRolesRequest) (*MatchRolesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MatchRoles not implemented")
 }
 func (UnimplementedAgencyServiceServer) mustEmbedUnimplementedAgencyServiceServer() {}
 func (UnimplementedAgencyServiceServer) testEmbeddedByValue()                       {}
@@ -664,6 +845,168 @@ func _AgencyService_ImportDraft_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgencyService_CreateRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).CreateRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_CreateRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).CreateRole(ctx, req.(*CreateRoleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_GetRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).GetRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_GetRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).GetRole(ctx, req.(*GetRoleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_ListRoles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRolesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).ListRoles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_ListRoles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).ListRoles(ctx, req.(*ListRolesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_UpdateRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).UpdateRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_UpdateRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).UpdateRole(ctx, req.(*UpdateRoleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_DeleteRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).DeleteRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_DeleteRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).DeleteRole(ctx, req.(*DeleteRoleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_AddContextSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddContextSourceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).AddContextSource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_AddContextSource_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).AddContextSource(ctx, req.(*AddContextSourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_ListContextSources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListContextSourcesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).ListContextSources(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_ListContextSources_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).ListContextSources(ctx, req.(*ListContextSourcesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_RemoveContextSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveContextSourceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).RemoveContextSource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_RemoveContextSource_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).RemoveContextSource(ctx, req.(*RemoveContextSourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_MatchRoles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MatchRolesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).MatchRoles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_MatchRoles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).MatchRoles(ctx, req.(*MatchRolesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgencyService_ServiceDesc is the grpc.ServiceDesc for AgencyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -730,6 +1073,42 @@ var AgencyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ImportDraft",
 			Handler:    _AgencyService_ImportDraft_Handler,
+		},
+		{
+			MethodName: "CreateRole",
+			Handler:    _AgencyService_CreateRole_Handler,
+		},
+		{
+			MethodName: "GetRole",
+			Handler:    _AgencyService_GetRole_Handler,
+		},
+		{
+			MethodName: "ListRoles",
+			Handler:    _AgencyService_ListRoles_Handler,
+		},
+		{
+			MethodName: "UpdateRole",
+			Handler:    _AgencyService_UpdateRole_Handler,
+		},
+		{
+			MethodName: "DeleteRole",
+			Handler:    _AgencyService_DeleteRole_Handler,
+		},
+		{
+			MethodName: "AddContextSource",
+			Handler:    _AgencyService_AddContextSource_Handler,
+		},
+		{
+			MethodName: "ListContextSources",
+			Handler:    _AgencyService_ListContextSources_Handler,
+		},
+		{
+			MethodName: "RemoveContextSource",
+			Handler:    _AgencyService_RemoveContextSource_Handler,
+		},
+		{
+			MethodName: "MatchRoles",
+			Handler:    _AgencyService_MatchRoles_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

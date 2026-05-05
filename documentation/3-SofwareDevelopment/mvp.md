@@ -50,7 +50,7 @@ The MVP delivers:
 | **MVP-AGENCY-010 — RACI Schema** | | | |
 | MVP-AGENCY-010 | RACI Schema: Role + ContextSource entity types | ✅ Done | — |
 | MVP-AGENCY-011 | RACI AgencyManager: CRUD + MatchRoles query | ✅ Done | MVP-AGENCY-010 |
-| MVP-AGENCY-012 | RACI gRPC RPCs | 📋 Not Started | MVP-AGENCY-011 |
+| MVP-AGENCY-012 | RACI gRPC RPCs | 🚀 In Progress | MVP-AGENCY-011 |
 | MVP-AGENCY-013 | RACI Cross Registration & Route Declarations | 📋 Not Started | MVP-AGENCY-012 |
 | MVP-AGENCY-014 | RACI Unit & Integration Tests | 📋 Not Started | MVP-AGENCY-011, MVP-AGENCY-012 |
 

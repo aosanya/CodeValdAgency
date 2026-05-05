@@ -31,6 +31,12 @@ func toGRPCError(err error) error {
 		return status.Error(codes.FailedPrecondition, err.Error())
 	case errors.Is(err, codevaldagency.ErrInvalidPublicationStatus):
 		return status.Error(codes.FailedPrecondition, err.Error())
+	case errors.Is(err, codevaldagency.ErrRoleNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, codevaldagency.ErrContextSourceNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, codevaldagency.ErrInvalidRegex):
+		return status.Error(codes.InvalidArgument, err.Error())
 	default:
 		return status.Errorf(codes.Internal, "internal error: %v", err)
 	}

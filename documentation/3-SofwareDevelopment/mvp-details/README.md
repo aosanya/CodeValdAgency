@@ -13,6 +13,7 @@ This directory contains per-topic implementation specifications for the CodeVald
 | [agency-management.md](agency-management.md) | MVP-AGENCY-001 to MVP-AGENCY-005 | Full agency management implementation details |
 | [route-registrar.md](route-registrar.md) | MVP-AGENCY-006 | Service-driven route registration for CodeValdCross |
 | [agency-drafts.md](agency-drafts.md) | MVP-AGENCY-009-A to MVP-AGENCY-009-F | Agency drafts — parallel versioning, fork, promote, archive |
+| [raci-matrix.md](raci-matrix.md) | MVP-AGENCY-010 to MVP-AGENCY-014 | RACI matrix — event-routing roles, composable context sources, MatchRoles dispatch |
 
 ---
 

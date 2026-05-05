@@ -52,7 +52,7 @@ The MVP delivers:
 | MVP-AGENCY-011 | RACI AgencyManager: CRUD + MatchRoles query | ✅ Done | MVP-AGENCY-010 |
 | MVP-AGENCY-012 | RACI gRPC RPCs | ✅ Done | MVP-AGENCY-011 |
 | MVP-AGENCY-013 | RACI Cross Registration & Route Declarations | ✅ Done | MVP-AGENCY-012 |
-| MVP-AGENCY-014 | RACI Unit & Integration Tests | 🚀 In Progress | MVP-AGENCY-011, MVP-AGENCY-012 |
+| MVP-AGENCY-014 | RACI Unit & Integration Tests | ✅ Done | MVP-AGENCY-011, MVP-AGENCY-012 |
 
 ---
 

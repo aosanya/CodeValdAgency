@@ -44,3 +44,16 @@ var ErrInvalidPublicationStatus = errors.New("invalid publication status transit
 // the draft content is identical to a previously published version and there
 // is nothing new to release.
 var ErrNoChangesDetected = errors.New("no changes detected: draft content is identical to an existing publication")
+
+// ErrRoleNotFound is returned by RACI methods when no Role entity exists for
+// the given role ID.
+var ErrRoleNotFound = errors.New("role not found")
+
+// ErrContextSourceNotFound is returned when no ContextSource entity exists for
+// the given source ID.
+var ErrContextSourceNotFound = errors.New("context source not found")
+
+// ErrInvalidRegex is returned by [AgencyManager.CreateRole] and
+// [AgencyManager.UpdateRole] when event_topic or payload_condition is not a
+// valid Go regular expression.
+var ErrInvalidRegex = errors.New("invalid regex: event_topic or payload_condition is not a valid Go regexp")

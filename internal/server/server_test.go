@@ -95,6 +95,33 @@ func (m *mockManager) GetWorkflows(_ context.Context) ([]codevaldagency.Workflow
 func (m *mockManager) GetConfiguredRoles(_ context.Context) ([]codevaldagency.ConfiguredRole, error) {
 	return m.rolesResult, m.rolesErr
 }
+func (m *mockManager) CreateRole(_ context.Context, _ codevaldagency.CreateRoleRequest) (codevaldagency.Role, error) {
+	return codevaldagency.Role{}, nil
+}
+func (m *mockManager) GetRole(_ context.Context, _ string) (codevaldagency.Role, error) {
+	return codevaldagency.Role{}, nil
+}
+func (m *mockManager) ListRoles(_ context.Context) ([]codevaldagency.Role, error) {
+	return nil, nil
+}
+func (m *mockManager) UpdateRole(_ context.Context, _ string, _ codevaldagency.UpdateRoleRequest) (codevaldagency.Role, error) {
+	return codevaldagency.Role{}, nil
+}
+func (m *mockManager) DeleteRole(_ context.Context, _ string) error {
+	return nil
+}
+func (m *mockManager) AddContextSource(_ context.Context, _ string, _ codevaldagency.AddContextSourceRequest) (codevaldagency.ContextSource, error) {
+	return codevaldagency.ContextSource{}, nil
+}
+func (m *mockManager) ListContextSources(_ context.Context, _ string) ([]codevaldagency.ContextSource, error) {
+	return nil, nil
+}
+func (m *mockManager) RemoveContextSource(_ context.Context, _, _ string) error {
+	return nil
+}
+func (m *mockManager) MatchRoles(_ context.Context, _, _ string) ([]codevaldagency.RoleMatch, error) {
+	return nil, nil
+}
 
 // requireCode asserts that err is a gRPC status error with the expected code.
 func requireCode(t *testing.T, err error, want codes.Code) {

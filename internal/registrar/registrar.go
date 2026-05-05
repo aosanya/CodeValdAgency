@@ -166,6 +166,83 @@ func agencyRoutes() []types.RouteInfo {
 				{URLParam: "version", Field: "version"},
 			},
 		},
+
+		// ── RACI role routes ──────────────────────────────────────────────────────
+		// POST /agency/{agencyId}/roles — create a new dispatch role.
+		{
+			Method:     "POST",
+			Pattern:    "/agency/{agencyId}/roles",
+			Capability: "create_role",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/CreateRole",
+		},
+		// GET /agency/{agencyId}/roles — list all dispatch roles.
+		{
+			Method:     "GET",
+			Pattern:    "/agency/{agencyId}/roles",
+			Capability: "list_roles",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/ListRoles",
+		},
+		// GET /agency/{agencyId}/roles/{roleId} — retrieve a single role.
+		{
+			Method:     "GET",
+			Pattern:    "/agency/{agencyId}/roles/{roleId}",
+			Capability: "get_role",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/GetRole",
+			PathBindings: []types.PathBinding{
+				{URLParam: "roleId", Field: "role_id"},
+			},
+		},
+		// PUT /agency/{agencyId}/roles/{roleId} — update a role's fields.
+		{
+			Method:     "PUT",
+			Pattern:    "/agency/{agencyId}/roles/{roleId}",
+			Capability: "update_role",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/UpdateRole",
+			PathBindings: []types.PathBinding{
+				{URLParam: "roleId", Field: "role_id"},
+			},
+		},
+		// DELETE /agency/{agencyId}/roles/{roleId} — delete a role.
+		{
+			Method:     "DELETE",
+			Pattern:    "/agency/{agencyId}/roles/{roleId}",
+			Capability: "delete_role",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/DeleteRole",
+			PathBindings: []types.PathBinding{
+				{URLParam: "roleId", Field: "role_id"},
+			},
+		},
+		// POST /agency/{agencyId}/roles/{roleId}/context-sources — add a context source.
+		{
+			Method:     "POST",
+			Pattern:    "/agency/{agencyId}/roles/{roleId}/context-sources",
+			Capability: "add_context_source",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/AddContextSource",
+			PathBindings: []types.PathBinding{
+				{URLParam: "roleId", Field: "role_id"},
+			},
+		},
+		// GET /agency/{agencyId}/roles/{roleId}/context-sources — list context sources.
+		{
+			Method:     "GET",
+			Pattern:    "/agency/{agencyId}/roles/{roleId}/context-sources",
+			Capability: "list_context_sources",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/ListContextSources",
+			PathBindings: []types.PathBinding{
+				{URLParam: "roleId", Field: "role_id"},
+			},
+		},
+		// DELETE /agency/{agencyId}/roles/{roleId}/context-sources/{sourceId} — remove a context source.
+		{
+			Method:     "DELETE",
+			Pattern:    "/agency/{agencyId}/roles/{roleId}/context-sources/{sourceId}",
+			Capability: "remove_context_source",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/RemoveContextSource",
+			PathBindings: []types.PathBinding{
+				{URLParam: "roleId", Field: "role_id"},
+				{URLParam: "sourceId", Field: "source_id"},
+			},
+		},
 	}
 
 	// Dynamic routes: one CRUD set per TypeDefinition with a non-empty PathSegment.

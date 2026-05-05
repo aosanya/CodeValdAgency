@@ -36,7 +36,6 @@ type AgencyManager interface {
 	// Returns [ErrAgencyReadOnly] if the live agency has already been published
 	// (i.e. at least one draft has been promoted). Once published, only
 	// [CreateDraft] + [PromoteDraft] may mutate the agency state.
-	// Publishes "cross.agency.created" after every successful write.
 	SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
 
 	// GetAgency retrieves the single agency for this database.
@@ -157,7 +156,6 @@ func NewAgencyManager(
 // If no Agency entity exists yet it calls CreateEntity; otherwise UpdateEntity
 // (only when the agency has not yet been published — Agency.Enabled == false).
 // Returns [ErrAgencyReadOnly] when the live agency is already published.
-// Publishes "cross.agency.created" on every successful write.
 func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error) {
 	var raw struct {
 		ID      string `json:"id"`
@@ -204,13 +202,7 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 		return Agency{}, fmt.Errorf("SetAgencyDetails: %w", err)
 	}
 
-	agency := entityToAgency(entity)
-
-	eventbus.SafePublish(ctx, m.publisher, eventbus.Event{
-		Topic:    "cross.agency.created",
-		AgencyID: agency.ID,
-	})
-	return agency, nil
+	return entityToAgency(entity), nil
 }
 
 // ── GetAgency ─────────────────────────────────────────────────────────────────

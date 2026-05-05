@@ -22,7 +22,7 @@ import (
 //  1. Sending periodic heartbeat registrations to CodeValdCross via the
 //     shared-library registrar (Run / Close).
 //  2. Implementing [codevaldagency.CrossPublisher] so that AgencyManager can
-//     fire "cross.agency.created" events on every successful CreateAgency call.
+//     publish agency lifecycle events (e.g. cross.agency.published).
 //
 // Construct via [New]; start heartbeats by calling Run in a goroutine; stop
 // by cancelling the context then calling Close.
@@ -50,7 +50,7 @@ func New(
 		advertiseAddr,
 		agencyID,
 		"codevaldagency",
-		[]string{"cross.agency.created", "cross.agency.published"},
+		[]string{"cross.agency.published"},
 		[]string{},
 		routes,
 		pingInterval,

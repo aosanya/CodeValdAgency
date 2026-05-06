@@ -17,7 +17,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 	"time"
@@ -258,12 +257,11 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 // GetAgency returns the single Agency entity stored in this database.
 // Returns [ErrAgencyNotFound] if no Agency entity exists yet.
 func (m *agencyManager) GetAgency(ctx context.Context) (Agency, error) {
-	log.Printf("GetAgency: querying agencyID=%q typeID=Agency", m.agencyID)
+
 	entities, err := m.listAgencyEntities(ctx)
 	if err != nil {
 		return Agency{}, fmt.Errorf("GetAgency: %w", err)
 	}
-	log.Printf("GetAgency: found %d entity(ies) for agencyID=%q", len(entities), m.agencyID)
 	if len(entities) == 0 {
 		return Agency{}, ErrAgencyNotFound
 	}

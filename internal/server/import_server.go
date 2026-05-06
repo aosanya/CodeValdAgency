@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 
 	pb "github.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1"
@@ -101,37 +102,54 @@ type importDeliverableSpec struct {
 // CodeValdCross HTTP proxy and idempotently populates a draft.
 func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*pb.ImportDraftResponse, error) {
 	rawBody := req.GetBody()
+	log.Printf("[ImportDraft] received body len=%d", len(rawBody))
 	if strings.TrimSpace(rawBody) == "" {
+		log.Printf("[ImportDraft] body is empty — returning InvalidArgument")
 		return nil, status.Error(codes.InvalidArgument, "ImportDraft: body is empty")
 	}
 
 	var spec importAgencyYAML
 	if err := yaml.Unmarshal([]byte(rawBody), &spec); err != nil {
-		// Try JSON fallback.
+		log.Printf("[ImportDraft] yaml.Unmarshal failed (%v) — trying JSON fallback", err)
 		if jsonErr := json.Unmarshal([]byte(rawBody), &spec); jsonErr != nil {
+			log.Printf("[ImportDraft] json.Unmarshal also failed: %v", jsonErr)
 			return nil, status.Errorf(codes.InvalidArgument, "ImportDraft: parse body as YAML: %v", err)
 		}
+		log.Printf("[ImportDraft] parsed as JSON fallback")
+	} else {
+		log.Printf("[ImportDraft] parsed as YAML")
 	}
 
+	log.Printf("[ImportDraft] parsed spec: agency.code=%q roles=%d goals=%d workflows=%d",
+		spec.Agency.Code, len(spec.ConfiguredRoles), len(spec.Goals), len(spec.Workflows))
+
 	if spec.Agency.Code == "" {
+		log.Printf("[ImportDraft] agency.code is empty — returning InvalidArgument")
 		return nil, status.Error(codes.InvalidArgument, "ImportDraft: agency.code is required")
 	}
 
 	agencyID := spec.Agency.Code
 
 	// 1. Set agency details.
+	log.Printf("[ImportDraft] %s: setting agency details", agencyID)
 	if err := s.importSetDetails(ctx, agencyID, spec.Agency); err != nil {
+		log.Printf("[ImportDraft] %s: set details failed: %v", agencyID, err)
 		return nil, status.Errorf(codes.Internal, "ImportDraft %s: set details: %v", agencyID, err)
 	}
 
 	// 2. Ensure open draft.
+	log.Printf("[ImportDraft] %s: ensuring draft", agencyID)
 	draftID, err := s.importEnsureDraft(ctx, agencyID, spec.Agency)
 	if err != nil {
+		log.Printf("[ImportDraft] %s: ensure draft failed: %v", agencyID, err)
 		return nil, status.Errorf(codes.Internal, "ImportDraft %s: ensure draft: %v", agencyID, err)
 	}
+	log.Printf("[ImportDraft] %s: draftID=%s", agencyID, draftID)
 
 	// 3. Configured roles.
+	log.Printf("[ImportDraft] %s: upserting %d configured roles", agencyID, len(spec.ConfiguredRoles))
 	for _, r := range spec.ConfiguredRoles {
+		log.Printf("[ImportDraft] %s: upsert role code=%s", agencyID, r.Code)
 		props := map[string]any{
 			"draft_ref_code": draftID,
 			"code":           r.Code,
@@ -141,12 +159,15 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			"ordinality":     r.Ordinality,
 		}
 		if err := s.importUpsert(ctx, agencyID, "DraftConfiguredRole", props); err != nil {
+			log.Printf("[ImportDraft] %s: role %s upsert failed: %v", agencyID, r.Code, err)
 			return nil, status.Errorf(codes.Internal, "ImportDraft %s: role %s: %v", agencyID, r.Code, err)
 		}
 	}
 
 	// 4. Goals.
+	log.Printf("[ImportDraft] %s: upserting %d goals", agencyID, len(spec.Goals))
 	for _, g := range spec.Goals {
+		log.Printf("[ImportDraft] %s: upsert goal code=%s", agencyID, g.Code)
 		props := map[string]any{
 			"draft_ref_code": draftID,
 			"code":           g.Code,
@@ -155,12 +176,15 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			"ordinality":     g.Ordinality,
 		}
 		if err := s.importUpsert(ctx, agencyID, "DraftGoal", props); err != nil {
+			log.Printf("[ImportDraft] %s: goal %s upsert failed: %v", agencyID, g.Code, err)
 			return nil, status.Errorf(codes.Internal, "ImportDraft %s: goal %s: %v", agencyID, g.Code, err)
 		}
 	}
 
 	// 5. Workflows.
+	log.Printf("[ImportDraft] %s: upserting %d workflows", agencyID, len(spec.Workflows))
 	for _, wf := range spec.Workflows {
+		log.Printf("[ImportDraft] %s: upsert workflow code=%s workItems=%d", agencyID, wf.Code, len(wf.WorkItems))
 		wfID, err := s.importUpsertID(ctx, agencyID, "DraftWorkflow", map[string]any{
 			"draft_ref_code": draftID,
 			"code":           wf.Code,
@@ -169,11 +193,14 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			"ordinality":     wf.Ordinality,
 		})
 		if err != nil {
+			log.Printf("[ImportDraft] %s: workflow %s upsert failed: %v", agencyID, wf.Code, err)
 			return nil, status.Errorf(codes.Internal, "ImportDraft %s: workflow %s: %v", agencyID, wf.Code, err)
 		}
+		log.Printf("[ImportDraft] %s: workflow %s -> id=%s", agencyID, wf.Code, wfID)
 
 		// Workflow-scoped instructions.
 		for _, inst := range wf.Instructions {
+			log.Printf("[ImportDraft] %s: upsert workflow instruction code=%s", agencyID, inst.Code)
 			if err := s.importUpsert(ctx, agencyID, "DraftInstruction", map[string]any{
 				"draft_ref_code":          draftID,
 				"code":                    inst.Code,
@@ -181,12 +208,14 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 				"content":                 clean(inst.Content),
 				"ordinality":              inst.Ordinality,
 			}); err != nil {
+				log.Printf("[ImportDraft] %s: workflow %s instruction %s upsert failed: %v", agencyID, wf.Code, inst.Code, err)
 				return nil, status.Errorf(codes.Internal, "ImportDraft %s: workflow %s instruction %s: %v", agencyID, wf.Code, inst.Code, err)
 			}
 		}
 
 		// Work items.
 		for _, wi := range wf.WorkItems {
+			log.Printf("[ImportDraft] %s: upsert work item code=%s deliverables=%d", agencyID, wi.Code, len(wi.Deliverables))
 			wiProps := map[string]any{
 				"draft_ref_code":          draftID,
 				"code":                    wi.Code,
@@ -201,11 +230,14 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			}
 			wiID, err := s.importUpsertID(ctx, agencyID, "DraftWorkItem", wiProps)
 			if err != nil {
+				log.Printf("[ImportDraft] %s: work item %s upsert failed: %v", agencyID, wi.Code, err)
 				return nil, status.Errorf(codes.Internal, "ImportDraft %s: work item %s: %v", agencyID, wi.Code, err)
 			}
+			log.Printf("[ImportDraft] %s: work item %s -> id=%s", agencyID, wi.Code, wiID)
 
 			// Work-item-scoped instructions.
 			for _, inst := range wi.Instructions {
+				log.Printf("[ImportDraft] %s: upsert work item instruction code=%s", agencyID, inst.Code)
 				if err := s.importUpsert(ctx, agencyID, "DraftInstruction", map[string]any{
 					"draft_ref_code":           draftID,
 					"code":                     inst.Code,
@@ -213,12 +245,14 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 					"content":                  clean(inst.Content),
 					"ordinality":               inst.Ordinality,
 				}); err != nil {
+					log.Printf("[ImportDraft] %s: work item %s instruction %s upsert failed: %v", agencyID, wi.Code, inst.Code, err)
 					return nil, status.Errorf(codes.Internal, "ImportDraft %s: work item %s instruction %s: %v", agencyID, wi.Code, inst.Code, err)
 				}
 			}
 
 			// Deliverables.
 			for _, d := range wi.Deliverables {
+				log.Printf("[ImportDraft] %s: upsert deliverable code=%s", agencyID, d.Code)
 				if err := s.importUpsert(ctx, agencyID, "DraftDeliverable", map[string]any{
 					"draft_ref_code":           draftID,
 					"code":                     d.Code,
@@ -228,12 +262,14 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 					"ordinality":               d.Ordinality,
 					"blocking":                 d.Blocking,
 				}); err != nil {
+					log.Printf("[ImportDraft] %s: work item %s deliverable %s upsert failed: %v", agencyID, wi.Code, d.Code, err)
 					return nil, status.Errorf(codes.Internal, "ImportDraft %s: work item %s deliverable %s: %v", agencyID, wi.Code, d.Code, err)
 				}
 			}
 		}
 	}
 
+	log.Printf("[ImportDraft] %s: done draftID=%s", agencyID, draftID)
 	return &pb.ImportDraftResponse{AgencyId: agencyID, DraftId: draftID}, nil
 }
 

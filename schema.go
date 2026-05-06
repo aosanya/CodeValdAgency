@@ -617,6 +617,9 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "instructions", Type: types.PropertyTypeString, Required: false},
 					// agent_id is a cross-service reference to a CodeValdAI Agent entity ID.
 					{Name: "agent_id", Type: types.PropertyTypeString, Required: false},
+					// pubsub_topic is the exact PubSub topic string this role subscribes to
+					// (e.g. "work.task.created"). Used alongside event_topic for registration.
+					{Name: "pubsub_topic", Type: types.PropertyTypeString, Required: false},
 					{Name: "enabled", Type: types.PropertyTypeBoolean, Required: true},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
 				},

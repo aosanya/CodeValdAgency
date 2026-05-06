@@ -22,6 +22,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -91,7 +93,22 @@ func main() {
 		log.Println("codevaldagency: CODEVALDAGENCY_AGENCY_ID not set — skipping schema seed")
 	}
 
+	log.Printf("codevaldagency: using agencyID=%q", cfg.AgencyID)
 	mgr := codevaldagency.NewAgencyManager(backend, backend, pub, cfg.AgencyID)
+
+	// Seed the Agency entity itself if it has not been created yet.
+	if cfg.AgencyID != "" {
+		seedCtx, seedCancel := context.WithTimeout(ctx, 10*time.Second)
+		if _, err := mgr.GetAgency(seedCtx); errors.Is(err, codevaldagency.ErrAgencyNotFound) {
+			seedJSON := fmt.Sprintf(`{"id":%q,"name":%q}`, cfg.AgencyID, cfg.AgencyID)
+			if _, seedErr := mgr.SetAgencyDetails(seedCtx, seedJSON); seedErr != nil {
+				log.Printf("codevaldagency: agency entity seed: %v", seedErr)
+			} else {
+				log.Printf("codevaldagency: seeded agency entity for agencyID=%q", cfg.AgencyID)
+			}
+		}
+		seedCancel()
+	}
 
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 	if err != nil {

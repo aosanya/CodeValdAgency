@@ -112,9 +112,10 @@ func DefaultAgencySchema() types.Schema {
 		Tag:     "v1",
 		Types: []types.TypeDefinition{
 			{
-				Name:        "Agency",
-				DisplayName: "Agency",
-				PathSegment: "",
+				Name:              "Agency",
+				DisplayName:       "Agency",
+				PathSegment:       "",
+				StorageCollection: "agency_details",
 				Properties: []types.PropertyDefinition{{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true}, {Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "mission", Type: types.PropertyTypeString, Required: false},
@@ -136,8 +137,9 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:        "Goal",
-				DisplayName: "Goal",
+				Name:              "Goal",
+				DisplayName:       "Goal",
+				StorageCollection: "agency_goals",
 				// PathSegment is intentionally empty — live Goals are created by PromoteDraft,
 				// not via direct HTTP CRUD. CRUD routes exist only for DraftGoal, scoped under
 				// /agency/{agencyId}/drafts/{draftId}/goals.
@@ -157,8 +159,9 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:        "Workflow",
-				DisplayName: "Workflow",
+				Name:              "Workflow",
+				DisplayName:       "Workflow",
+				StorageCollection: "agency_workflows",
 				// PathSegment is intentionally empty — live Workflows are created by PromoteDraft,
 				// not via direct HTTP CRUD. CRUD routes exist only for DraftWorkflow, scoped under
 				// /agency/{agencyId}/drafts/{draftId}/workflows.
@@ -180,8 +183,9 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:        "WorkItem",
-				DisplayName: "Work Item",
+				Name:              "WorkItem",
+				DisplayName:       "Work Item",
+				StorageCollection: "agency_work_items",
 				// PathSegment is intentionally empty — live WorkItems are created by PromoteDraft,
 				// not via direct HTTP CRUD. CRUD routes exist only for DraftWorkItem, scoped under
 				// /agency/{agencyId}/drafts/{draftId}/work-items.
@@ -213,8 +217,9 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:        "Instruction",
-				DisplayName: "Instruction",
+				Name:              "Instruction",
+				DisplayName:       "Instruction",
+				StorageCollection: "agency_instructions",
 				// PathSegment is intentionally empty — live Instructions are created by PromoteDraft,
 				// not via direct HTTP CRUD. CRUD routes exist only for DraftInstruction, scoped under
 				// /agency/{agencyId}/drafts/{draftId}/instructions.
@@ -235,8 +240,9 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:        "Deliverable",
-				DisplayName: "Deliverable",
+				Name:              "Deliverable",
+				DisplayName:       "Deliverable",
+				StorageCollection: "agency_deliverables",
 				// PathSegment is intentionally empty — live Deliverables are created by PromoteDraft,
 				// not via direct HTTP CRUD. CRUD routes exist only for DraftDeliverable, scoped under
 				// /agency/{agencyId}/drafts/{draftId}/deliverables.
@@ -267,11 +273,12 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "DeliverableResult",
-				DisplayName:   "Deliverable Result",
-				PathSegment:   "results",
-				EntityIDParam: "resultId",
-				Immutable:     true,
+				Name:              "DeliverableResult",
+				DisplayName:       "Deliverable Result",
+				PathSegment:       "results",
+				EntityIDParam:     "resultId",
+				Immutable:         true,
+				StorageCollection: "agency_deliverable_results",
 				Properties: []types.PropertyDefinition{{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true}, {Name: "code", Type: types.PropertyTypeString, Required: false},
 					// status valid values: "pending", "completed", "rejected", "waived"
 					//   pending   — submitted by the actor; awaiting review
@@ -291,11 +298,12 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "ContentRef",
-				DisplayName:   "Content Ref",
-				PathSegment:   "content-refs",
-				EntityIDParam: "contentRefId",
-				Immutable:     true,
+				Name:              "ContentRef",
+				DisplayName:       "Content Ref",
+				PathSegment:       "content-refs",
+				EntityIDParam:     "contentRefId",
+				Immutable:         true,
+				StorageCollection: "agency_content_refs",
 				Properties: []types.PropertyDefinition{
 					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
@@ -314,8 +322,9 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:        "ConfiguredRole",
-				DisplayName: "Configured Role",
+				Name:              "ConfiguredRole",
+				DisplayName:       "Configured Role",
+				StorageCollection: "agency_configured_roles",
 				// PathSegment is intentionally empty — live ConfiguredRoles are created by PromoteDraft,
 				// not via direct HTTP CRUD. CRUD routes exist only for DraftConfiguredRole, scoped under
 				// /agency/{agencyId}/drafts/{draftId}/configured-roles.
@@ -508,11 +517,12 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "AgencySnapshot",
-				DisplayName:   "Agency Snapshot",
-				PathSegment:   "snapshots",
-				EntityIDParam: "snapshotId",
-				Immutable:     true,
+				Name:              "AgencySnapshot",
+				DisplayName:       "Agency Snapshot",
+				PathSegment:       "snapshots",
+				EntityIDParam:     "snapshotId",
+				Immutable:         true,
+				StorageCollection: "agency_snapshots",
 				Properties: []types.PropertyDefinition{
 					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
@@ -527,11 +537,12 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
-				Name:          "AgencyPublication",
-				DisplayName:   "Agency Publication",
-				PathSegment:   "publications",
-				EntityIDParam: "publicationId",
-				Immutable:     true,
+				Name:              "AgencyPublication",
+				DisplayName:       "Agency Publication",
+				PathSegment:       "publications",
+				EntityIDParam:     "publicationId",
+				Immutable:         true,
+				StorageCollection: "agency_publications",
 				Properties: []types.PropertyDefinition{
 					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
@@ -559,11 +570,12 @@ func DefaultAgencySchema() types.Schema {
 			// (draft → active → archived) so that UpdatePublicationStatus can call
 			// UpdateEntity on this type without hitting ErrImmutableType.
 			{
-				Name:          "AgencyPublicationStatus",
-				DisplayName:   "Agency Publication Status",
-				PathSegment:   "publication-statuses",
-				EntityIDParam: "publicationStatusId",
-				UniqueKey:     []string{"code"},
+				Name:              "AgencyPublicationStatus",
+				DisplayName:       "Agency Publication Status",
+				PathSegment:       "publication-statuses",
+				EntityIDParam:     "publicationStatusId",
+				StorageCollection: "agency_publication_statuses",
+				UniqueKey:         []string{"code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
@@ -585,11 +597,12 @@ func DefaultAgencySchema() types.Schema {
 			// roles whose event_topic regex matches the topic and whose
 			// payload_condition regex (if set) matches the payload string.
 			{
-				Name:          "Role",
-				DisplayName:   "Role",
-				PathSegment:   "roles",
-				EntityIDParam: "roleId",
-				UniqueKey:     []string{"code"},
+				Name:              "Role",
+				DisplayName:       "Role",
+				PathSegment:       "roles",
+				EntityIDParam:     "roleId",
+				StorageCollection: "agency_roles",
+				UniqueKey:         []string{"code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
@@ -619,10 +632,11 @@ func DefaultAgencySchema() types.Schema {
 			// GitContextSource configures what to fetch from CodeValdGit when this
 			// role is dispatched. Multiple sources may be linked to a single Role.
 			{
-				Name:          "GitContextSource",
-				DisplayName:   "Git Context Source",
-				PathSegment:   "context-sources",
-				EntityIDParam: "sourceId",
+				Name:              "GitContextSource",
+				DisplayName:       "Git Context Source",
+				PathSegment:       "git-context-sources",
+				EntityIDParam:     "sourceId",
+				StorageCollection: "agency_git_context_sources",
 				Properties: []types.PropertyDefinition{
 					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
@@ -645,10 +659,11 @@ func DefaultAgencySchema() types.Schema {
 			// CommContextSource configures what to fetch from CodeValdComm (conversation
 			// threads) when this role is dispatched.
 			{
-				Name:          "CommContextSource",
-				DisplayName:   "Comm Context Source",
-				PathSegment:   "context-sources",
-				EntityIDParam: "sourceId",
+				Name:              "CommContextSource",
+				DisplayName:       "Comm Context Source",
+				PathSegment:       "comm-context-sources",
+				EntityIDParam:     "sourceId",
+				StorageCollection: "agency_comm_context_sources",
 				Properties: []types.PropertyDefinition{
 					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
@@ -664,10 +679,11 @@ func DefaultAgencySchema() types.Schema {
 			// WorkContextSource configures what to fetch from CodeValdWork (task details)
 			// when this role is dispatched.
 			{
-				Name:          "WorkContextSource",
-				DisplayName:   "Work Context Source",
-				PathSegment:   "context-sources",
-				EntityIDParam: "sourceId",
+				Name:              "WorkContextSource",
+				DisplayName:       "Work Context Source",
+				PathSegment:       "work-context-sources",
+				EntityIDParam:     "sourceId",
+				StorageCollection: "agency_work_context_sources",
 				Properties: []types.PropertyDefinition{
 					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},

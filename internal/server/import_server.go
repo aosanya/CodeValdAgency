@@ -360,9 +360,10 @@ func (s *Server) importEnsureDraft(ctx context.Context, agencyID string, a impor
 		AgencyID: agencyID,
 		TypeID:   "AgencyDraft",
 		Properties: map[string]any{
-			"code":        a.Code,
-			"description": a.Name,
-			"status":      "open",
+			"code":             a.Code,
+			"description":      a.Name,
+			"status":           "open",
+			"forked_from_type": "import",
 		},
 	})
 	if err != nil {

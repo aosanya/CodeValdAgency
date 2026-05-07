@@ -403,6 +403,22 @@ func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (Agen
 		return AgencyPublication{}, fmt.Errorf("PublishAgency: link status entity: %w", err)
 	}
 
+	// Mark the draft as promoted.
+	if draftID != "" {
+		if _, err := m.dm.UpdateEntity(ctx, m.agencyID, draftID, entitygraph.UpdateEntityRequest{
+			Properties: map[string]any{"status": "promoted"},
+		}); err != nil {
+			return AgencyPublication{}, fmt.Errorf("PublishAgency: promote draft: %w", err)
+		}
+	}
+
+	// Enable the agency now that it has a live publication.
+	if _, err := m.dm.UpdateEntity(ctx, m.agencyID, agency.ID, entitygraph.UpdateEntityRequest{
+		Properties: map[string]any{"enabled": true},
+	}); err != nil {
+		return AgencyPublication{}, fmt.Errorf("PublishAgency: enable agency: %w", err)
+	}
+
 	pub := AgencyPublication{
 		ID:          entity.ID,
 		AgencyID:    m.agencyID,

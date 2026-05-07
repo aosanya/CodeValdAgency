@@ -1,4 +1,4 @@
-.PHONY: build build-server run-server restart kill proto test test-arango test-all vet lint clean
+.PHONY: build build-server run-server restart kill proto test test-arango test-all vet lint clean reset-db
 
 export PATH := /usr/local/go/bin:$(PATH)
 
@@ -82,3 +82,48 @@ clean:
 	go clean ./...
 	rm -rf bin/
 	rm -f coverage.out coverage.html
+
+# ── Database ──────────────────────────────────────────────────────────────────
+
+## Truncate all agency ArangoDB collections (dev reset).
+## Loads .env if present; honours AGENCY_ARANGO_* env vars.
+## Usage: make reset-db
+##        AGENCY_ARANGO_DATABASE=mydb make reset-db
+reset-db:
+	@if [ -f .env ]; then \
+		set -a && . ./.env && set +a; \
+	fi; \
+	ENDPOINT=$${AGENCY_ARANGO_ENDPOINT:-http://localhost:8529}; \
+	USER=$${AGENCY_ARANGO_USER:-root}; \
+	PASS=$${AGENCY_ARANGO_PASSWORD:-}; \
+	DB=$${AGENCY_ARANGO_DATABASE:-codevaldagency}; \
+	echo "Resetting agency collections in '$$DB' at $$ENDPOINT ..."; \
+	for col in \
+		agency_details \
+		agency_goals \
+		agency_workflows \
+		agency_work_items \
+		agency_instructions \
+		agency_deliverables \
+		agency_deliverable_results \
+		agency_content_refs \
+		agency_configured_roles \
+		agency_drafts \
+		agency_draft_entities \
+		agency_snapshots \
+		agency_publications \
+		agency_publication_statuses \
+		agency_work_plans \
+		agency_git_context_sources \
+		agency_comm_context_sources \
+		agency_work_context_sources; do \
+		STATUS=$$(curl -s -o /dev/null -w "%{http_code}" \
+			-u "$$USER:$$PASS" \
+			-X PUT "$$ENDPOINT/_db/$$DB/_api/collection/$$col/truncate"); \
+		case "$$STATUS" in \
+			200) echo "  [ok]   $$col" ;; \
+			404) echo "  [skip] $$col (collection not found)" ;; \
+			*)   echo "  [FAIL] $$col (HTTP $$STATUS)" ;; \
+		esac; \
+	done; \
+	echo "Done."

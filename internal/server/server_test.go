@@ -47,12 +47,12 @@ type mockManager struct {
 	archiveDraftResult    codevaldagency.AgencyDraft
 	archiveDraftErr       error
 
-	createRoleResult   codevaldagency.Role
-	createRoleErr      error
-	getRoleResult      codevaldagency.Role
-	getRoleErr         error
-	matchRolesResult   []codevaldagency.RoleMatch
-	matchRolesErr      error
+	createWorkPlanResult   codevaldagency.WorkPlan
+	createWorkPlanErr      error
+	getWorkPlanResult      codevaldagency.WorkPlan
+	getWorkPlanErr         error
+	matchWorkPlansResult   []codevaldagency.WorkPlanMatch
+	matchWorkPlansErr      error
 }
 
 func (m *mockManager) SetAgencyDetails(_ context.Context, _ string) (codevaldagency.Agency, error) {
@@ -102,19 +102,19 @@ func (m *mockManager) GetWorkflows(_ context.Context) ([]codevaldagency.Workflow
 func (m *mockManager) GetConfiguredRoles(_ context.Context) ([]codevaldagency.ConfiguredRole, error) {
 	return m.rolesResult, m.rolesErr
 }
-func (m *mockManager) CreateRole(_ context.Context, _ codevaldagency.CreateRoleRequest) (codevaldagency.Role, error) {
-	return m.createRoleResult, m.createRoleErr
+func (m *mockManager) CreateWorkPlan(_ context.Context, _ codevaldagency.CreateWorkPlanRequest) (codevaldagency.WorkPlan, error) {
+	return m.createWorkPlanResult, m.createWorkPlanErr
 }
-func (m *mockManager) GetRole(_ context.Context, _ string) (codevaldagency.Role, error) {
-	return m.getRoleResult, m.getRoleErr
+func (m *mockManager) GetWorkPlan(_ context.Context, _ string) (codevaldagency.WorkPlan, error) {
+	return m.getWorkPlanResult, m.getWorkPlanErr
 }
-func (m *mockManager) ListRoles(_ context.Context) ([]codevaldagency.Role, error) {
+func (m *mockManager) ListWorkPlans(_ context.Context) ([]codevaldagency.WorkPlan, error) {
 	return nil, nil
 }
-func (m *mockManager) UpdateRole(_ context.Context, _ string, _ codevaldagency.UpdateRoleRequest) (codevaldagency.Role, error) {
-	return codevaldagency.Role{}, nil
+func (m *mockManager) UpdateWorkPlan(_ context.Context, _ string, _ codevaldagency.UpdateWorkPlanRequest) (codevaldagency.WorkPlan, error) {
+	return codevaldagency.WorkPlan{}, nil
 }
-func (m *mockManager) DeleteRole(_ context.Context, _ string) error {
+func (m *mockManager) DeleteWorkPlan(_ context.Context, _ string) error {
 	return nil
 }
 func (m *mockManager) AddContextSource(_ context.Context, _ string, _ codevaldagency.AddContextSourceRequest) (codevaldagency.ContextSource, error) {
@@ -126,8 +126,8 @@ func (m *mockManager) ListContextSources(_ context.Context, _ string) ([]codeval
 func (m *mockManager) RemoveContextSource(_ context.Context, _, _ string) error {
 	return nil
 }
-func (m *mockManager) MatchRoles(_ context.Context, _, _ string) ([]codevaldagency.RoleMatch, error) {
-	return m.matchRolesResult, m.matchRolesErr
+func (m *mockManager) MatchWorkPlans(_ context.Context, _, _ string) ([]codevaldagency.WorkPlanMatch, error) {
+	return m.matchWorkPlansResult, m.matchWorkPlansErr
 }
 
 // requireCode asserts that err is a gRPC status error with the expected code.

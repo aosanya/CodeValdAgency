@@ -91,6 +91,47 @@ type AgencyManager interface {
     // Returns ErrPublicationNotFound if no publication with that version exists.
     // Returns ErrInvalidPublicationStatus if the transition is not permitted.
     UpdatePublicationStatus(ctx context.Context, version int, status string) (AgencyPublication, error)
+
+    // ── WorkPlan dispatch methods ─────────────────────────────────────────────
+
+    // CreateWorkPlan stores a new WorkPlan and links it to the Agency.
+    // Returns ErrInvalidRegex if trigger_topic or payload_condition is not a valid Go regexp.
+    CreateWorkPlan(ctx context.Context, req CreateWorkPlanRequest) (WorkPlan, error)
+
+    // GetWorkPlan retrieves a single WorkPlan by ID.
+    // Returns ErrWorkPlanNotFound if no WorkPlan with that ID exists.
+    GetWorkPlan(ctx context.Context, workPlanID string) (WorkPlan, error)
+
+    // ListWorkPlans returns all WorkPlan entities linked to this Agency.
+    ListWorkPlans(ctx context.Context) ([]WorkPlan, error)
+
+    // UpdateWorkPlan applies updates to the WorkPlan identified by workPlanID.
+    // Returns ErrWorkPlanNotFound if no WorkPlan with that ID exists.
+    // Returns ErrInvalidRegex if trigger_topic or payload_condition is not a valid Go regexp.
+    UpdateWorkPlan(ctx context.Context, workPlanID string, req UpdateWorkPlanRequest) (WorkPlan, error)
+
+    // DeleteWorkPlan removes the WorkPlan identified by workPlanID.
+    // Returns ErrWorkPlanNotFound if no WorkPlan with that ID exists.
+    DeleteWorkPlan(ctx context.Context, workPlanID string) error
+
+    // AddContextSource creates a typed ContextSource and links it to the WorkPlan.
+    // Returns ErrWorkPlanNotFound if the WorkPlan does not exist.
+    AddContextSource(ctx context.Context, workPlanID string, req AddContextSourceRequest) (ContextSource, error)
+
+    // ListContextSources returns all ContextSource entities linked to the WorkPlan.
+    // Returns ErrWorkPlanNotFound if the WorkPlan does not exist.
+    ListContextSources(ctx context.Context, workPlanID string) ([]ContextSource, error)
+
+    // RemoveContextSource deletes the ContextSource identified by sourceID.
+    // Returns ErrContextSourceNotFound if no such entity exists.
+    RemoveContextSource(ctx context.Context, workPlanID, sourceID string) error
+
+    // MatchWorkPlans evaluates topic and payload against all enabled WorkPlans.
+    // TriggerTopic is compiled as a Go regex and matched against topic;
+    // if PayloadCondition is non-empty it is also matched against payload.
+    // Returns all matching work plans with their ContextSource entities,
+    // ordered by WorkPlan.Ordinality ascending.
+    MatchWorkPlans(ctx context.Context, topic, payload string) ([]WorkPlanMatch, error)
 }
 ```
 

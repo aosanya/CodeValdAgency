@@ -274,25 +274,26 @@ const (
 	ContextSourceWork ContextSourceType = "WorkContextSource"
 )
 
-// Role is a RACI dispatch role linked to an Agency via a has_role edge.
-// CodeValdAI calls MatchRoles with the incoming Cross event topic and raw JSON
-// payload; the agency returns all enabled roles whose EventTopic regex matches
-// and whose PayloadCondition regex (if non-empty) also matches.
-type Role struct {
-	// ID is the unique identifier for this role.
+// WorkPlan is an execution plan linked to an Agency via a has_work_plan edge.
+// It binds a trigger topic, a ConfiguredRole, and a WorkItem together.
+// CodeValdAI calls MatchWorkPlans with the incoming Cross event topic and raw
+// JSON payload; the agency returns all enabled work plans whose TriggerTopic
+// regex matches and whose PayloadCondition regex (if non-empty) also matches.
+type WorkPlan struct {
+	// ID is the unique identifier for this work plan.
 	ID string
 
 	// AgencyID is the identifier of the owning agency.
 	AgencyID string
 
-	// Name is a human-readable label for the role.
+	// Name is a human-readable label for the work plan.
 	Name string
 
-	// Description is the role brief.
+	// Description is the work plan brief.
 	Description string
 
-	// EventTopic is a Go regex matched against the incoming Cross event topic.
-	EventTopic string
+	// TriggerTopic is a Go regex matched against the incoming Cross event topic.
+	TriggerTopic string
 
 	// PayloadCondition is a Go regex matched against the raw JSON payload string.
 	// An empty string matches all payloads.
@@ -304,10 +305,10 @@ type Role struct {
 	// AgentID is a cross-service reference to a CodeValdAI Agent entity ID.
 	AgentID string
 
-	// Enabled controls whether this role is included in MatchRoles results.
+	// Enabled controls whether this work plan is included in MatchWorkPlans results.
 	Enabled bool
 
-	// Ordinality controls the ascending sort order when multiple roles match.
+	// Ordinality controls the ascending sort order when multiple work plans match.
 	Ordinality int
 }
 
@@ -353,8 +354,8 @@ type ContextSource struct {
 	// ID is the unique identifier for this context source.
 	ID string
 
-	// RoleID is the identifier of the owning role.
-	RoleID string
+	// WorkPlanID is the identifier of the owning work plan.
+	WorkPlanID string
 
 	// SourceType identifies which service this source fetches from.
 	SourceType ContextSourceType
@@ -369,26 +370,26 @@ type ContextSource struct {
 	Work *WorkContextSourceConfig
 }
 
-// RoleMatch pairs a matched Role with all its linked ContextSource entities.
-// Returned by AgencyManager.MatchRoles, ordered by Role.Ordinality ascending.
-type RoleMatch struct {
-	// Role is the matched dispatch role.
-	Role Role
+// WorkPlanMatch pairs a matched WorkPlan with all its linked ContextSource entities.
+// Returned by AgencyManager.MatchWorkPlans, ordered by WorkPlan.Ordinality ascending.
+type WorkPlanMatch struct {
+	// WorkPlan is the matched execution plan.
+	WorkPlan WorkPlan
 
-	// ContextSources are all context source entities linked to the role.
+	// ContextSources are all context source entities linked to the work plan.
 	ContextSources []ContextSource
 }
 
-// CreateRoleRequest carries the fields for creating a new [Role].
-type CreateRoleRequest struct {
-	// Name is a human-readable label for the role.
+// CreateWorkPlanRequest carries the fields for creating a new [WorkPlan].
+type CreateWorkPlanRequest struct {
+	// Name is a human-readable label for the work plan.
 	Name string
 
-	// Description is the role brief.
+	// Description is the work plan brief.
 	Description string
 
-	// EventTopic is a Go regex matched against the incoming Cross event topic.
-	EventTopic string
+	// TriggerTopic is a Go regex matched against the incoming Cross event topic.
+	TriggerTopic string
 
 	// PayloadCondition is a Go regex matched against the raw JSON payload.
 	// Empty string matches all payloads.
@@ -400,23 +401,23 @@ type CreateRoleRequest struct {
 	// AgentID is a cross-service reference to a CodeValdAI Agent entity ID.
 	AgentID string
 
-	// Enabled controls whether this role participates in MatchRoles dispatch.
+	// Enabled controls whether this work plan participates in MatchWorkPlans dispatch.
 	Enabled bool
 
-	// Ordinality controls ascending sort order when multiple roles match.
+	// Ordinality controls ascending sort order when multiple work plans match.
 	Ordinality int
 }
 
-// UpdateRoleRequest carries the fields that may be changed on an existing [Role].
-type UpdateRoleRequest struct {
-	// Name is a human-readable label for the role.
+// UpdateWorkPlanRequest carries the fields that may be changed on an existing [WorkPlan].
+type UpdateWorkPlanRequest struct {
+	// Name is a human-readable label for the work plan.
 	Name string
 
-	// Description is the role brief.
+	// Description is the work plan brief.
 	Description string
 
-	// EventTopic is a Go regex matched against the incoming Cross event topic.
-	EventTopic string
+	// TriggerTopic is a Go regex matched against the incoming Cross event topic.
+	TriggerTopic string
 
 	// PayloadCondition is a Go regex matched against the raw JSON payload.
 	// Empty string matches all payloads.
@@ -428,10 +429,10 @@ type UpdateRoleRequest struct {
 	// AgentID is a cross-service reference to a CodeValdAI Agent entity ID.
 	AgentID string
 
-	// Enabled controls whether this role participates in MatchRoles dispatch.
+	// Enabled controls whether this work plan participates in MatchWorkPlans dispatch.
 	Enabled bool
 
-	// Ordinality controls ascending sort order when multiple roles match.
+	// Ordinality controls ascending sort order when multiple work plans match.
 	Ordinality int
 }
 

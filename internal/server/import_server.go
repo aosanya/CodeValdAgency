@@ -10,6 +10,7 @@
 //  5. For each DraftWorkflow: upsert the workflow, then its scoped
 //     DraftInstruction entities, then each DraftWorkItem (with its own
 //     DraftInstruction and DraftDeliverable entities).
+//  6. Upsert all WorkPlan entities (live, not draft-scoped).
 //
 // All entity writes go through entitygraph.DataManager.UpsertEntity — the same
 // idempotency path used by EntityService.CreateEntity. Re-running the import
@@ -33,10 +34,11 @@ import (
 // ── YAML schema types ─────────────────────────────────────────────────────────
 
 type importAgencyYAML struct {
-	Agency          importAgencySpec     `yaml:"agency"`
-	ConfiguredRoles []importRoleSpec     `yaml:"configured_roles"`
-	Goals           []importGoalSpec     `yaml:"goals"`
-	Workflows       []importWorkflowSpec `yaml:"workflows"`
+	Agency          importAgencySpec      `yaml:"agency"`
+	ConfiguredRoles []importRoleSpec      `yaml:"configured_roles"`
+	Goals           []importGoalSpec      `yaml:"goals"`
+	Workflows       []importWorkflowSpec  `yaml:"workflows"`
+	WorkPlans       []importWorkPlanSpec  `yaml:"work_plans"`
 }
 
 type importAgencySpec struct {
@@ -93,6 +95,18 @@ type importDeliverableSpec struct {
 	Description string `yaml:"description"`
 	Ordinality  int    `yaml:"ordinality"`
 	Blocking    bool   `yaml:"blocking"`
+}
+
+type importWorkPlanSpec struct {
+	Code             string `yaml:"code"`
+	Name             string `yaml:"name"`
+	Description      string `yaml:"description"`
+	TriggerTopic     string `yaml:"trigger_topic"`
+	PayloadCondition string `yaml:"payload_condition"`
+	Instructions     string `yaml:"instructions"`
+	AgentID          string `yaml:"agent_id"`
+	Enabled          bool   `yaml:"enabled"`
+	Ordinality       int    `yaml:"ordinality"`
 }
 
 // ── RPC handler ───────────────────────────────────────────────────────────────
@@ -266,6 +280,27 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 					return nil, status.Errorf(codes.Internal, "ImportDraft %s: work item %s deliverable %s: %v", agencyID, wi.Code, d.Code, err)
 				}
 			}
+		}
+	}
+
+	// 6. Work plans (live entities, not draft-scoped).
+	log.Printf("[ImportDraft] %s: upserting %d work plans", agencyID, len(spec.WorkPlans))
+	for _, wp := range spec.WorkPlans {
+		log.Printf("[ImportDraft] %s: upsert work plan code=%s", agencyID, wp.Code)
+		props := map[string]any{
+			"code":              wp.Code,
+			"name":              wp.Name,
+			"description":       clean(wp.Description),
+			"trigger_topic":     wp.TriggerTopic,
+			"payload_condition": clean(wp.PayloadCondition),
+			"instructions":      clean(wp.Instructions),
+			"agent_id":          clean(wp.AgentID),
+			"enabled":           wp.Enabled,
+			"ordinality":        wp.Ordinality,
+		}
+		if err := s.importUpsert(ctx, agencyID, "WorkPlan", props); err != nil {
+			log.Printf("[ImportDraft] %s: work plan %s upsert failed: %v", agencyID, wp.Code, err)
+			return nil, status.Errorf(codes.Internal, "ImportDraft %s: work plan %s: %v", agencyID, wp.Code, err)
 		}
 	}
 

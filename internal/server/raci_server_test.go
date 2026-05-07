@@ -11,32 +11,32 @@ import (
 	"github.com/aosanya/CodeValdAgency/internal/server"
 )
 
-// ── CreateRole ────────────────────────────────────────────────────────────────
+// ── CreateWorkPlan ────────────────────────────────────────────────────────────
 
-func TestServer_CreateRole_OK(t *testing.T) {
+func TestServer_CreateWorkPlan_OK(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{
-		createRoleResult: codevaldagency.Role{
-			ID:         "role-1",
-			AgencyID:   "a1",
-			Name:       "dispatcher",
-			EventTopic: `work\.task\..*`,
-			Enabled:    true,
-			Ordinality: 1,
+		createWorkPlanResult: codevaldagency.WorkPlan{
+			ID:           "wp-1",
+			AgencyID:     "a1",
+			Name:         "dispatcher",
+			TriggerTopic: `work\.task\..*`,
+			Enabled:      true,
+			Ordinality:   1,
 		},
 	}
 	srv := server.New(mgr, nil)
-	got, err := srv.CreateRole(context.Background(), &pb.CreateRoleRequest{
-		Name:       "dispatcher",
-		EventTopic: `work\.task\..*`,
-		Enabled:    true,
-		Ordinality: 1,
+	got, err := srv.CreateWorkPlan(context.Background(), &pb.CreateWorkPlanRequest{
+		Name:         "dispatcher",
+		TriggerTopic: `work\.task\..*`,
+		Enabled:      true,
+		Ordinality:   1,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got.GetId() != "role-1" {
-		t.Errorf("ID: want %q, got %q", "role-1", got.GetId())
+	if got.GetId() != "wp-1" {
+		t.Errorf("ID: want %q, got %q", "wp-1", got.GetId())
 	}
 	if got.GetName() != "dispatcher" {
 		t.Errorf("Name: want %q, got %q", "dispatcher", got.GetName())
@@ -46,43 +46,43 @@ func TestServer_CreateRole_OK(t *testing.T) {
 	}
 }
 
-func TestServer_CreateRole_InvalidRegex_ReturnsInvalidArgument(t *testing.T) {
+func TestServer_CreateWorkPlan_InvalidRegex_ReturnsInvalidArgument(t *testing.T) {
 	t.Parallel()
-	mgr := &mockManager{createRoleErr: codevaldagency.ErrInvalidRegex}
+	mgr := &mockManager{createWorkPlanErr: codevaldagency.ErrInvalidRegex}
 	srv := server.New(mgr, nil)
-	_, err := srv.CreateRole(context.Background(), &pb.CreateRoleRequest{
-		Name:       "bad",
-		EventTopic: `[invalid`,
+	_, err := srv.CreateWorkPlan(context.Background(), &pb.CreateWorkPlanRequest{
+		Name:         "bad",
+		TriggerTopic: `[invalid`,
 	})
 	requireCode(t, err, codes.InvalidArgument)
 }
 
-func TestServer_GetRole_NotFound_ReturnsNotFound(t *testing.T) {
+func TestServer_GetWorkPlan_NotFound_ReturnsNotFound(t *testing.T) {
 	t.Parallel()
-	mgr := &mockManager{getRoleErr: codevaldagency.ErrRoleNotFound}
+	mgr := &mockManager{getWorkPlanErr: codevaldagency.ErrWorkPlanNotFound}
 	srv := server.New(mgr, nil)
-	_, err := srv.GetRole(context.Background(), &pb.GetRoleRequest{RoleId: "missing"})
+	_, err := srv.GetWorkPlan(context.Background(), &pb.GetWorkPlanRequest{WorkPlanId: "missing"})
 	requireCode(t, err, codes.NotFound)
 }
 
-// ── MatchRoles ────────────────────────────────────────────────────────────────
+// ── MatchWorkPlans ────────────────────────────────────────────────────────────
 
-func TestServer_MatchRoles_ReturnsMatchesWithSources(t *testing.T) {
+func TestServer_MatchWorkPlans_ReturnsMatchesWithSources(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{
-		matchRolesResult: []codevaldagency.RoleMatch{
+		matchWorkPlansResult: []codevaldagency.WorkPlanMatch{
 			{
-				Role: codevaldagency.Role{
-					ID:         "role-1",
-					Name:       "dispatcher",
-					EventTopic: `work\.task\..*`,
-					Enabled:    true,
-					Ordinality: 1,
+				WorkPlan: codevaldagency.WorkPlan{
+					ID:           "wp-1",
+					Name:         "dispatcher",
+					TriggerTopic: `work\.task\..*`,
+					Enabled:      true,
+					Ordinality:   1,
 				},
 				ContextSources: []codevaldagency.ContextSource{
 					{
 						ID:         "src-1",
-						RoleID:     "role-1",
+						WorkPlanID: "wp-1",
 						SourceType: codevaldagency.ContextSourceGit,
 						Git: &codevaldagency.GitContextSourceConfig{
 							Signals:    "commit,pr",
@@ -94,7 +94,7 @@ func TestServer_MatchRoles_ReturnsMatchesWithSources(t *testing.T) {
 		},
 	}
 	srv := server.New(mgr, nil)
-	resp, err := srv.MatchRoles(context.Background(), &pb.MatchRolesRequest{
+	resp, err := srv.MatchWorkPlans(context.Background(), &pb.MatchWorkPlansRequest{
 		Topic:   "work.task.status.changed",
 		Payload: `{"status":"open"}`,
 	})
@@ -105,8 +105,8 @@ func TestServer_MatchRoles_ReturnsMatchesWithSources(t *testing.T) {
 		t.Fatalf("expected 1 match, got %d", len(resp.GetMatches()))
 	}
 	m := resp.GetMatches()[0]
-	if m.GetRole().GetId() != "role-1" {
-		t.Errorf("match role ID: want %q, got %q", "role-1", m.GetRole().GetId())
+	if m.GetWorkPlan().GetId() != "wp-1" {
+		t.Errorf("match work plan ID: want %q, got %q", "wp-1", m.GetWorkPlan().GetId())
 	}
 	if len(m.GetContextSources()) != 1 {
 		t.Fatalf("expected 1 context source, got %d", len(m.GetContextSources()))
@@ -126,11 +126,11 @@ func TestServer_MatchRoles_ReturnsMatchesWithSources(t *testing.T) {
 	}
 }
 
-func TestServer_MatchRoles_Empty_ReturnsEmptyList(t *testing.T) {
+func TestServer_MatchWorkPlans_Empty_ReturnsEmptyList(t *testing.T) {
 	t.Parallel()
-	mgr := &mockManager{matchRolesResult: nil}
+	mgr := &mockManager{matchWorkPlansResult: nil}
 	srv := server.New(mgr, nil)
-	resp, err := srv.MatchRoles(context.Background(), &pb.MatchRolesRequest{
+	resp, err := srv.MatchWorkPlans(context.Background(), &pb.MatchWorkPlansRequest{
 		Topic: "unknown.topic",
 	})
 	if err != nil {

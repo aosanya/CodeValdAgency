@@ -111,52 +111,52 @@ type AgencyManager interface {
 	// Returns [ErrDraftNotOpen] if the draft is already promoted or archived.
 	ArchiveDraft(ctx context.Context, draftID string) (AgencyDraft, error)
 
-	// ── RACI dispatch methods ─────────────────────────────────────────────────
+	// ── WorkPlan dispatch methods ─────────────────────────────────────────────
 
-	// CreateRole stores a new [Role] entity and links it to the Agency via
-	// has_role / belongs_to_agency edges.
-	// Returns [ErrInvalidRegex] if EventTopic or PayloadCondition is not a valid
+	// CreateWorkPlan stores a new [WorkPlan] entity and links it to the Agency via
+	// has_work_plan / belongs_to_agency edges.
+	// Returns [ErrInvalidRegex] if TriggerTopic or PayloadCondition is not a valid
 	// Go regular expression.
-	CreateRole(ctx context.Context, req CreateRoleRequest) (Role, error)
+	CreateWorkPlan(ctx context.Context, req CreateWorkPlanRequest) (WorkPlan, error)
 
-	// GetRole retrieves a single [Role] by its entity ID.
-	// Returns [ErrRoleNotFound] if no Role entity with that ID exists.
-	GetRole(ctx context.Context, roleID string) (Role, error)
+	// GetWorkPlan retrieves a single [WorkPlan] by its entity ID.
+	// Returns [ErrWorkPlanNotFound] if no WorkPlan entity with that ID exists.
+	GetWorkPlan(ctx context.Context, workPlanID string) (WorkPlan, error)
 
-	// ListRoles returns all [Role] entities linked to this Agency.
-	ListRoles(ctx context.Context) ([]Role, error)
+	// ListWorkPlans returns all [WorkPlan] entities linked to this Agency.
+	ListWorkPlans(ctx context.Context) ([]WorkPlan, error)
 
-	// UpdateRole applies req to the [Role] identified by roleID.
-	// Returns [ErrRoleNotFound] if no Role entity with that ID exists.
-	// Returns [ErrInvalidRegex] if EventTopic or PayloadCondition is not a valid
+	// UpdateWorkPlan applies req to the [WorkPlan] identified by workPlanID.
+	// Returns [ErrWorkPlanNotFound] if no WorkPlan entity with that ID exists.
+	// Returns [ErrInvalidRegex] if TriggerTopic or PayloadCondition is not a valid
 	// Go regular expression.
-	UpdateRole(ctx context.Context, roleID string, req UpdateRoleRequest) (Role, error)
+	UpdateWorkPlan(ctx context.Context, workPlanID string, req UpdateWorkPlanRequest) (WorkPlan, error)
 
-	// DeleteRole removes the [Role] entity identified by roleID.
-	// Returns [ErrRoleNotFound] if no Role entity with that ID exists.
-	DeleteRole(ctx context.Context, roleID string) error
+	// DeleteWorkPlan removes the [WorkPlan] entity identified by workPlanID.
+	// Returns [ErrWorkPlanNotFound] if no WorkPlan entity with that ID exists.
+	DeleteWorkPlan(ctx context.Context, workPlanID string) error
 
 	// AddContextSource creates a typed [ContextSource] entity and links it to
-	// the [Role] identified by roleID via has_context_source / belongs_to_role edges.
-	// Returns [ErrRoleNotFound] if no Role entity with that ID exists.
-	AddContextSource(ctx context.Context, roleID string, req AddContextSourceRequest) (ContextSource, error)
+	// the [WorkPlan] identified by workPlanID via has_context_source / belongs_to_work_plan edges.
+	// Returns [ErrWorkPlanNotFound] if no WorkPlan entity with that ID exists.
+	AddContextSource(ctx context.Context, workPlanID string, req AddContextSourceRequest) (ContextSource, error)
 
 	// ListContextSources returns all [ContextSource] entities linked to the
-	// [Role] identified by roleID.
-	// Returns [ErrRoleNotFound] if no Role entity with that ID exists.
-	ListContextSources(ctx context.Context, roleID string) ([]ContextSource, error)
+	// [WorkPlan] identified by workPlanID.
+	// Returns [ErrWorkPlanNotFound] if no WorkPlan entity with that ID exists.
+	ListContextSources(ctx context.Context, workPlanID string) ([]ContextSource, error)
 
 	// RemoveContextSource deletes the [ContextSource] entity identified by
-	// sourceID and removes its has_context_source edge from the owning Role.
+	// sourceID and removes its has_context_source edge from the owning WorkPlan.
 	// Returns [ErrContextSourceNotFound] if no such entity exists.
-	RemoveContextSource(ctx context.Context, roleID, sourceID string) error
+	RemoveContextSource(ctx context.Context, workPlanID, sourceID string) error
 
-	// MatchRoles evaluates topic and payload against all enabled [Role] entities.
-	// For each role, EventTopic is matched as a Go regex against topic; if
-	// PayloadCondition is non-empty it is also matched against the raw payload
-	// string. Returns all matching roles with their linked [ContextSource]
-	// entities, ordered by Role.Ordinality ascending.
-	MatchRoles(ctx context.Context, topic, payload string) ([]RoleMatch, error)
+	// MatchWorkPlans evaluates topic and payload against all enabled [WorkPlan] entities.
+	// TriggerTopic is matched as a Go regex against topic; if PayloadCondition is
+	// non-empty it is also matched against the raw payload string. Returns all
+	// matching work plans with their linked [ContextSource] entities, ordered by
+	// WorkPlan.Ordinality ascending.
+	MatchWorkPlans(ctx context.Context, topic, payload string) ([]WorkPlanMatch, error)
 }
 
 // AgencySchemaManager manages schema versions for the Agency entity graph.

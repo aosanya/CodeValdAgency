@@ -31,7 +31,7 @@ func toGRPCError(err error) error {
 		return status.Error(codes.FailedPrecondition, err.Error())
 	case errors.Is(err, codevaldagency.ErrInvalidPublicationStatus):
 		return status.Error(codes.FailedPrecondition, err.Error())
-	case errors.Is(err, codevaldagency.ErrRoleNotFound):
+	case errors.Is(err, codevaldagency.ErrWorkPlanNotFound):
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, codevaldagency.ErrContextSourceNotFound):
 		return status.Error(codes.NotFound, err.Error())

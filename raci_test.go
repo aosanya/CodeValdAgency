@@ -8,12 +8,12 @@ import (
 	codevaldagency "github.com/aosanya/CodeValdAgency"
 )
 
-// mustSetupRole creates a role via CreateRole, failing the test on any error.
-func mustSetupRole(t *testing.T, mgr codevaldagency.AgencyManager, topic string, enabled bool, ordinality int) codevaldagency.Role {
+// mustSetupWorkPlan creates a role via CreateRole, failing the test on any error.
+func mustSetupWorkPlan(t *testing.T, mgr codevaldagency.AgencyManager, topic string, enabled bool, ordinality int) codevaldagency.WorkPlan {
 	t.Helper()
-	role, err := mgr.CreateRole(context.Background(), codevaldagency.CreateRoleRequest{
+	role, err := mgr.CreateWorkPlan(context.Background(), codevaldagency.CreateWorkPlanRequest{
 		Name:       "role-" + topic,
-		EventTopic: topic,
+		TriggerTopic: topic,
 		Enabled:    enabled,
 		Ordinality: ordinality,
 	})
@@ -30,9 +30,9 @@ func TestCreateRole_Valid_StoresEntityAndEdge(t *testing.T) {
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
 
-	role, err := mgr.CreateRole(context.Background(), codevaldagency.CreateRoleRequest{
+	role, err := mgr.CreateWorkPlan(context.Background(), codevaldagency.CreateWorkPlanRequest{
 		Name:             "dispatcher",
-		EventTopic:       `work\.task\..*`,
+		TriggerTopic:       `work\.task\..*`,
 		PayloadCondition: `"status":"open"`,
 		Enabled:          true,
 		Ordinality:       1,
@@ -46,15 +46,15 @@ func TestCreateRole_Valid_StoresEntityAndEdge(t *testing.T) {
 	if role.Name != "dispatcher" {
 		t.Errorf("Name: want %q, got %q", "dispatcher", role.Name)
 	}
-	if role.EventTopic != `work\.task\..*` {
-		t.Errorf("EventTopic: want %q, got %q", `work\.task\..*`, role.EventTopic)
+	if role.TriggerTopic != `work\.task\..*` {
+		t.Errorf("TriggerTopic: want %q, got %q", `work\.task\..*`, role.TriggerTopic)
 	}
 	if !role.Enabled {
 		t.Error("expected Enabled=true")
 	}
 
 	// Role should be retrievable.
-	got, err := mgr.GetRole(context.Background(), role.ID)
+	got, err := mgr.GetWorkPlan(context.Background(), role.ID)
 	if err != nil {
 		t.Fatalf("GetRole: %v", err)
 	}
@@ -68,9 +68,9 @@ func TestCreateRole_InvalidEventTopic_ReturnsErrInvalidRegex(t *testing.T) {
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
 
-	_, err := mgr.CreateRole(context.Background(), codevaldagency.CreateRoleRequest{
+	_, err := mgr.CreateWorkPlan(context.Background(), codevaldagency.CreateWorkPlanRequest{
 		Name:       "bad",
-		EventTopic: `[invalid`,
+		TriggerTopic: `[invalid`,
 	})
 	if !errors.Is(err, codevaldagency.ErrInvalidRegex) {
 		t.Fatalf("expected ErrInvalidRegex, got %v", err)
@@ -82,9 +82,9 @@ func TestCreateRole_InvalidPayloadCondition_ReturnsErrInvalidRegex(t *testing.T)
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
 
-	_, err := mgr.CreateRole(context.Background(), codevaldagency.CreateRoleRequest{
+	_, err := mgr.CreateWorkPlan(context.Background(), codevaldagency.CreateWorkPlanRequest{
 		Name:             "bad",
-		EventTopic:       `work\.task\..*`,
+		TriggerTopic:       `work\.task\..*`,
 		PayloadCondition: `(unclosed`,
 	})
 	if !errors.Is(err, codevaldagency.ErrInvalidRegex) {
@@ -94,13 +94,13 @@ func TestCreateRole_InvalidPayloadCondition_ReturnsErrInvalidRegex(t *testing.T)
 
 // ── GetRole ───────────────────────────────────────────────────────────────────
 
-func TestGetRole_NotFound_ReturnsErrRoleNotFound(t *testing.T) {
+func TestGetRole_NotFound_ReturnsErrWorkPlanNotFound(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 
-	_, err := mgr.GetRole(context.Background(), "no-such-id")
-	if !errors.Is(err, codevaldagency.ErrRoleNotFound) {
-		t.Fatalf("expected ErrRoleNotFound, got %v", err)
+	_, err := mgr.GetWorkPlan(context.Background(), "no-such-id")
+	if !errors.Is(err, codevaldagency.ErrWorkPlanNotFound) {
+		t.Fatalf("expected ErrWorkPlanNotFound, got %v", err)
 	}
 }
 
@@ -108,9 +108,9 @@ func TestGetRole_RoundTrip(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	role := mustSetupRole(t, mgr, `work\.task\..*`, true, 5)
+	role := mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 5)
 
-	got, err := mgr.GetRole(context.Background(), role.ID)
+	got, err := mgr.GetWorkPlan(context.Background(), role.ID)
 	if err != nil {
 		t.Fatalf("GetRole: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestListRoles_EmptyBeforeAnyCreate(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 
-	roles, err := mgr.ListRoles(context.Background())
+	roles, err := mgr.ListWorkPlans(context.Background())
 	if err != nil {
 		t.Fatalf("ListRoles: %v", err)
 	}
@@ -138,10 +138,10 @@ func TestListRoles_ReturnsAll(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	mustSetupRole(t, mgr, `work\.task\..*`, true, 1)
-	mustSetupRole(t, mgr, `git\.push\..*`, true, 2)
+	mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 1)
+	mustSetupWorkPlan(t, mgr, `git\.push\..*`, true, 2)
 
-	roles, err := mgr.ListRoles(context.Background())
+	roles, err := mgr.ListWorkPlans(context.Background())
 	if err != nil {
 		t.Fatalf("ListRoles: %v", err)
 	}
@@ -152,15 +152,15 @@ func TestListRoles_ReturnsAll(t *testing.T) {
 
 // ── UpdateRole ────────────────────────────────────────────────────────────────
 
-func TestUpdateRole_NotFound_ReturnsErrRoleNotFound(t *testing.T) {
+func TestUpdateRole_NotFound_ReturnsErrWorkPlanNotFound(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 
-	_, err := mgr.UpdateRole(context.Background(), "no-such-id", codevaldagency.UpdateRoleRequest{
-		EventTopic: `work\..*`,
+	_, err := mgr.UpdateWorkPlan(context.Background(), "no-such-id", codevaldagency.UpdateWorkPlanRequest{
+		TriggerTopic: `work\..*`,
 	})
-	if !errors.Is(err, codevaldagency.ErrRoleNotFound) {
-		t.Fatalf("expected ErrRoleNotFound, got %v", err)
+	if !errors.Is(err, codevaldagency.ErrWorkPlanNotFound) {
+		t.Fatalf("expected ErrWorkPlanNotFound, got %v", err)
 	}
 }
 
@@ -168,10 +168,10 @@ func TestUpdateRole_InvalidRegex_ReturnsErrInvalidRegex(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	role := mustSetupRole(t, mgr, `work\..*`, true, 1)
+	role := mustSetupWorkPlan(t, mgr, `work\..*`, true, 1)
 
-	_, err := mgr.UpdateRole(context.Background(), role.ID, codevaldagency.UpdateRoleRequest{
-		EventTopic: `[bad`,
+	_, err := mgr.UpdateWorkPlan(context.Background(), role.ID, codevaldagency.UpdateWorkPlanRequest{
+		TriggerTopic: `[bad`,
 	})
 	if !errors.Is(err, codevaldagency.ErrInvalidRegex) {
 		t.Fatalf("expected ErrInvalidRegex, got %v", err)
@@ -180,13 +180,13 @@ func TestUpdateRole_InvalidRegex_ReturnsErrInvalidRegex(t *testing.T) {
 
 // ── DeleteRole ────────────────────────────────────────────────────────────────
 
-func TestDeleteRole_NotFound_ReturnsErrRoleNotFound(t *testing.T) {
+func TestDeleteRole_NotFound_ReturnsErrWorkPlanNotFound(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 
-	err := mgr.DeleteRole(context.Background(), "no-such-id")
-	if !errors.Is(err, codevaldagency.ErrRoleNotFound) {
-		t.Fatalf("expected ErrRoleNotFound, got %v", err)
+	err := mgr.DeleteWorkPlan(context.Background(), "no-such-id")
+	if !errors.Is(err, codevaldagency.ErrWorkPlanNotFound) {
+		t.Fatalf("expected ErrWorkPlanNotFound, got %v", err)
 	}
 }
 
@@ -194,14 +194,14 @@ func TestDeleteRole_RemovesEntity(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	role := mustSetupRole(t, mgr, `work\..*`, true, 1)
+	role := mustSetupWorkPlan(t, mgr, `work\..*`, true, 1)
 
-	if err := mgr.DeleteRole(context.Background(), role.ID); err != nil {
+	if err := mgr.DeleteWorkPlan(context.Background(), role.ID); err != nil {
 		t.Fatalf("DeleteRole: %v", err)
 	}
-	_, err := mgr.GetRole(context.Background(), role.ID)
-	if !errors.Is(err, codevaldagency.ErrRoleNotFound) {
-		t.Fatalf("expected ErrRoleNotFound after delete, got %v", err)
+	_, err := mgr.GetWorkPlan(context.Background(), role.ID)
+	if !errors.Is(err, codevaldagency.ErrWorkPlanNotFound) {
+		t.Fatalf("expected ErrWorkPlanNotFound after delete, got %v", err)
 	}
 }
 
@@ -211,17 +211,17 @@ func TestMatchRoles_ExactTopic_Matches(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	role := mustSetupRole(t, mgr, `work\.task\.status\.changed`, true, 1)
+	role := mustSetupWorkPlan(t, mgr, `work\.task\.status\.changed`, true, 1)
 
-	matches, err := mgr.MatchRoles(context.Background(), "work.task.status.changed", `{}`)
+	matches, err := mgr.MatchWorkPlans(context.Background(), "work.task.status.changed", `{}`)
 	if err != nil {
 		t.Fatalf("MatchRoles: %v", err)
 	}
 	if len(matches) != 1 {
 		t.Fatalf("expected 1 match, got %d", len(matches))
 	}
-	if matches[0].Role.ID != role.ID {
-		t.Errorf("Role.ID: want %q, got %q", role.ID, matches[0].Role.ID)
+	if matches[0].WorkPlan.ID != role.ID {
+		t.Errorf("Role.ID: want %q, got %q", role.ID, matches[0].WorkPlan.ID)
 	}
 }
 
@@ -229,11 +229,11 @@ func TestMatchRoles_WildcardTopic_MatchesBoth(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	mustSetupRole(t, mgr, `work\.task\..*`, true, 1)
+	mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 1)
 
 	topics := []string{"work.task.status.changed", "work.task.completed"}
 	for _, topic := range topics {
-		matches, err := mgr.MatchRoles(context.Background(), topic, `{}`)
+		matches, err := mgr.MatchWorkPlans(context.Background(), topic, `{}`)
 		if err != nil {
 			t.Fatalf("MatchRoles(%q): %v", topic, err)
 		}
@@ -247,9 +247,9 @@ func TestMatchRoles_NonMatchingTopic_ReturnsEmpty(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	mustSetupRole(t, mgr, `work\.task\..*`, true, 1)
+	mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 1)
 
-	matches, err := mgr.MatchRoles(context.Background(), "git.push.completed", `{}`)
+	matches, err := mgr.MatchWorkPlans(context.Background(), "git.push.completed", `{}`)
 	if err != nil {
 		t.Fatalf("MatchRoles: %v", err)
 	}
@@ -264,9 +264,9 @@ func TestMatchRoles_PayloadCondition_FiltersByContent(t *testing.T) {
 	mustSetupAgency(t, mgr, "a1", "Alpha")
 
 	// Role only fires when payload contains "To":"in_progress".
-	_, err := mgr.CreateRole(context.Background(), codevaldagency.CreateRoleRequest{
+	_, err := mgr.CreateWorkPlan(context.Background(), codevaldagency.CreateWorkPlanRequest{
 		Name:             "in-progress-role",
-		EventTopic:       `work\.task\..*`,
+		TriggerTopic:       `work\.task\..*`,
 		PayloadCondition: `"To":"in_progress"`,
 		Enabled:          true,
 		Ordinality:       1,
@@ -276,7 +276,7 @@ func TestMatchRoles_PayloadCondition_FiltersByContent(t *testing.T) {
 	}
 
 	// Matching payload.
-	matches, err := mgr.MatchRoles(context.Background(), "work.task.status.changed", `{"To":"in_progress"}`)
+	matches, err := mgr.MatchWorkPlans(context.Background(), "work.task.status.changed", `{"To":"in_progress"}`)
 	if err != nil {
 		t.Fatalf("MatchRoles (matching): %v", err)
 	}
@@ -285,7 +285,7 @@ func TestMatchRoles_PayloadCondition_FiltersByContent(t *testing.T) {
 	}
 
 	// Non-matching payload.
-	matches, err = mgr.MatchRoles(context.Background(), "work.task.status.changed", `{"To":"done"}`)
+	matches, err = mgr.MatchWorkPlans(context.Background(), "work.task.status.changed", `{"To":"done"}`)
 	if err != nil {
 		t.Fatalf("MatchRoles (non-matching): %v", err)
 	}
@@ -298,11 +298,11 @@ func TestMatchRoles_EmptyPayloadCondition_MatchesAll(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	mustSetupRole(t, mgr, `work\.task\..*`, true, 1) // PayloadCondition is empty
+	mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 1) // PayloadCondition is empty
 
 	payloads := []string{`{}`, `{"To":"done"}`, `{"anything":"goes"}`}
 	for _, p := range payloads {
-		matches, err := mgr.MatchRoles(context.Background(), "work.task.status.changed", p)
+		matches, err := mgr.MatchWorkPlans(context.Background(), "work.task.status.changed", p)
 		if err != nil {
 			t.Fatalf("MatchRoles(%q): %v", p, err)
 		}
@@ -316,9 +316,9 @@ func TestMatchRoles_DisabledRole_Excluded(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	mustSetupRole(t, mgr, `work\.task\..*`, false /* disabled */, 1)
+	mustSetupWorkPlan(t, mgr, `work\.task\..*`, false /* disabled */, 1)
 
-	matches, err := mgr.MatchRoles(context.Background(), "work.task.status.changed", `{}`)
+	matches, err := mgr.MatchWorkPlans(context.Background(), "work.task.status.changed", `{}`)
 	if err != nil {
 		t.Fatalf("MatchRoles: %v", err)
 	}
@@ -332,11 +332,11 @@ func TestMatchRoles_OrderedByOrdinality(t *testing.T) {
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
 	// Create in reverse ordinality order.
-	mustSetupRole(t, mgr, `work\.task\..*`, true, 30)
-	mustSetupRole(t, mgr, `work\.task\..*`, true, 10)
-	mustSetupRole(t, mgr, `work\.task\..*`, true, 20)
+	mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 30)
+	mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 10)
+	mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 20)
 
-	matches, err := mgr.MatchRoles(context.Background(), "work.task.status.changed", `{}`)
+	matches, err := mgr.MatchWorkPlans(context.Background(), "work.task.status.changed", `{}`)
 	if err != nil {
 		t.Fatalf("MatchRoles: %v", err)
 	}
@@ -344,9 +344,9 @@ func TestMatchRoles_OrderedByOrdinality(t *testing.T) {
 		t.Fatalf("expected 3 matches, got %d", len(matches))
 	}
 	for i := 1; i < len(matches); i++ {
-		if matches[i].Role.Ordinality < matches[i-1].Role.Ordinality {
+		if matches[i].WorkPlan.Ordinality < matches[i-1].WorkPlan.Ordinality {
 			t.Errorf("matches not ordered by ordinality: [%d]=%d > [%d]=%d",
-				i-1, matches[i-1].Role.Ordinality, i, matches[i].Role.Ordinality)
+				i-1, matches[i-1].WorkPlan.Ordinality, i, matches[i].WorkPlan.Ordinality)
 		}
 	}
 }
@@ -357,7 +357,7 @@ func TestAddContextSource_Git_RoundTrip(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	role := mustSetupRole(t, mgr, `work\.task\..*`, true, 1)
+	role := mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 1)
 
 	src, err := mgr.AddContextSource(context.Background(), role.ID, codevaldagency.AddContextSourceRequest{
 		SourceType: codevaldagency.ContextSourceGit,
@@ -404,7 +404,7 @@ func TestAddContextSource_AllThreeTypes_AllReturnedByList(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	role := mustSetupRole(t, mgr, `work\.task\..*`, true, 1)
+	role := mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 1)
 
 	reqs := []codevaldagency.AddContextSourceRequest{
 		{
@@ -453,7 +453,7 @@ func TestAddContextSource_Comm_TypedFieldsRoundTrip(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	role := mustSetupRole(t, mgr, `work\.task\..*`, true, 1)
+	role := mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 1)
 
 	src, err := mgr.AddContextSource(context.Background(), role.ID, codevaldagency.AddContextSourceRequest{
 		SourceType: codevaldagency.ContextSourceComm,
@@ -477,7 +477,7 @@ func TestAddContextSource_Work_TypedFieldsRoundTrip(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	role := mustSetupRole(t, mgr, `work\.task\..*`, true, 1)
+	role := mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 1)
 
 	src, err := mgr.AddContextSource(context.Background(), role.ID, codevaldagency.AddContextSourceRequest{
 		SourceType: codevaldagency.ContextSourceWork,
@@ -503,7 +503,7 @@ func TestRemoveContextSource_AbsentFromSubsequentList(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	role := mustSetupRole(t, mgr, `work\.task\..*`, true, 1)
+	role := mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 1)
 
 	src, err := mgr.AddContextSource(context.Background(), role.ID, codevaldagency.AddContextSourceRequest{
 		SourceType: codevaldagency.ContextSourceGit,
@@ -532,7 +532,7 @@ func TestRemoveContextSource_NotFound_ReturnsErrContextSourceNotFound(t *testing
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	role := mustSetupRole(t, mgr, `work\.task\..*`, true, 1)
+	role := mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 1)
 
 	err := mgr.RemoveContextSource(context.Background(), role.ID, "no-such-source")
 	if !errors.Is(err, codevaldagency.ErrContextSourceNotFound) {
@@ -542,13 +542,13 @@ func TestRemoveContextSource_NotFound_ReturnsErrContextSourceNotFound(t *testing
 
 // ── ListContextSources ────────────────────────────────────────────────────────
 
-func TestListContextSources_RoleNotFound_ReturnsErrRoleNotFound(t *testing.T) {
+func TestListContextSources_RoleNotFound_ReturnsErrWorkPlanNotFound(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 
 	_, err := mgr.ListContextSources(context.Background(), "no-such-role")
-	if !errors.Is(err, codevaldagency.ErrRoleNotFound) {
-		t.Fatalf("expected ErrRoleNotFound, got %v", err)
+	if !errors.Is(err, codevaldagency.ErrWorkPlanNotFound) {
+		t.Fatalf("expected ErrWorkPlanNotFound, got %v", err)
 	}
 }
 
@@ -558,7 +558,7 @@ func TestMatchRoles_ReturnsContextSources(t *testing.T) {
 	t.Parallel()
 	mgr, _ := mustNewManager(t)
 	mustSetupAgency(t, mgr, "a1", "Alpha")
-	role := mustSetupRole(t, mgr, `work\.task\..*`, true, 1)
+	role := mustSetupWorkPlan(t, mgr, `work\.task\..*`, true, 1)
 
 	if _, err := mgr.AddContextSource(context.Background(), role.ID, codevaldagency.AddContextSourceRequest{
 		SourceType: codevaldagency.ContextSourceWork,
@@ -567,7 +567,7 @@ func TestMatchRoles_ReturnsContextSources(t *testing.T) {
 		t.Fatalf("AddContextSource: %v", err)
 	}
 
-	matches, err := mgr.MatchRoles(context.Background(), "work.task.status.changed", `{}`)
+	matches, err := mgr.MatchWorkPlans(context.Background(), "work.task.status.changed", `{}`)
 	if err != nil {
 		t.Fatalf("MatchRoles: %v", err)
 	}

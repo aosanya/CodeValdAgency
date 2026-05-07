@@ -9,27 +9,27 @@ import (
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
 )
 
-// ── CreateRole ────────────────────────────────────────────────────────────────
+// ── CreateWorkPlan ────────────────────────────────────────────────────────────
 
-// CreateRole stores a new Role entity and links it to the Agency via
-// has_role / belongs_to_agency edges.
-func (m *agencyManager) CreateRole(ctx context.Context, req CreateRoleRequest) (Role, error) {
-	if err := validateRoleRegexes(req.EventTopic, req.PayloadCondition); err != nil {
-		return Role{}, err
+// CreateWorkPlan stores a new WorkPlan entity and links it to the Agency via
+// has_work_plan / belongs_to_agency edges.
+func (m *agencyManager) CreateWorkPlan(ctx context.Context, req CreateWorkPlanRequest) (WorkPlan, error) {
+	if err := validateWorkPlanRegex(req.TriggerTopic, req.PayloadCondition); err != nil {
+		return WorkPlan{}, err
 	}
 
 	agency, err := m.GetAgency(ctx)
 	if err != nil {
-		return Role{}, fmt.Errorf("CreateRole: %w", err)
+		return WorkPlan{}, fmt.Errorf("CreateWorkPlan: %w", err)
 	}
 
 	entity, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 		AgencyID: m.agencyID,
-		TypeID:   "Role",
+		TypeID:   "WorkPlan",
 		Properties: map[string]any{
 			"name":              req.Name,
 			"description":       req.Description,
-			"event_topic":       req.EventTopic,
+			"trigger_topic":     req.TriggerTopic,
 			"payload_condition": req.PayloadCondition,
 			"instructions":      req.Instructions,
 			"agent_id":          req.AgentID,
@@ -38,16 +38,16 @@ func (m *agencyManager) CreateRole(ctx context.Context, req CreateRoleRequest) (
 		},
 	})
 	if err != nil {
-		return Role{}, fmt.Errorf("CreateRole: create entity: %w", err)
+		return WorkPlan{}, fmt.Errorf("CreateWorkPlan: create entity: %w", err)
 	}
 
 	if _, err := m.dm.CreateRelationship(ctx, entitygraph.CreateRelationshipRequest{
 		AgencyID: m.agencyID,
-		Name:     "has_role",
+		Name:     "has_work_plan",
 		FromID:   agency.ID,
 		ToID:     entity.ID,
 	}); err != nil {
-		return Role{}, fmt.Errorf("CreateRole: link has_role: %w", err)
+		return WorkPlan{}, fmt.Errorf("CreateWorkPlan: link has_work_plan: %w", err)
 	}
 	if _, err := m.dm.CreateRelationship(ctx, entitygraph.CreateRelationshipRequest{
 		AgencyID: m.agencyID,
@@ -55,60 +55,60 @@ func (m *agencyManager) CreateRole(ctx context.Context, req CreateRoleRequest) (
 		FromID:   entity.ID,
 		ToID:     agency.ID,
 	}); err != nil {
-		return Role{}, fmt.Errorf("CreateRole: link belongs_to_agency: %w", err)
+		return WorkPlan{}, fmt.Errorf("CreateWorkPlan: link belongs_to_agency: %w", err)
 	}
 
-	return entityToRole(entity, m.agencyID), nil
+	return entityToWorkPlan(entity, m.agencyID), nil
 }
 
-// ── GetRole ───────────────────────────────────────────────────────────────────
+// ── GetWorkPlan ───────────────────────────────────────────────────────────────
 
-// GetRole retrieves a single Role by its entity ID.
-// Returns [ErrRoleNotFound] if no Role entity with that ID exists.
-func (m *agencyManager) GetRole(ctx context.Context, roleID string) (Role, error) {
-	entity, err := m.dm.GetEntity(ctx, m.agencyID, roleID)
-	if err != nil || entity.TypeID != "Role" {
-		return Role{}, fmt.Errorf("GetRole %s: %w", roleID, ErrRoleNotFound)
+// GetWorkPlan retrieves a single WorkPlan by its entity ID.
+// Returns [ErrWorkPlanNotFound] if no WorkPlan entity with that ID exists.
+func (m *agencyManager) GetWorkPlan(ctx context.Context, workPlanID string) (WorkPlan, error) {
+	entity, err := m.dm.GetEntity(ctx, m.agencyID, workPlanID)
+	if err != nil || entity.TypeID != "WorkPlan" {
+		return WorkPlan{}, fmt.Errorf("GetWorkPlan %s: %w", workPlanID, ErrWorkPlanNotFound)
 	}
-	return entityToRole(entity, m.agencyID), nil
+	return entityToWorkPlan(entity, m.agencyID), nil
 }
 
-// ── ListRoles ─────────────────────────────────────────────────────────────────
+// ── ListWorkPlans ─────────────────────────────────────────────────────────────
 
-// ListRoles returns all Role entities linked to this Agency.
-func (m *agencyManager) ListRoles(ctx context.Context) ([]Role, error) {
+// ListWorkPlans returns all WorkPlan entities linked to this Agency.
+func (m *agencyManager) ListWorkPlans(ctx context.Context) ([]WorkPlan, error) {
 	entities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
 		AgencyID: m.agencyID,
-		TypeID:   "Role",
+		TypeID:   "WorkPlan",
 	})
 	if err != nil {
-		return nil, fmt.Errorf("ListRoles: %w", err)
+		return nil, fmt.Errorf("ListWorkPlans: %w", err)
 	}
-	roles := make([]Role, len(entities))
+	plans := make([]WorkPlan, len(entities))
 	for i, e := range entities {
-		roles[i] = entityToRole(e, m.agencyID)
+		plans[i] = entityToWorkPlan(e, m.agencyID)
 	}
-	return roles, nil
+	return plans, nil
 }
 
-// ── UpdateRole ────────────────────────────────────────────────────────────────
+// ── UpdateWorkPlan ────────────────────────────────────────────────────────────
 
-// UpdateRole applies req to the Role identified by roleID.
-// Returns [ErrRoleNotFound] if no Role entity with that ID exists.
-// Returns [ErrInvalidRegex] if EventTopic or PayloadCondition is not a valid Go regexp.
-func (m *agencyManager) UpdateRole(ctx context.Context, roleID string, req UpdateRoleRequest) (Role, error) {
-	if err := validateRoleRegexes(req.EventTopic, req.PayloadCondition); err != nil {
-		return Role{}, err
+// UpdateWorkPlan applies req to the WorkPlan identified by workPlanID.
+// Returns [ErrWorkPlanNotFound] if no WorkPlan entity with that ID exists.
+// Returns [ErrInvalidRegex] if TriggerTopic or PayloadCondition is not a valid Go regexp.
+func (m *agencyManager) UpdateWorkPlan(ctx context.Context, workPlanID string, req UpdateWorkPlanRequest) (WorkPlan, error) {
+	if err := validateWorkPlanRegex(req.TriggerTopic, req.PayloadCondition); err != nil {
+		return WorkPlan{}, err
 	}
-	if _, err := m.GetRole(ctx, roleID); err != nil {
-		return Role{}, err
+	if _, err := m.GetWorkPlan(ctx, workPlanID); err != nil {
+		return WorkPlan{}, err
 	}
 
-	updated, err := m.dm.UpdateEntity(ctx, m.agencyID, roleID, entitygraph.UpdateEntityRequest{
+	updated, err := m.dm.UpdateEntity(ctx, m.agencyID, workPlanID, entitygraph.UpdateEntityRequest{
 		Properties: map[string]any{
 			"name":              req.Name,
 			"description":       req.Description,
-			"event_topic":       req.EventTopic,
+			"trigger_topic":     req.TriggerTopic,
 			"payload_condition": req.PayloadCondition,
 			"instructions":      req.Instructions,
 			"agent_id":          req.AgentID,
@@ -117,21 +117,21 @@ func (m *agencyManager) UpdateRole(ctx context.Context, roleID string, req Updat
 		},
 	})
 	if err != nil {
-		return Role{}, fmt.Errorf("UpdateRole %s: %w", roleID, err)
+		return WorkPlan{}, fmt.Errorf("UpdateWorkPlan %s: %w", workPlanID, err)
 	}
-	return entityToRole(updated, m.agencyID), nil
+	return entityToWorkPlan(updated, m.agencyID), nil
 }
 
-// ── DeleteRole ────────────────────────────────────────────────────────────────
+// ── DeleteWorkPlan ────────────────────────────────────────────────────────────
 
-// DeleteRole removes the Role entity identified by roleID.
-// Returns [ErrRoleNotFound] if no Role entity with that ID exists.
-func (m *agencyManager) DeleteRole(ctx context.Context, roleID string) error {
-	if _, err := m.GetRole(ctx, roleID); err != nil {
+// DeleteWorkPlan removes the WorkPlan entity identified by workPlanID.
+// Returns [ErrWorkPlanNotFound] if no WorkPlan entity with that ID exists.
+func (m *agencyManager) DeleteWorkPlan(ctx context.Context, workPlanID string) error {
+	if _, err := m.GetWorkPlan(ctx, workPlanID); err != nil {
 		return err
 	}
-	if err := m.dm.DeleteEntity(ctx, m.agencyID, roleID); err != nil {
-		return fmt.Errorf("DeleteRole %s: %w", roleID, err)
+	if err := m.dm.DeleteEntity(ctx, m.agencyID, workPlanID); err != nil {
+		return fmt.Errorf("DeleteWorkPlan %s: %w", workPlanID, err)
 	}
 	return nil
 }
@@ -139,10 +139,10 @@ func (m *agencyManager) DeleteRole(ctx context.Context, roleID string) error {
 // ── AddContextSource ──────────────────────────────────────────────────────────
 
 // AddContextSource creates a typed ContextSource entity and links it to the
-// Role identified by roleID via has_context_source / belongs_to_role edges.
-// Returns [ErrRoleNotFound] if no Role entity with that ID exists.
-func (m *agencyManager) AddContextSource(ctx context.Context, roleID string, req AddContextSourceRequest) (ContextSource, error) {
-	if _, err := m.GetRole(ctx, roleID); err != nil {
+// WorkPlan identified by workPlanID via has_context_source / belongs_to_work_plan edges.
+// Returns [ErrWorkPlanNotFound] if no WorkPlan entity with that ID exists.
+func (m *agencyManager) AddContextSource(ctx context.Context, workPlanID string, req AddContextSourceRequest) (ContextSource, error) {
+	if _, err := m.GetWorkPlan(ctx, workPlanID); err != nil {
 		return ContextSource{}, err
 	}
 
@@ -160,37 +160,37 @@ func (m *agencyManager) AddContextSource(ctx context.Context, roleID string, req
 	if _, err := m.dm.CreateRelationship(ctx, entitygraph.CreateRelationshipRequest{
 		AgencyID: m.agencyID,
 		Name:     "has_context_source",
-		FromID:   roleID,
+		FromID:   workPlanID,
 		ToID:     entity.ID,
 	}); err != nil {
 		return ContextSource{}, fmt.Errorf("AddContextSource: link has_context_source: %w", err)
 	}
 	if _, err := m.dm.CreateRelationship(ctx, entitygraph.CreateRelationshipRequest{
 		AgencyID: m.agencyID,
-		Name:     "belongs_to_role",
+		Name:     "belongs_to_work_plan",
 		FromID:   entity.ID,
-		ToID:     roleID,
+		ToID:     workPlanID,
 	}); err != nil {
-		return ContextSource{}, fmt.Errorf("AddContextSource: link belongs_to_role: %w", err)
+		return ContextSource{}, fmt.Errorf("AddContextSource: link belongs_to_work_plan: %w", err)
 	}
 
-	return entityToContextSource(entity, roleID), nil
+	return entityToContextSource(entity, workPlanID), nil
 }
 
 // ── ListContextSources ────────────────────────────────────────────────────────
 
-// ListContextSources returns all ContextSource entities linked to the Role
-// identified by roleID via has_context_source edges.
-// Returns [ErrRoleNotFound] if no Role entity with that ID exists.
-func (m *agencyManager) ListContextSources(ctx context.Context, roleID string) ([]ContextSource, error) {
-	if _, err := m.GetRole(ctx, roleID); err != nil {
+// ListContextSources returns all ContextSource entities linked to the WorkPlan
+// identified by workPlanID via has_context_source edges.
+// Returns [ErrWorkPlanNotFound] if no WorkPlan entity with that ID exists.
+func (m *agencyManager) ListContextSources(ctx context.Context, workPlanID string) ([]ContextSource, error) {
+	if _, err := m.GetWorkPlan(ctx, workPlanID); err != nil {
 		return nil, err
 	}
 
 	rels, err := m.dm.ListRelationships(ctx, entitygraph.RelationshipFilter{
 		AgencyID: m.agencyID,
 		Name:     "has_context_source",
-		FromID:   roleID,
+		FromID:   workPlanID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("ListContextSources: list rels: %w", err)
@@ -202,7 +202,7 @@ func (m *agencyManager) ListContextSources(ctx context.Context, roleID string) (
 		if err != nil {
 			continue // entity may have been concurrently deleted
 		}
-		sources = append(sources, entityToContextSource(entity, roleID))
+		sources = append(sources, entityToContextSource(entity, workPlanID))
 	}
 	return sources, nil
 }
@@ -210,9 +210,9 @@ func (m *agencyManager) ListContextSources(ctx context.Context, roleID string) (
 // ── RemoveContextSource ───────────────────────────────────────────────────────
 
 // RemoveContextSource deletes the ContextSource entity identified by sourceID
-// and removes its has_context_source edge from the owning Role.
+// and removes its has_context_source edge from the owning WorkPlan.
 // Returns [ErrContextSourceNotFound] if no such entity exists.
-func (m *agencyManager) RemoveContextSource(ctx context.Context, roleID, sourceID string) error {
+func (m *agencyManager) RemoveContextSource(ctx context.Context, workPlanID, sourceID string) error {
 	entity, err := m.dm.GetEntity(ctx, m.agencyID, sourceID)
 	if err != nil {
 		return fmt.Errorf("RemoveContextSource %s: %w", sourceID, ErrContextSourceNotFound)
@@ -227,33 +227,33 @@ func (m *agencyManager) RemoveContextSource(ctx context.Context, roleID, sourceI
 	return nil
 }
 
-// ── MatchRoles ────────────────────────────────────────────────────────────────
+// ── MatchWorkPlans ────────────────────────────────────────────────────────────
 
-// MatchRoles evaluates topic and payload against all enabled Role entities.
-// For each role, EventTopic is compiled as a Go regex and matched against
-// topic; if PayloadCondition is non-empty it is also matched against payload.
-// Returns all matching roles with their ContextSource entities, ordered by
-// Role.Ordinality ascending.
-func (m *agencyManager) MatchRoles(ctx context.Context, topic, payload string) ([]RoleMatch, error) {
-	roles, err := m.ListRoles(ctx)
+// MatchWorkPlans evaluates topic and payload against all enabled WorkPlan entities.
+// TriggerTopic is compiled as a Go regex and matched against topic; if
+// PayloadCondition is non-empty it is also matched against payload.
+// Returns all matching work plans with their ContextSource entities, ordered by
+// WorkPlan.Ordinality ascending.
+func (m *agencyManager) MatchWorkPlans(ctx context.Context, topic, payload string) ([]WorkPlanMatch, error) {
+	plans, err := m.ListWorkPlans(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("MatchRoles: %w", err)
+		return nil, fmt.Errorf("MatchWorkPlans: %w", err)
 	}
 
-	var matches []RoleMatch
-	for _, role := range roles {
-		if !role.Enabled {
+	var matches []WorkPlanMatch
+	for _, plan := range plans {
+		if !plan.Enabled {
 			continue
 		}
-		topicRe, err := regexp.Compile(role.EventTopic)
+		topicRe, err := regexp.Compile(plan.TriggerTopic)
 		if err != nil {
 			continue // skip malformed regex — should not happen post-validation
 		}
 		if !topicRe.MatchString(topic) {
 			continue
 		}
-		if role.PayloadCondition != "" {
-			payloadRe, err := regexp.Compile(role.PayloadCondition)
+		if plan.PayloadCondition != "" {
+			payloadRe, err := regexp.Compile(plan.PayloadCondition)
 			if err != nil {
 				continue
 			}
@@ -262,26 +262,26 @@ func (m *agencyManager) MatchRoles(ctx context.Context, topic, payload string) (
 			}
 		}
 
-		sources, err := m.ListContextSources(ctx, role.ID)
+		sources, err := m.ListContextSources(ctx, plan.ID)
 		if err != nil {
-			return nil, fmt.Errorf("MatchRoles: sources for role %s: %w", role.ID, err)
+			return nil, fmt.Errorf("MatchWorkPlans: sources for work plan %s: %w", plan.ID, err)
 		}
-		matches = append(matches, RoleMatch{Role: role, ContextSources: sources})
+		matches = append(matches, WorkPlanMatch{WorkPlan: plan, ContextSources: sources})
 	}
 
 	sort.Slice(matches, func(i, j int) bool {
-		return matches[i].Role.Ordinality < matches[j].Role.Ordinality
+		return matches[i].WorkPlan.Ordinality < matches[j].WorkPlan.Ordinality
 	})
 	return matches, nil
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-// validateRoleRegexes compiles eventTopic and (if non-empty) payloadCondition
+// validateWorkPlanRegex compiles triggerTopic and (if non-empty) payloadCondition
 // as Go regular expressions, returning [ErrInvalidRegex] on the first failure.
-func validateRoleRegexes(eventTopic, payloadCondition string) error {
-	if _, err := regexp.Compile(eventTopic); err != nil {
-		return fmt.Errorf("%w: event_topic: %v", ErrInvalidRegex, err)
+func validateWorkPlanRegex(triggerTopic, payloadCondition string) error {
+	if _, err := regexp.Compile(triggerTopic); err != nil {
+		return fmt.Errorf("%w: trigger_topic: %v", ErrInvalidRegex, err)
 	}
 	if payloadCondition != "" {
 		if _, err := regexp.Compile(payloadCondition); err != nil {
@@ -334,16 +334,16 @@ func isContextSourceTypeID(typeID string) bool {
 	return typeID == "GitContextSource" || typeID == "CommContextSource" || typeID == "WorkContextSource"
 }
 
-// entityToRole converts a raw [entitygraph.Entity] of type "Role" to a domain
-// [Role].
-func entityToRole(e entitygraph.Entity, agencyID string) Role {
+// entityToWorkPlan converts a raw [entitygraph.Entity] of type "WorkPlan" to a
+// domain [WorkPlan].
+func entityToWorkPlan(e entitygraph.Entity, agencyID string) WorkPlan {
 	p := e.Properties
-	return Role{
+	return WorkPlan{
 		ID:               e.ID,
 		AgencyID:         agencyID,
 		Name:             strProp(p, "name"),
 		Description:      strProp(p, "description"),
-		EventTopic:       strProp(p, "event_topic"),
+		TriggerTopic:     strProp(p, "trigger_topic"),
 		PayloadCondition: strProp(p, "payload_condition"),
 		Instructions:     strProp(p, "instructions"),
 		AgentID:          strProp(p, "agent_id"),
@@ -355,11 +355,11 @@ func entityToRole(e entitygraph.Entity, agencyID string) Role {
 // entityToContextSource converts a raw [entitygraph.Entity] of a context
 // source type to a domain [ContextSource]. The TypeID determines which typed
 // config struct is populated.
-func entityToContextSource(e entitygraph.Entity, roleID string) ContextSource {
+func entityToContextSource(e entitygraph.Entity, workPlanID string) ContextSource {
 	p := e.Properties
 	cs := ContextSource{
 		ID:         e.ID,
-		RoleID:     roleID,
+		WorkPlanID: workPlanID,
 		SourceType: ContextSourceType(e.TypeID),
 	}
 	switch e.TypeID {

@@ -208,14 +208,15 @@ func draftToProto(d codevaldagency.AgencyDraft) *pb.AgencyDraft {
 	}
 }
 
-// ── RACI RPC handlers ─────────────────────────────────────────────────────────
 
-// CreateRole implements pb.AgencyServiceServer.
-func (s *Server) CreateRole(ctx context.Context, req *pb.CreateRoleRequest) (*pb.Role, error) {
-	role, err := s.mgr.CreateRole(ctx, codevaldagency.CreateRoleRequest{
+// ── WorkPlan RPC handlers ─────────────────────────────────────────────────────
+
+// CreateWorkPlan implements pb.AgencyServiceServer.
+func (s *Server) CreateWorkPlan(ctx context.Context, req *pb.CreateWorkPlanRequest) (*pb.WorkPlan, error) {
+	wp, err := s.mgr.CreateWorkPlan(ctx, codevaldagency.CreateWorkPlanRequest{
 		Name:             req.GetName(),
 		Description:      req.GetDescription(),
-		EventTopic:       req.GetEventTopic(),
+		TriggerTopic:     req.GetTriggerTopic(),
 		PayloadCondition: req.GetPayloadCondition(),
 		Instructions:     req.GetInstructions(),
 		AgentID:          req.GetAgentId(),
@@ -225,37 +226,37 @@ func (s *Server) CreateRole(ctx context.Context, req *pb.CreateRoleRequest) (*pb
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	return roleToProto(role), nil
+	return workPlanToProto(wp), nil
 }
 
-// GetRole implements pb.AgencyServiceServer.
-func (s *Server) GetRole(ctx context.Context, req *pb.GetRoleRequest) (*pb.Role, error) {
-	role, err := s.mgr.GetRole(ctx, req.GetRoleId())
+// GetWorkPlan implements pb.AgencyServiceServer.
+func (s *Server) GetWorkPlan(ctx context.Context, req *pb.GetWorkPlanRequest) (*pb.WorkPlan, error) {
+	wp, err := s.mgr.GetWorkPlan(ctx, req.GetWorkPlanId())
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	return roleToProto(role), nil
+	return workPlanToProto(wp), nil
 }
 
-// ListRoles implements pb.AgencyServiceServer.
-func (s *Server) ListRoles(ctx context.Context, _ *pb.ListRolesRequest) (*pb.ListRolesResponse, error) {
-	roles, err := s.mgr.ListRoles(ctx)
+// ListWorkPlans implements pb.AgencyServiceServer.
+func (s *Server) ListWorkPlans(ctx context.Context, _ *pb.ListWorkPlansRequest) (*pb.ListWorkPlansResponse, error) {
+	plans, err := s.mgr.ListWorkPlans(ctx)
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	out := make([]*pb.Role, len(roles))
-	for i, r := range roles {
-		out[i] = roleToProto(r)
+	out := make([]*pb.WorkPlan, len(plans))
+	for i, wp := range plans {
+		out[i] = workPlanToProto(wp)
 	}
-	return &pb.ListRolesResponse{Roles: out}, nil
+	return &pb.ListWorkPlansResponse{WorkPlans: out}, nil
 }
 
-// UpdateRole implements pb.AgencyServiceServer.
-func (s *Server) UpdateRole(ctx context.Context, req *pb.UpdateRoleRequest) (*pb.Role, error) {
-	role, err := s.mgr.UpdateRole(ctx, req.GetRoleId(), codevaldagency.UpdateRoleRequest{
+// UpdateWorkPlan implements pb.AgencyServiceServer.
+func (s *Server) UpdateWorkPlan(ctx context.Context, req *pb.UpdateWorkPlanRequest) (*pb.WorkPlan, error) {
+	wp, err := s.mgr.UpdateWorkPlan(ctx, req.GetWorkPlanId(), codevaldagency.UpdateWorkPlanRequest{
 		Name:             req.GetName(),
 		Description:      req.GetDescription(),
-		EventTopic:       req.GetEventTopic(),
+		TriggerTopic:     req.GetTriggerTopic(),
 		PayloadCondition: req.GetPayloadCondition(),
 		Instructions:     req.GetInstructions(),
 		AgentID:          req.GetAgentId(),
@@ -265,12 +266,12 @@ func (s *Server) UpdateRole(ctx context.Context, req *pb.UpdateRoleRequest) (*pb
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	return roleToProto(role), nil
+	return workPlanToProto(wp), nil
 }
 
-// DeleteRole implements pb.AgencyServiceServer.
-func (s *Server) DeleteRole(ctx context.Context, req *pb.DeleteRoleRequest) (*emptypb.Empty, error) {
-	if err := s.mgr.DeleteRole(ctx, req.GetRoleId()); err != nil {
+// DeleteWorkPlan implements pb.AgencyServiceServer.
+func (s *Server) DeleteWorkPlan(ctx context.Context, req *pb.DeleteWorkPlanRequest) (*emptypb.Empty, error) {
+	if err := s.mgr.DeleteWorkPlan(ctx, req.GetWorkPlanId()); err != nil {
 		return nil, toGRPCError(err)
 	}
 	return &emptypb.Empty{}, nil
@@ -302,7 +303,7 @@ func (s *Server) AddContextSource(ctx context.Context, req *pb.AddContextSourceR
 			IncludeHistory:     w.GetIncludeHistory(),
 		}
 	}
-	src, err := s.mgr.AddContextSource(ctx, req.GetRoleId(), domReq)
+	src, err := s.mgr.AddContextSource(ctx, req.GetWorkPlanId(), domReq)
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
@@ -311,7 +312,7 @@ func (s *Server) AddContextSource(ctx context.Context, req *pb.AddContextSourceR
 
 // ListContextSources implements pb.AgencyServiceServer.
 func (s *Server) ListContextSources(ctx context.Context, req *pb.ListContextSourcesRequest) (*pb.ListContextSourcesResponse, error) {
-	sources, err := s.mgr.ListContextSources(ctx, req.GetRoleId())
+	sources, err := s.mgr.ListContextSources(ctx, req.GetWorkPlanId())
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
@@ -324,41 +325,41 @@ func (s *Server) ListContextSources(ctx context.Context, req *pb.ListContextSour
 
 // RemoveContextSource implements pb.AgencyServiceServer.
 func (s *Server) RemoveContextSource(ctx context.Context, req *pb.RemoveContextSourceRequest) (*emptypb.Empty, error) {
-	if err := s.mgr.RemoveContextSource(ctx, req.GetRoleId(), req.GetSourceId()); err != nil {
+	if err := s.mgr.RemoveContextSource(ctx, req.GetWorkPlanId(), req.GetSourceId()); err != nil {
 		return nil, toGRPCError(err)
 	}
 	return &emptypb.Empty{}, nil
 }
 
-// MatchRoles implements pb.AgencyServiceServer.
-func (s *Server) MatchRoles(ctx context.Context, req *pb.MatchRolesRequest) (*pb.MatchRolesResponse, error) {
-	matches, err := s.mgr.MatchRoles(ctx, req.GetTopic(), req.GetPayload())
+// MatchWorkPlans implements pb.AgencyServiceServer.
+func (s *Server) MatchWorkPlans(ctx context.Context, req *pb.MatchWorkPlansRequest) (*pb.MatchWorkPlansResponse, error) {
+	matches, err := s.mgr.MatchWorkPlans(ctx, req.GetTopic(), req.GetPayload())
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	out := make([]*pb.RoleMatch, len(matches))
+	out := make([]*pb.WorkPlanMatch, len(matches))
 	for i, m := range matches {
 		srcs := make([]*pb.ContextSource, len(m.ContextSources))
 		for j, src := range m.ContextSources {
 			srcs[j] = contextSourceToProto(src)
 		}
-		out[i] = &pb.RoleMatch{
-			Role:           roleToProto(m.Role),
+		out[i] = &pb.WorkPlanMatch{
+			WorkPlan:       workPlanToProto(m.WorkPlan),
 			ContextSources: srcs,
 		}
 	}
-	return &pb.MatchRolesResponse{Matches: out}, nil
+	return &pb.MatchWorkPlansResponse{Matches: out}, nil
 }
 
-// ── RACI domain → proto converters ───────────────────────────────────────────
+// ── WorkPlan domain → proto converters ───────────────────────────────────────
 
-func roleToProto(r codevaldagency.Role) *pb.Role {
-	return &pb.Role{
+func workPlanToProto(r codevaldagency.WorkPlan) *pb.WorkPlan {
+	return &pb.WorkPlan{
 		Id:               r.ID,
 		AgencyId:         r.AgencyID,
 		Name:             r.Name,
 		Description:      r.Description,
-		EventTopic:       r.EventTopic,
+		TriggerTopic:     r.TriggerTopic,
 		PayloadCondition: r.PayloadCondition,
 		Instructions:     r.Instructions,
 		AgentId:          r.AgentID,
@@ -369,9 +370,9 @@ func roleToProto(r codevaldagency.Role) *pb.Role {
 
 func contextSourceToProto(src codevaldagency.ContextSource) *pb.ContextSource {
 	cs := &pb.ContextSource{
-		Id:         src.ID,
-		RoleId:     src.RoleID,
-		SourceType: string(src.SourceType),
+		Id:          src.ID,
+		WorkPlanId:  src.WorkPlanID,
+		SourceType:  string(src.SourceType),
 	}
 	if src.Git != nil {
 		cs.Git = &pb.GitContextSource{

@@ -25,7 +25,7 @@
 //   - AgencySnapshot            — immutable activation record (draft → active)
 //   - AgencyPublication         — immutable versioned publication snapshot
 //   - AgencyPublicationStatus   — mutable status node for a publication (draft → active → archived)
-//   - Role                      — RACI dispatch role; regex-matched against Cross event topics (mutable)
+//   - WorkPlan                  — execution plan binding a trigger topic, Role, and WorkItem (mutable)
 //   - GitContextSource          — context source: CodeValdGit file signals (mutable)
 //   - CommContextSource         — context source: CodeValdComm thread lookback (mutable)
 //   - WorkContextSource         — context source: CodeValdWork task details (mutable)
@@ -133,7 +133,7 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "has_draft", Label: "Drafts", PathSegment: "drafts", ToType: "AgencyDraft", ToMany: true, Inverse: "belongs_to_agency"},
 					{Name: "has_snapshot", Label: "Snapshots", PathSegment: "snapshots", ToType: "AgencySnapshot", ToMany: true, Inverse: "belongs_to_agency"},
 					{Name: "has_publication", Label: "Publications", PathSegment: "publications", ToType: "AgencyPublication", ToMany: true, Inverse: "belongs_to_agency"},
-					{Name: "has_role", Label: "Roles", PathSegment: "roles", ToType: "Role", ToMany: true, Inverse: "belongs_to_agency"},
+					{Name: "has_work_plan", Label: "Work Plans", PathSegment: "work-plans", ToType: "WorkPlan", ToMany: true, Inverse: "belongs_to_agency"},
 				},
 			},
 			{
@@ -156,6 +156,9 @@ func DefaultAgencySchema() types.Schema {
 					// ToMany=false, optional: set when this Goal is a draft copy.
 					// Inverse of AgencyDraft.has_goal — written atomically by CreateDraft.
 					{Name: "belongs_to_draft", Label: "Draft", PathSegment: "draft", ToType: "AgencyDraft", ToMany: false},
+					// ToMany=true: work items that contribute to this goal.
+					// Inverse of WorkItem.belongs_to_goal.
+					{Name: "has_work_item", Label: "Work Items", PathSegment: "work-items", ToType: "WorkItem", ToMany: true, Inverse: "belongs_to_goal"},
 				},
 			},
 			{
@@ -205,9 +208,8 @@ func DefaultAgencySchema() types.Schema {
 					// ToMany=false, Required=true: a WorkItem must belong to exactly one Workflow.
 					// Inverse of Workflow.has_work_item — auto-created by CreateRelationship.
 					{Name: "belongs_to_workflow", Label: "Workflow", PathSegment: "workflow", ToType: "Workflow", ToMany: false, Required: true},
-					// ToMany=true, Required=false: zero or more eligible roles may be assigned.
-					// Whichever actor (human or ai_agent) claims the task first executes it.
-					{Name: "assigned_role", Label: "Assigned Roles", PathSegment: "assigned-roles", ToType: "ConfiguredRole", ToMany: true, Inverse: "assigned_work_item"},
+					// ToMany=false: inverse of Goal.has_work_item (optional — set when linked to a Goal).
+					{Name: "belongs_to_goal", Label: "Goal", PathSegment: "goal", ToType: "Goal", ToMany: false},
 					// ToMany=true: standing rules attached to this work item.
 					{Name: "has_instruction", Label: "Instructions", PathSegment: "instructions", ToType: "Instruction", ToMany: true, Inverse: "belongs_to_work_item"},
 					// ToMany=true: expected outputs this work item must produce.
@@ -347,8 +349,8 @@ func DefaultAgencySchema() types.Schema {
 					// ToMany=false, Required=true: a ConfiguredRole must belong to exactly one Agency.
 					// Inverse of Agency.has_configured_role — auto-created by CreateRelationship.
 					{Name: "belongs_to_agency", Label: "Agency", PathSegment: "agency", ToType: "Agency", ToMany: false, Required: true},
-					// ToMany=true: inverse of WorkItem.assigned_role — auto-created by CreateRelationship.
-					{Name: "assigned_work_item", Label: "Work Items", PathSegment: "work-items", ToType: "WorkItem", ToMany: true},
+					// ToMany=true: inverse of WorkPlan.assigned_role — work plans assigned to this role.
+					{Name: "assigned_work_plan", Label: "Work Plans", PathSegment: "work-plans", ToType: "WorkPlan", ToMany: true, Inverse: "assigned_role"},
 					// ToMany=true: inverse of Deliverable.reviewer_role — deliverables this role can waive.
 					{Name: "reviews_deliverable", Label: "Reviewed Deliverables", PathSegment: "reviewed-deliverables", ToType: "Deliverable", ToMany: true},
 					// ToMany=false, optional: set when this ConfiguredRole is a draft copy.
@@ -592,24 +594,25 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "belongs_to_publication", Label: "Publication", PathSegment: "publication", ToType: "AgencyPublication", ToMany: false, Required: false, Inverse: "has_status"},
 				},
 			},
-			// Role is a RACI dispatch role. CodeValdAI calls MatchRoles with the
-			// incoming Cross topic and raw JSON payload; the agency returns all enabled
-			// roles whose event_topic regex matches the topic and whose
+			// WorkPlan binds a trigger topic, a ConfiguredRole, and a WorkItem into
+			// an executable plan. CodeValdAI calls MatchWorkPlans with the incoming
+			// Cross topic and raw JSON payload; the agency returns all enabled work
+			// plans whose trigger_topic regex matches the topic and whose
 			// payload_condition regex (if set) matches the payload string.
 			{
-				Name:              "Role",
-				DisplayName:       "Role",
-				PathSegment:       "roles",
-				EntityIDParam:     "roleId",
-				StorageCollection: "agency_roles",
+				Name:              "WorkPlan",
+				DisplayName:       "Work Plan",
+				PathSegment:       "work-plans",
+				EntityIDParam:     "workPlanId",
+				StorageCollection: "agency_work_plans",
 				UniqueKey:         []string{"code"},
 				Properties: []types.PropertyDefinition{
 					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
-					// event_topic is a Go regex matched against the incoming Cross topic.
-					{Name: "event_topic", Type: types.PropertyTypeString, Required: true},
+					// trigger_topic is a Go regex matched against the incoming Cross topic.
+					{Name: "trigger_topic", Type: types.PropertyTypeString, Required: true},
 					// payload_condition is a Go regex matched against the raw JSON payload.
 					// Empty string means match all payloads.
 					{Name: "payload_condition", Type: types.PropertyTypeString, Required: false},
@@ -617,23 +620,24 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "instructions", Type: types.PropertyTypeString, Required: false},
 					// agent_id is a cross-service reference to a CodeValdAI Agent entity ID.
 					{Name: "agent_id", Type: types.PropertyTypeString, Required: false},
-					// pubsub_topic is the exact PubSub topic string this role subscribes to
-					// (e.g. "work.task.created"). Used alongside event_topic for registration.
-					{Name: "pubsub_topic", Type: types.PropertyTypeString, Required: false},
 					{Name: "enabled", Type: types.PropertyTypeBoolean, Required: true},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
 				},
 				Relationships: []types.RelationshipDefinition{
-					// ToMany=false, Required=true: a Role must belong to exactly one Agency.
-					// Inverse of Agency.has_role — auto-created by CreateRelationship.
+					// ToMany=false, Required=true: a WorkPlan must belong to exactly one Agency.
+					// Inverse of Agency.has_work_plan — auto-created by CreateRelationship.
 					{Name: "belongs_to_agency", Label: "Agency", PathSegment: "agency", ToType: "Agency", ToMany: false, Required: true},
-					// ToMany=true: context sources linked to this role for assembling the AgentRun bundle.
-					// Inverse written on each ContextSource type as belongs_to_role.
+					// ToMany=true: context sources linked to this work plan for assembling the AgentRun bundle.
+					// Inverse written on each ContextSource type as belongs_to_work_plan.
 					{Name: "has_context_source", Label: "Context Sources", PathSegment: "context-sources", ToType: "GitContextSource", ToMany: true},
+					// ToMany=false: the ConfiguredRole assigned to this work plan.
+					{Name: "assigned_role", Label: "Assigned Role", PathSegment: "assigned-role", ToType: "ConfiguredRole", ToMany: false, Inverse: "assigned_work_plan"},
+					// ToMany=false: the WorkItem this work plan executes.
+					{Name: "has_work_item", Label: "Work Item", PathSegment: "work-item", ToType: "WorkItem", ToMany: false},
 				},
 			},
 			// GitContextSource configures what to fetch from CodeValdGit when this
-			// role is dispatched. Multiple sources may be linked to a single Role.
+			// task is dispatched. Multiple sources may be linked to a single Task.
 			{
 				Name:              "GitContextSource",
 				DisplayName:       "Git Context Source",
@@ -655,12 +659,12 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "file_types", Type: types.PropertyTypeString, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
-					// ToMany=false, Required=true: a GitContextSource must belong to exactly one Role.
-					{Name: "belongs_to_role", Label: "Role", PathSegment: "role", ToType: "Role", ToMany: false, Required: true},
+					// ToMany=false, Required=true: a GitContextSource must belong to exactly one Task.
+					{Name: "belongs_to_work_plan", Label: "Work Plan", PathSegment: "work-plan", ToType: "WorkPlan", ToMany: false, Required: true},
 				},
 			},
 			// CommContextSource configures what to fetch from CodeValdComm (conversation
-			// threads) when this role is dispatched.
+			// threads) when this task is dispatched.
 			{
 				Name:              "CommContextSource",
 				DisplayName:       "Comm Context Source",
@@ -676,11 +680,11 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "max_results", Type: types.PropertyTypeInteger, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
-					{Name: "belongs_to_role", Label: "Role", PathSegment: "role", ToType: "Role", ToMany: false, Required: true},
+					{Name: "belongs_to_work_plan", Label: "Work Plan", PathSegment: "work-plan", ToType: "WorkPlan", ToMany: false, Required: true},
 				},
 			},
 			// WorkContextSource configures what to fetch from CodeValdWork (task details)
-			// when this role is dispatched.
+			// when this task is dispatched.
 			{
 				Name:              "WorkContextSource",
 				DisplayName:       "Work Context Source",
@@ -696,7 +700,7 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "include_history", Type: types.PropertyTypeBoolean, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
-					{Name: "belongs_to_role", Label: "Role", PathSegment: "role", ToType: "Role", ToMany: false, Required: true},
+					{Name: "belongs_to_work_plan", Label: "Work Plan", PathSegment: "work-plan", ToType: "WorkPlan", ToMany: false, Required: true},
 				},
 			},
 		},

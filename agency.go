@@ -51,6 +51,9 @@ type AgencyManager interface {
 	// GetConfiguredRoles returns all live ConfiguredRole entities linked to this Agency.
 	GetConfiguredRoles(ctx context.Context) ([]ConfiguredRole, error)
 
+	// GetWorkItems returns all live WorkItem entities linked to this Agency.
+	GetWorkItems(ctx context.Context) ([]WorkItem, error)
+
 	// PublishAgency creates an immutable versioned publication of the current
 	// agency state, linked to the given draftID. Version is auto-incremented
 	// from the last publication (starts at 1).
@@ -321,6 +324,24 @@ func (m *agencyManager) GetConfiguredRoles(ctx context.Context) ([]ConfiguredRol
 		roles[i] = entityToConfiguredRole(e)
 	}
 	return roles, nil
+}
+
+// ── GetWorkItems ──────────────────────────────────────────────────────────────
+
+// GetWorkItems returns all live WorkItem entities for this Agency.
+func (m *agencyManager) GetWorkItems(ctx context.Context) ([]WorkItem, error) {
+	entities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+		AgencyID: m.agencyID,
+		TypeID:   "WorkItem",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("GetWorkItems: %w", err)
+	}
+	items := make([]WorkItem, len(entities))
+	for i, e := range entities {
+		items[i] = entityToWorkItem(e)
+	}
+	return items, nil
 }
 
 // ── PublishAgency ─────────────────────────────────────────────────────────────
@@ -747,6 +768,26 @@ func entityToWorkflow(e entitygraph.Entity) Workflow {
 		Name:        strProp(p, "name"),
 		Description: strProp(p, "description"),
 		Ordinality:  ord,
+	}
+}
+
+func entityToWorkItem(e entitygraph.Entity) WorkItem {
+	p := e.Properties
+	ord := 0
+	if v, ok := p["ordinality"]; ok {
+		switch vv := v.(type) {
+		case int:
+			ord = vv
+		case float64:
+			ord = int(vv)
+		}
+	}
+	return WorkItem{
+		ID:          e.ID,
+		Title:       strProp(p, "title"),
+		Description: strProp(p, "description"),
+		Ordinality:  ord,
+		Prompt:      strProp(p, "prompt"),
 	}
 }
 

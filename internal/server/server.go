@@ -106,6 +106,15 @@ func (s *Server) GetConfiguredRoles(ctx context.Context, _ *pb.GetConfiguredRole
 	return &pb.GetConfiguredRolesResponse{ConfiguredRoles: configuredRolesToProto(roles)}, nil
 }
 
+// GetWorkItems implements pb.AgencyServiceServer.
+func (s *Server) GetWorkItems(ctx context.Context, _ *pb.GetWorkItemsRequest) (*pb.GetWorkItemsResponse, error) {
+	items, err := s.mgr.GetWorkItems(ctx)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &pb.GetWorkItemsResponse{WorkItems: workItemsToProto(items)}, nil
+}
+
 // ── Domain → Proto converters ─────────────────────────────────────────────────
 
 func agencyToProto(a codevaldagency.Agency) *pb.Agency {
@@ -172,6 +181,22 @@ func configuredRolesToProto(roles []codevaldagency.ConfiguredRole) []*pb.Configu
 		out[i] = &pb.ConfiguredRole{
 			Role:      r.Name,
 			ActorType: actorTypeToProto(r.ActorType),
+		}
+	}
+	return out
+}
+
+func workItemsToProto(items []codevaldagency.WorkItem) []*pb.WorkItem {
+	if len(items) == 0 {
+		return nil
+	}
+	out := make([]*pb.WorkItem, len(items))
+	for i, wi := range items {
+		out[i] = &pb.WorkItem{
+			Id:          wi.ID,
+			Title:       wi.Title,
+			Description: wi.Description,
+			Order:       int32(wi.Ordinality),
 		}
 	}
 	return out

@@ -189,6 +189,13 @@ func agencyRoutes() []types.RouteInfo {
 			Capability: "get_configured_roles",
 			GrpcMethod: "/codevaldagency.v1.AgencyService/GetConfiguredRoles",
 		},
+		// GET /agency/{agencyId}/work-items — list promoted live work items.
+		{
+			Method:     "GET",
+			Pattern:    "/agency/{agencyId}/work-items",
+			Capability: "get_work_items",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/GetWorkItems",
+		},
 
 		// ── RACI role routes ──────────────────────────────────────────────────────
 		// POST /agency/{agencyId}/roles — create a new dispatch role.

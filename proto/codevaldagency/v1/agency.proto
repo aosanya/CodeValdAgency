@@ -171,6 +171,15 @@ message GetConfiguredRolesResponse {
   repeated ConfiguredRole configured_roles = 1;
 }
 
+// GetWorkItemsRequest is intentionally empty — work items are scoped to the
+// single agency in this database.
+message GetWorkItemsRequest {}
+
+// GetWorkItemsResponse wraps the flat list of live WorkItems.
+message GetWorkItemsResponse {
+  repeated WorkItem work_items = 1;
+}
+
 // ── Draft messages ─────────────────────────────────────────────────────────────
 
 // AgencyDraft is a versioned, editable copy of the agency sub-entity graph
@@ -416,6 +425,9 @@ service AgencyService {
 
   // GetConfiguredRoles returns all live ConfiguredRole entities linked to the Agency.
   rpc GetConfiguredRoles(GetConfiguredRolesRequest) returns (GetConfiguredRolesResponse);
+
+  // GetWorkItems returns all live WorkItem entities linked to the Agency.
+  rpc GetWorkItems(GetWorkItemsRequest) returns (GetWorkItemsResponse);
 
   // CreateDraft creates a new editable draft by deep-copying the sub-entity
   // graph from the nominated source.

@@ -1240,6 +1240,89 @@ func (x *GetConfiguredRolesResponse) GetConfiguredRoles() []*ConfiguredRole {
 	return nil
 }
 
+// GetWorkItemsRequest is intentionally empty — work items are scoped to the
+// single agency in this database.
+type GetWorkItemsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWorkItemsRequest) Reset() {
+	*x = GetWorkItemsRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkItemsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkItemsRequest) ProtoMessage() {}
+
+func (x *GetWorkItemsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkItemsRequest.ProtoReflect.Descriptor instead.
+func (*GetWorkItemsRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{19}
+}
+
+// GetWorkItemsResponse wraps the flat list of live WorkItems.
+type GetWorkItemsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WorkItems     []*WorkItem            `protobuf:"bytes,1,rep,name=work_items,json=workItems,proto3" json:"work_items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWorkItemsResponse) Reset() {
+	*x = GetWorkItemsResponse{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkItemsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkItemsResponse) ProtoMessage() {}
+
+func (x *GetWorkItemsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkItemsResponse.ProtoReflect.Descriptor instead.
+func (*GetWorkItemsResponse) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *GetWorkItemsResponse) GetWorkItems() []*WorkItem {
+	if x != nil {
+		return x.WorkItems
+	}
+	return nil
+}
+
 // AgencyDraft is a versioned, editable copy of the agency sub-entity graph
 // created by CreateDraft and promoted to live state by PromoteDraft.
 type AgencyDraft struct {
@@ -1258,7 +1341,7 @@ type AgencyDraft struct {
 
 func (x *AgencyDraft) Reset() {
 	*x = AgencyDraft{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[19]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1270,7 +1353,7 @@ func (x *AgencyDraft) String() string {
 func (*AgencyDraft) ProtoMessage() {}
 
 func (x *AgencyDraft) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[19]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1283,7 +1366,7 @@ func (x *AgencyDraft) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgencyDraft.ProtoReflect.Descriptor instead.
 func (*AgencyDraft) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{19}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *AgencyDraft) GetId() string {
@@ -1357,7 +1440,7 @@ type CreateDraftRequest struct {
 
 func (x *CreateDraftRequest) Reset() {
 	*x = CreateDraftRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[20]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1369,7 +1452,7 @@ func (x *CreateDraftRequest) String() string {
 func (*CreateDraftRequest) ProtoMessage() {}
 
 func (x *CreateDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[20]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1382,7 +1465,7 @@ func (x *CreateDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDraftRequest.ProtoReflect.Descriptor instead.
 func (*CreateDraftRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{20}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *CreateDraftRequest) GetDescription() string {
@@ -1415,7 +1498,7 @@ type GetDraftRequest struct {
 
 func (x *GetDraftRequest) Reset() {
 	*x = GetDraftRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[21]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1427,7 +1510,7 @@ func (x *GetDraftRequest) String() string {
 func (*GetDraftRequest) ProtoMessage() {}
 
 func (x *GetDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[21]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1440,7 +1523,7 @@ func (x *GetDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDraftRequest.ProtoReflect.Descriptor instead.
 func (*GetDraftRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{21}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *GetDraftRequest) GetDraftId() string {
@@ -1458,7 +1541,7 @@ type ListDraftsRequest struct {
 
 func (x *ListDraftsRequest) Reset() {
 	*x = ListDraftsRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[22]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1470,7 +1553,7 @@ func (x *ListDraftsRequest) String() string {
 func (*ListDraftsRequest) ProtoMessage() {}
 
 func (x *ListDraftsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[22]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1483,7 +1566,7 @@ func (x *ListDraftsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDraftsRequest.ProtoReflect.Descriptor instead.
 func (*ListDraftsRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{22}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{24}
 }
 
 type ListDraftsResponse struct {
@@ -1495,7 +1578,7 @@ type ListDraftsResponse struct {
 
 func (x *ListDraftsResponse) Reset() {
 	*x = ListDraftsResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[23]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1507,7 +1590,7 @@ func (x *ListDraftsResponse) String() string {
 func (*ListDraftsResponse) ProtoMessage() {}
 
 func (x *ListDraftsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[23]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1520,7 +1603,7 @@ func (x *ListDraftsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDraftsResponse.ProtoReflect.Descriptor instead.
 func (*ListDraftsResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{23}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ListDraftsResponse) GetDrafts() []*AgencyDraft {
@@ -1540,7 +1623,7 @@ type UpdateDraftDescriptionRequest struct {
 
 func (x *UpdateDraftDescriptionRequest) Reset() {
 	*x = UpdateDraftDescriptionRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[24]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1552,7 +1635,7 @@ func (x *UpdateDraftDescriptionRequest) String() string {
 func (*UpdateDraftDescriptionRequest) ProtoMessage() {}
 
 func (x *UpdateDraftDescriptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[24]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1565,7 +1648,7 @@ func (x *UpdateDraftDescriptionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDraftDescriptionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateDraftDescriptionRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{24}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *UpdateDraftDescriptionRequest) GetDraftId() string {
@@ -1591,7 +1674,7 @@ type PromoteDraftRequest struct {
 
 func (x *PromoteDraftRequest) Reset() {
 	*x = PromoteDraftRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[25]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1603,7 +1686,7 @@ func (x *PromoteDraftRequest) String() string {
 func (*PromoteDraftRequest) ProtoMessage() {}
 
 func (x *PromoteDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[25]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1616,7 +1699,7 @@ func (x *PromoteDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteDraftRequest.ProtoReflect.Descriptor instead.
 func (*PromoteDraftRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{25}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *PromoteDraftRequest) GetDraftId() string {
@@ -1635,7 +1718,7 @@ type ArchiveDraftRequest struct {
 
 func (x *ArchiveDraftRequest) Reset() {
 	*x = ArchiveDraftRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[26]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1647,7 +1730,7 @@ func (x *ArchiveDraftRequest) String() string {
 func (*ArchiveDraftRequest) ProtoMessage() {}
 
 func (x *ArchiveDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[26]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1660,7 +1743,7 @@ func (x *ArchiveDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArchiveDraftRequest.ProtoReflect.Descriptor instead.
 func (*ArchiveDraftRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{26}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ArchiveDraftRequest) GetDraftId() string {
@@ -1697,7 +1780,7 @@ type WorkPlan struct {
 
 func (x *WorkPlan) Reset() {
 	*x = WorkPlan{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[27]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1709,7 +1792,7 @@ func (x *WorkPlan) String() string {
 func (*WorkPlan) ProtoMessage() {}
 
 func (x *WorkPlan) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[27]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1722,7 +1805,7 @@ func (x *WorkPlan) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkPlan.ProtoReflect.Descriptor instead.
 func (*WorkPlan) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{27}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *WorkPlan) GetId() string {
@@ -1809,7 +1892,7 @@ type GitContextSource struct {
 
 func (x *GitContextSource) Reset() {
 	*x = GitContextSource{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[28]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1821,7 +1904,7 @@ func (x *GitContextSource) String() string {
 func (*GitContextSource) ProtoMessage() {}
 
 func (x *GitContextSource) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[28]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1834,7 +1917,7 @@ func (x *GitContextSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitContextSource.ProtoReflect.Descriptor instead.
 func (*GitContextSource) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{28}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *GitContextSource) GetSignals() string {
@@ -1883,7 +1966,7 @@ type CommContextSource struct {
 
 func (x *CommContextSource) Reset() {
 	*x = CommContextSource{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[29]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1895,7 +1978,7 @@ func (x *CommContextSource) String() string {
 func (*CommContextSource) ProtoMessage() {}
 
 func (x *CommContextSource) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[29]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1908,7 +1991,7 @@ func (x *CommContextSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommContextSource.ProtoReflect.Descriptor instead.
 func (*CommContextSource) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{29}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *CommContextSource) GetLookbackDays() int32 {
@@ -1936,7 +2019,7 @@ type WorkContextSource struct {
 
 func (x *WorkContextSource) Reset() {
 	*x = WorkContextSource{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[30]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1948,7 +2031,7 @@ func (x *WorkContextSource) String() string {
 func (*WorkContextSource) ProtoMessage() {}
 
 func (x *WorkContextSource) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[30]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1961,7 +2044,7 @@ func (x *WorkContextSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkContextSource.ProtoReflect.Descriptor instead.
 func (*WorkContextSource) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{30}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *WorkContextSource) GetIncludeDescription() bool {
@@ -1995,7 +2078,7 @@ type ContextSource struct {
 
 func (x *ContextSource) Reset() {
 	*x = ContextSource{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[31]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2007,7 +2090,7 @@ func (x *ContextSource) String() string {
 func (*ContextSource) ProtoMessage() {}
 
 func (x *ContextSource) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[31]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2020,7 +2103,7 @@ func (x *ContextSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContextSource.ProtoReflect.Descriptor instead.
 func (*ContextSource) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{31}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ContextSource) GetId() string {
@@ -2077,7 +2160,7 @@ type WorkPlanMatch struct {
 
 func (x *WorkPlanMatch) Reset() {
 	*x = WorkPlanMatch{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[32]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2089,7 +2172,7 @@ func (x *WorkPlanMatch) String() string {
 func (*WorkPlanMatch) ProtoMessage() {}
 
 func (x *WorkPlanMatch) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[32]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2102,7 +2185,7 @@ func (x *WorkPlanMatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkPlanMatch.ProtoReflect.Descriptor instead.
 func (*WorkPlanMatch) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{32}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *WorkPlanMatch) GetWorkPlan() *WorkPlan {
@@ -2136,7 +2219,7 @@ type CreateWorkPlanRequest struct {
 
 func (x *CreateWorkPlanRequest) Reset() {
 	*x = CreateWorkPlanRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[33]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2148,7 +2231,7 @@ func (x *CreateWorkPlanRequest) String() string {
 func (*CreateWorkPlanRequest) ProtoMessage() {}
 
 func (x *CreateWorkPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[33]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2161,7 +2244,7 @@ func (x *CreateWorkPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateWorkPlanRequest.ProtoReflect.Descriptor instead.
 func (*CreateWorkPlanRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{33}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *CreateWorkPlanRequest) GetName() string {
@@ -2230,7 +2313,7 @@ type GetWorkPlanRequest struct {
 
 func (x *GetWorkPlanRequest) Reset() {
 	*x = GetWorkPlanRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[34]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2242,7 +2325,7 @@ func (x *GetWorkPlanRequest) String() string {
 func (*GetWorkPlanRequest) ProtoMessage() {}
 
 func (x *GetWorkPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[34]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2255,7 +2338,7 @@ func (x *GetWorkPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkPlanRequest.ProtoReflect.Descriptor instead.
 func (*GetWorkPlanRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{34}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *GetWorkPlanRequest) GetWorkPlanId() string {
@@ -2274,7 +2357,7 @@ type ListWorkPlansRequest struct {
 
 func (x *ListWorkPlansRequest) Reset() {
 	*x = ListWorkPlansRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[35]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2286,7 +2369,7 @@ func (x *ListWorkPlansRequest) String() string {
 func (*ListWorkPlansRequest) ProtoMessage() {}
 
 func (x *ListWorkPlansRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[35]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2299,7 +2382,7 @@ func (x *ListWorkPlansRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkPlansRequest.ProtoReflect.Descriptor instead.
 func (*ListWorkPlansRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{35}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{37}
 }
 
 // ListWorkPlansResponse wraps the list of WorkPlans.
@@ -2312,7 +2395,7 @@ type ListWorkPlansResponse struct {
 
 func (x *ListWorkPlansResponse) Reset() {
 	*x = ListWorkPlansResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[36]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2324,7 +2407,7 @@ func (x *ListWorkPlansResponse) String() string {
 func (*ListWorkPlansResponse) ProtoMessage() {}
 
 func (x *ListWorkPlansResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[36]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2337,7 +2420,7 @@ func (x *ListWorkPlansResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkPlansResponse.ProtoReflect.Descriptor instead.
 func (*ListWorkPlansResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{36}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ListWorkPlansResponse) GetWorkPlans() []*WorkPlan {
@@ -2365,7 +2448,7 @@ type UpdateWorkPlanRequest struct {
 
 func (x *UpdateWorkPlanRequest) Reset() {
 	*x = UpdateWorkPlanRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[37]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2377,7 +2460,7 @@ func (x *UpdateWorkPlanRequest) String() string {
 func (*UpdateWorkPlanRequest) ProtoMessage() {}
 
 func (x *UpdateWorkPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[37]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2390,7 +2473,7 @@ func (x *UpdateWorkPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateWorkPlanRequest.ProtoReflect.Descriptor instead.
 func (*UpdateWorkPlanRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{37}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *UpdateWorkPlanRequest) GetWorkPlanId() string {
@@ -2466,7 +2549,7 @@ type DeleteWorkPlanRequest struct {
 
 func (x *DeleteWorkPlanRequest) Reset() {
 	*x = DeleteWorkPlanRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[38]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2478,7 +2561,7 @@ func (x *DeleteWorkPlanRequest) String() string {
 func (*DeleteWorkPlanRequest) ProtoMessage() {}
 
 func (x *DeleteWorkPlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[38]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2491,7 +2574,7 @@ func (x *DeleteWorkPlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWorkPlanRequest.ProtoReflect.Descriptor instead.
 func (*DeleteWorkPlanRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{38}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *DeleteWorkPlanRequest) GetWorkPlanId() string {
@@ -2515,7 +2598,7 @@ type AddContextSourceRequest struct {
 
 func (x *AddContextSourceRequest) Reset() {
 	*x = AddContextSourceRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[39]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2527,7 +2610,7 @@ func (x *AddContextSourceRequest) String() string {
 func (*AddContextSourceRequest) ProtoMessage() {}
 
 func (x *AddContextSourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[39]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2540,7 +2623,7 @@ func (x *AddContextSourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddContextSourceRequest.ProtoReflect.Descriptor instead.
 func (*AddContextSourceRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{39}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *AddContextSourceRequest) GetWorkPlanId() string {
@@ -2588,7 +2671,7 @@ type ListContextSourcesRequest struct {
 
 func (x *ListContextSourcesRequest) Reset() {
 	*x = ListContextSourcesRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[40]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2600,7 +2683,7 @@ func (x *ListContextSourcesRequest) String() string {
 func (*ListContextSourcesRequest) ProtoMessage() {}
 
 func (x *ListContextSourcesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[40]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2613,7 +2696,7 @@ func (x *ListContextSourcesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListContextSourcesRequest.ProtoReflect.Descriptor instead.
 func (*ListContextSourcesRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{40}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *ListContextSourcesRequest) GetWorkPlanId() string {
@@ -2633,7 +2716,7 @@ type ListContextSourcesResponse struct {
 
 func (x *ListContextSourcesResponse) Reset() {
 	*x = ListContextSourcesResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[41]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2645,7 +2728,7 @@ func (x *ListContextSourcesResponse) String() string {
 func (*ListContextSourcesResponse) ProtoMessage() {}
 
 func (x *ListContextSourcesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[41]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2658,7 +2741,7 @@ func (x *ListContextSourcesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListContextSourcesResponse.ProtoReflect.Descriptor instead.
 func (*ListContextSourcesResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{41}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ListContextSourcesResponse) GetContextSources() []*ContextSource {
@@ -2679,7 +2762,7 @@ type RemoveContextSourceRequest struct {
 
 func (x *RemoveContextSourceRequest) Reset() {
 	*x = RemoveContextSourceRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[42]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2691,7 +2774,7 @@ func (x *RemoveContextSourceRequest) String() string {
 func (*RemoveContextSourceRequest) ProtoMessage() {}
 
 func (x *RemoveContextSourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[42]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2704,7 +2787,7 @@ func (x *RemoveContextSourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveContextSourceRequest.ProtoReflect.Descriptor instead.
 func (*RemoveContextSourceRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{42}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *RemoveContextSourceRequest) GetWorkPlanId() string {
@@ -2734,7 +2817,7 @@ type MatchWorkPlansRequest struct {
 
 func (x *MatchWorkPlansRequest) Reset() {
 	*x = MatchWorkPlansRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[43]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2746,7 +2829,7 @@ func (x *MatchWorkPlansRequest) String() string {
 func (*MatchWorkPlansRequest) ProtoMessage() {}
 
 func (x *MatchWorkPlansRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[43]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2759,7 +2842,7 @@ func (x *MatchWorkPlansRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchWorkPlansRequest.ProtoReflect.Descriptor instead.
 func (*MatchWorkPlansRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{43}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *MatchWorkPlansRequest) GetTopic() string {
@@ -2786,7 +2869,7 @@ type MatchWorkPlansResponse struct {
 
 func (x *MatchWorkPlansResponse) Reset() {
 	*x = MatchWorkPlansResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[44]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2798,7 +2881,7 @@ func (x *MatchWorkPlansResponse) String() string {
 func (*MatchWorkPlansResponse) ProtoMessage() {}
 
 func (x *MatchWorkPlansResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[44]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2811,7 +2894,7 @@ func (x *MatchWorkPlansResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchWorkPlansResponse.ProtoReflect.Descriptor instead.
 func (*MatchWorkPlansResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{44}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *MatchWorkPlansResponse) GetMatches() []*WorkPlanMatch {
@@ -2834,7 +2917,7 @@ type ImportDraftRequest struct {
 
 func (x *ImportDraftRequest) Reset() {
 	*x = ImportDraftRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[45]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2846,7 +2929,7 @@ func (x *ImportDraftRequest) String() string {
 func (*ImportDraftRequest) ProtoMessage() {}
 
 func (x *ImportDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[45]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2859,7 +2942,7 @@ func (x *ImportDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportDraftRequest.ProtoReflect.Descriptor instead.
 func (*ImportDraftRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{45}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ImportDraftRequest) GetBody() string {
@@ -2882,7 +2965,7 @@ type ImportDraftResponse struct {
 
 func (x *ImportDraftResponse) Reset() {
 	*x = ImportDraftResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[46]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2894,7 +2977,7 @@ func (x *ImportDraftResponse) String() string {
 func (*ImportDraftResponse) ProtoMessage() {}
 
 func (x *ImportDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[46]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2907,7 +2990,7 @@ func (x *ImportDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportDraftResponse.ProtoReflect.Descriptor instead.
 func (*ImportDraftResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{46}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *ImportDraftResponse) GetAgencyId() string {
@@ -2996,7 +3079,11 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\tworkflows\x18\x01 \x03(\v2\x1b.codevaldagency.v1.WorkflowR\tworkflows\"\x1b\n" +
 	"\x19GetConfiguredRolesRequest\"j\n" +
 	"\x1aGetConfiguredRolesResponse\x12L\n" +
-	"\x10configured_roles\x18\x01 \x03(\v2!.codevaldagency.v1.ConfiguredRoleR\x0fconfiguredRoles\"\xe0\x02\n" +
+	"\x10configured_roles\x18\x01 \x03(\v2!.codevaldagency.v1.ConfiguredRoleR\x0fconfiguredRoles\"\x15\n" +
+	"\x13GetWorkItemsRequest\"R\n" +
+	"\x14GetWorkItemsResponse\x12:\n" +
+	"\n" +
+	"work_items\x18\x01 \x03(\v2\x1b.codevaldagency.v1.WorkItemR\tworkItems\"\xe0\x02\n" +
 	"\vAgencyDraft\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tagency_id\x18\x02 \x01(\tR\bagencyId\x12 \n" +
@@ -3142,7 +3229,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x16ACTOR_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10ACTOR_TYPE_HUMAN\x10\x01\x12\x11\n" +
 	"\rACTOR_TYPE_AI\x10\x02\x12\x15\n" +
-	"\x11ACTOR_TYPE_EITHER\x10\x032\xdc\x11\n" +
+	"\x11ACTOR_TYPE_EITHER\x10\x032\xbd\x12\n" +
 	"\rAgencyService\x12Y\n" +
 	"\x10SetAgencyDetails\x12*.codevaldagency.v1.SetAgencyDetailsRequest\x1a\x19.codevaldagency.v1.Agency\x12K\n" +
 	"\tGetAgency\x12#.codevaldagency.v1.GetAgencyRequest\x1a\x19.codevaldagency.v1.Agency\x12^\n" +
@@ -3151,7 +3238,8 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x10ListPublications\x12*.codevaldagency.v1.ListPublicationsRequest\x1a+.codevaldagency.v1.ListPublicationsResponse\x12S\n" +
 	"\bGetGoals\x12\".codevaldagency.v1.GetGoalsRequest\x1a#.codevaldagency.v1.GetGoalsResponse\x12_\n" +
 	"\fGetWorkflows\x12&.codevaldagency.v1.GetWorkflowsRequest\x1a'.codevaldagency.v1.GetWorkflowsResponse\x12q\n" +
-	"\x12GetConfiguredRoles\x12,.codevaldagency.v1.GetConfiguredRolesRequest\x1a-.codevaldagency.v1.GetConfiguredRolesResponse\x12T\n" +
+	"\x12GetConfiguredRoles\x12,.codevaldagency.v1.GetConfiguredRolesRequest\x1a-.codevaldagency.v1.GetConfiguredRolesResponse\x12_\n" +
+	"\fGetWorkItems\x12&.codevaldagency.v1.GetWorkItemsRequest\x1a'.codevaldagency.v1.GetWorkItemsResponse\x12T\n" +
 	"\vCreateDraft\x12%.codevaldagency.v1.CreateDraftRequest\x1a\x1e.codevaldagency.v1.AgencyDraft\x12N\n" +
 	"\bGetDraft\x12\".codevaldagency.v1.GetDraftRequest\x1a\x1e.codevaldagency.v1.AgencyDraft\x12Y\n" +
 	"\n" +
@@ -3183,7 +3271,7 @@ func file_codevaldagency_v1_agency_proto_rawDescGZIP() []byte {
 }
 
 var file_codevaldagency_v1_agency_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_codevaldagency_v1_agency_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
+var file_codevaldagency_v1_agency_proto_msgTypes = make([]protoimpl.MessageInfo, 49)
 var file_codevaldagency_v1_agency_proto_goTypes = []any{
 	(AgencyDraftStatus)(0),                // 0: codevaldagency.v1.AgencyDraftStatus
 	(RACILabel)(0),                        // 1: codevaldagency.v1.RACILabel
@@ -3207,36 +3295,38 @@ var file_codevaldagency_v1_agency_proto_goTypes = []any{
 	(*GetWorkflowsResponse)(nil),          // 19: codevaldagency.v1.GetWorkflowsResponse
 	(*GetConfiguredRolesRequest)(nil),     // 20: codevaldagency.v1.GetConfiguredRolesRequest
 	(*GetConfiguredRolesResponse)(nil),    // 21: codevaldagency.v1.GetConfiguredRolesResponse
-	(*AgencyDraft)(nil),                   // 22: codevaldagency.v1.AgencyDraft
-	(*CreateDraftRequest)(nil),            // 23: codevaldagency.v1.CreateDraftRequest
-	(*GetDraftRequest)(nil),               // 24: codevaldagency.v1.GetDraftRequest
-	(*ListDraftsRequest)(nil),             // 25: codevaldagency.v1.ListDraftsRequest
-	(*ListDraftsResponse)(nil),            // 26: codevaldagency.v1.ListDraftsResponse
-	(*UpdateDraftDescriptionRequest)(nil), // 27: codevaldagency.v1.UpdateDraftDescriptionRequest
-	(*PromoteDraftRequest)(nil),           // 28: codevaldagency.v1.PromoteDraftRequest
-	(*ArchiveDraftRequest)(nil),           // 29: codevaldagency.v1.ArchiveDraftRequest
-	(*WorkPlan)(nil),                      // 30: codevaldagency.v1.WorkPlan
-	(*GitContextSource)(nil),              // 31: codevaldagency.v1.GitContextSource
-	(*CommContextSource)(nil),             // 32: codevaldagency.v1.CommContextSource
-	(*WorkContextSource)(nil),             // 33: codevaldagency.v1.WorkContextSource
-	(*ContextSource)(nil),                 // 34: codevaldagency.v1.ContextSource
-	(*WorkPlanMatch)(nil),                 // 35: codevaldagency.v1.WorkPlanMatch
-	(*CreateWorkPlanRequest)(nil),         // 36: codevaldagency.v1.CreateWorkPlanRequest
-	(*GetWorkPlanRequest)(nil),            // 37: codevaldagency.v1.GetWorkPlanRequest
-	(*ListWorkPlansRequest)(nil),          // 38: codevaldagency.v1.ListWorkPlansRequest
-	(*ListWorkPlansResponse)(nil),         // 39: codevaldagency.v1.ListWorkPlansResponse
-	(*UpdateWorkPlanRequest)(nil),         // 40: codevaldagency.v1.UpdateWorkPlanRequest
-	(*DeleteWorkPlanRequest)(nil),         // 41: codevaldagency.v1.DeleteWorkPlanRequest
-	(*AddContextSourceRequest)(nil),       // 42: codevaldagency.v1.AddContextSourceRequest
-	(*ListContextSourcesRequest)(nil),     // 43: codevaldagency.v1.ListContextSourcesRequest
-	(*ListContextSourcesResponse)(nil),    // 44: codevaldagency.v1.ListContextSourcesResponse
-	(*RemoveContextSourceRequest)(nil),    // 45: codevaldagency.v1.RemoveContextSourceRequest
-	(*MatchWorkPlansRequest)(nil),         // 46: codevaldagency.v1.MatchWorkPlansRequest
-	(*MatchWorkPlansResponse)(nil),        // 47: codevaldagency.v1.MatchWorkPlansResponse
-	(*ImportDraftRequest)(nil),            // 48: codevaldagency.v1.ImportDraftRequest
-	(*ImportDraftResponse)(nil),           // 49: codevaldagency.v1.ImportDraftResponse
-	(*timestamppb.Timestamp)(nil),         // 50: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                 // 51: google.protobuf.Empty
+	(*GetWorkItemsRequest)(nil),           // 22: codevaldagency.v1.GetWorkItemsRequest
+	(*GetWorkItemsResponse)(nil),          // 23: codevaldagency.v1.GetWorkItemsResponse
+	(*AgencyDraft)(nil),                   // 24: codevaldagency.v1.AgencyDraft
+	(*CreateDraftRequest)(nil),            // 25: codevaldagency.v1.CreateDraftRequest
+	(*GetDraftRequest)(nil),               // 26: codevaldagency.v1.GetDraftRequest
+	(*ListDraftsRequest)(nil),             // 27: codevaldagency.v1.ListDraftsRequest
+	(*ListDraftsResponse)(nil),            // 28: codevaldagency.v1.ListDraftsResponse
+	(*UpdateDraftDescriptionRequest)(nil), // 29: codevaldagency.v1.UpdateDraftDescriptionRequest
+	(*PromoteDraftRequest)(nil),           // 30: codevaldagency.v1.PromoteDraftRequest
+	(*ArchiveDraftRequest)(nil),           // 31: codevaldagency.v1.ArchiveDraftRequest
+	(*WorkPlan)(nil),                      // 32: codevaldagency.v1.WorkPlan
+	(*GitContextSource)(nil),              // 33: codevaldagency.v1.GitContextSource
+	(*CommContextSource)(nil),             // 34: codevaldagency.v1.CommContextSource
+	(*WorkContextSource)(nil),             // 35: codevaldagency.v1.WorkContextSource
+	(*ContextSource)(nil),                 // 36: codevaldagency.v1.ContextSource
+	(*WorkPlanMatch)(nil),                 // 37: codevaldagency.v1.WorkPlanMatch
+	(*CreateWorkPlanRequest)(nil),         // 38: codevaldagency.v1.CreateWorkPlanRequest
+	(*GetWorkPlanRequest)(nil),            // 39: codevaldagency.v1.GetWorkPlanRequest
+	(*ListWorkPlansRequest)(nil),          // 40: codevaldagency.v1.ListWorkPlansRequest
+	(*ListWorkPlansResponse)(nil),         // 41: codevaldagency.v1.ListWorkPlansResponse
+	(*UpdateWorkPlanRequest)(nil),         // 42: codevaldagency.v1.UpdateWorkPlanRequest
+	(*DeleteWorkPlanRequest)(nil),         // 43: codevaldagency.v1.DeleteWorkPlanRequest
+	(*AddContextSourceRequest)(nil),       // 44: codevaldagency.v1.AddContextSourceRequest
+	(*ListContextSourcesRequest)(nil),     // 45: codevaldagency.v1.ListContextSourcesRequest
+	(*ListContextSourcesResponse)(nil),    // 46: codevaldagency.v1.ListContextSourcesResponse
+	(*RemoveContextSourceRequest)(nil),    // 47: codevaldagency.v1.RemoveContextSourceRequest
+	(*MatchWorkPlansRequest)(nil),         // 48: codevaldagency.v1.MatchWorkPlansRequest
+	(*MatchWorkPlansResponse)(nil),        // 49: codevaldagency.v1.MatchWorkPlansResponse
+	(*ImportDraftRequest)(nil),            // 50: codevaldagency.v1.ImportDraftRequest
+	(*ImportDraftResponse)(nil),           // 51: codevaldagency.v1.ImportDraftResponse
+	(*timestamppb.Timestamp)(nil),         // 52: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                 // 53: google.protobuf.Empty
 }
 var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	1,  // 0: codevaldagency.v1.RoleAssignment.raci:type_name -> codevaldagency.v1.RACILabel
@@ -3246,82 +3336,85 @@ var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	7,  // 4: codevaldagency.v1.Agency.goals:type_name -> codevaldagency.v1.Goal
 	6,  // 5: codevaldagency.v1.Agency.workflows:type_name -> codevaldagency.v1.Workflow
 	4,  // 6: codevaldagency.v1.Agency.configured_roles:type_name -> codevaldagency.v1.ConfiguredRole
-	50, // 7: codevaldagency.v1.Agency.created_at:type_name -> google.protobuf.Timestamp
-	50, // 8: codevaldagency.v1.Agency.updated_at:type_name -> google.protobuf.Timestamp
+	52, // 7: codevaldagency.v1.Agency.created_at:type_name -> google.protobuf.Timestamp
+	52, // 8: codevaldagency.v1.Agency.updated_at:type_name -> google.protobuf.Timestamp
 	8,  // 9: codevaldagency.v1.AgencyPublication.agency:type_name -> codevaldagency.v1.Agency
-	50, // 10: codevaldagency.v1.AgencyPublication.published_at:type_name -> google.protobuf.Timestamp
+	52, // 10: codevaldagency.v1.AgencyPublication.published_at:type_name -> google.protobuf.Timestamp
 	11, // 11: codevaldagency.v1.ListPublicationsResponse.publications:type_name -> codevaldagency.v1.AgencyPublication
 	7,  // 12: codevaldagency.v1.GetGoalsResponse.goals:type_name -> codevaldagency.v1.Goal
 	6,  // 13: codevaldagency.v1.GetWorkflowsResponse.workflows:type_name -> codevaldagency.v1.Workflow
 	4,  // 14: codevaldagency.v1.GetConfiguredRolesResponse.configured_roles:type_name -> codevaldagency.v1.ConfiguredRole
-	0,  // 15: codevaldagency.v1.AgencyDraft.status:type_name -> codevaldagency.v1.AgencyDraftStatus
-	50, // 16: codevaldagency.v1.AgencyDraft.created_at:type_name -> google.protobuf.Timestamp
-	50, // 17: codevaldagency.v1.AgencyDraft.updated_at:type_name -> google.protobuf.Timestamp
-	22, // 18: codevaldagency.v1.ListDraftsResponse.drafts:type_name -> codevaldagency.v1.AgencyDraft
-	31, // 19: codevaldagency.v1.ContextSource.git:type_name -> codevaldagency.v1.GitContextSource
-	32, // 20: codevaldagency.v1.ContextSource.comm:type_name -> codevaldagency.v1.CommContextSource
-	33, // 21: codevaldagency.v1.ContextSource.work:type_name -> codevaldagency.v1.WorkContextSource
-	30, // 22: codevaldagency.v1.WorkPlanMatch.work_plan:type_name -> codevaldagency.v1.WorkPlan
-	34, // 23: codevaldagency.v1.WorkPlanMatch.context_sources:type_name -> codevaldagency.v1.ContextSource
-	30, // 24: codevaldagency.v1.ListWorkPlansResponse.work_plans:type_name -> codevaldagency.v1.WorkPlan
-	31, // 25: codevaldagency.v1.AddContextSourceRequest.git:type_name -> codevaldagency.v1.GitContextSource
-	32, // 26: codevaldagency.v1.AddContextSourceRequest.comm:type_name -> codevaldagency.v1.CommContextSource
-	33, // 27: codevaldagency.v1.AddContextSourceRequest.work:type_name -> codevaldagency.v1.WorkContextSource
-	34, // 28: codevaldagency.v1.ListContextSourcesResponse.context_sources:type_name -> codevaldagency.v1.ContextSource
-	35, // 29: codevaldagency.v1.MatchWorkPlansResponse.matches:type_name -> codevaldagency.v1.WorkPlanMatch
-	10, // 30: codevaldagency.v1.AgencyService.SetAgencyDetails:input_type -> codevaldagency.v1.SetAgencyDetailsRequest
-	9,  // 31: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
-	12, // 32: codevaldagency.v1.AgencyService.PublishAgency:input_type -> codevaldagency.v1.PublishAgencyRequest
-	13, // 33: codevaldagency.v1.AgencyService.GetPublication:input_type -> codevaldagency.v1.GetPublicationRequest
-	14, // 34: codevaldagency.v1.AgencyService.ListPublications:input_type -> codevaldagency.v1.ListPublicationsRequest
-	16, // 35: codevaldagency.v1.AgencyService.GetGoals:input_type -> codevaldagency.v1.GetGoalsRequest
-	18, // 36: codevaldagency.v1.AgencyService.GetWorkflows:input_type -> codevaldagency.v1.GetWorkflowsRequest
-	20, // 37: codevaldagency.v1.AgencyService.GetConfiguredRoles:input_type -> codevaldagency.v1.GetConfiguredRolesRequest
-	23, // 38: codevaldagency.v1.AgencyService.CreateDraft:input_type -> codevaldagency.v1.CreateDraftRequest
-	24, // 39: codevaldagency.v1.AgencyService.GetDraft:input_type -> codevaldagency.v1.GetDraftRequest
-	25, // 40: codevaldagency.v1.AgencyService.ListDrafts:input_type -> codevaldagency.v1.ListDraftsRequest
-	27, // 41: codevaldagency.v1.AgencyService.UpdateDraftDescription:input_type -> codevaldagency.v1.UpdateDraftDescriptionRequest
-	28, // 42: codevaldagency.v1.AgencyService.PromoteDraft:input_type -> codevaldagency.v1.PromoteDraftRequest
-	29, // 43: codevaldagency.v1.AgencyService.ArchiveDraft:input_type -> codevaldagency.v1.ArchiveDraftRequest
-	48, // 44: codevaldagency.v1.AgencyService.ImportDraft:input_type -> codevaldagency.v1.ImportDraftRequest
-	36, // 45: codevaldagency.v1.AgencyService.CreateWorkPlan:input_type -> codevaldagency.v1.CreateWorkPlanRequest
-	37, // 46: codevaldagency.v1.AgencyService.GetWorkPlan:input_type -> codevaldagency.v1.GetWorkPlanRequest
-	38, // 47: codevaldagency.v1.AgencyService.ListWorkPlans:input_type -> codevaldagency.v1.ListWorkPlansRequest
-	40, // 48: codevaldagency.v1.AgencyService.UpdateWorkPlan:input_type -> codevaldagency.v1.UpdateWorkPlanRequest
-	41, // 49: codevaldagency.v1.AgencyService.DeleteWorkPlan:input_type -> codevaldagency.v1.DeleteWorkPlanRequest
-	42, // 50: codevaldagency.v1.AgencyService.AddContextSource:input_type -> codevaldagency.v1.AddContextSourceRequest
-	43, // 51: codevaldagency.v1.AgencyService.ListContextSources:input_type -> codevaldagency.v1.ListContextSourcesRequest
-	45, // 52: codevaldagency.v1.AgencyService.RemoveContextSource:input_type -> codevaldagency.v1.RemoveContextSourceRequest
-	46, // 53: codevaldagency.v1.AgencyService.MatchWorkPlans:input_type -> codevaldagency.v1.MatchWorkPlansRequest
-	8,  // 54: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
-	8,  // 55: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
-	11, // 56: codevaldagency.v1.AgencyService.PublishAgency:output_type -> codevaldagency.v1.AgencyPublication
-	11, // 57: codevaldagency.v1.AgencyService.GetPublication:output_type -> codevaldagency.v1.AgencyPublication
-	15, // 58: codevaldagency.v1.AgencyService.ListPublications:output_type -> codevaldagency.v1.ListPublicationsResponse
-	17, // 59: codevaldagency.v1.AgencyService.GetGoals:output_type -> codevaldagency.v1.GetGoalsResponse
-	19, // 60: codevaldagency.v1.AgencyService.GetWorkflows:output_type -> codevaldagency.v1.GetWorkflowsResponse
-	21, // 61: codevaldagency.v1.AgencyService.GetConfiguredRoles:output_type -> codevaldagency.v1.GetConfiguredRolesResponse
-	22, // 62: codevaldagency.v1.AgencyService.CreateDraft:output_type -> codevaldagency.v1.AgencyDraft
-	22, // 63: codevaldagency.v1.AgencyService.GetDraft:output_type -> codevaldagency.v1.AgencyDraft
-	26, // 64: codevaldagency.v1.AgencyService.ListDrafts:output_type -> codevaldagency.v1.ListDraftsResponse
-	22, // 65: codevaldagency.v1.AgencyService.UpdateDraftDescription:output_type -> codevaldagency.v1.AgencyDraft
-	8,  // 66: codevaldagency.v1.AgencyService.PromoteDraft:output_type -> codevaldagency.v1.Agency
-	22, // 67: codevaldagency.v1.AgencyService.ArchiveDraft:output_type -> codevaldagency.v1.AgencyDraft
-	49, // 68: codevaldagency.v1.AgencyService.ImportDraft:output_type -> codevaldagency.v1.ImportDraftResponse
-	30, // 69: codevaldagency.v1.AgencyService.CreateWorkPlan:output_type -> codevaldagency.v1.WorkPlan
-	30, // 70: codevaldagency.v1.AgencyService.GetWorkPlan:output_type -> codevaldagency.v1.WorkPlan
-	39, // 71: codevaldagency.v1.AgencyService.ListWorkPlans:output_type -> codevaldagency.v1.ListWorkPlansResponse
-	30, // 72: codevaldagency.v1.AgencyService.UpdateWorkPlan:output_type -> codevaldagency.v1.WorkPlan
-	51, // 73: codevaldagency.v1.AgencyService.DeleteWorkPlan:output_type -> google.protobuf.Empty
-	34, // 74: codevaldagency.v1.AgencyService.AddContextSource:output_type -> codevaldagency.v1.ContextSource
-	44, // 75: codevaldagency.v1.AgencyService.ListContextSources:output_type -> codevaldagency.v1.ListContextSourcesResponse
-	51, // 76: codevaldagency.v1.AgencyService.RemoveContextSource:output_type -> google.protobuf.Empty
-	47, // 77: codevaldagency.v1.AgencyService.MatchWorkPlans:output_type -> codevaldagency.v1.MatchWorkPlansResponse
-	54, // [54:78] is the sub-list for method output_type
-	30, // [30:54] is the sub-list for method input_type
-	30, // [30:30] is the sub-list for extension type_name
-	30, // [30:30] is the sub-list for extension extendee
-	0,  // [0:30] is the sub-list for field type_name
+	5,  // 15: codevaldagency.v1.GetWorkItemsResponse.work_items:type_name -> codevaldagency.v1.WorkItem
+	0,  // 16: codevaldagency.v1.AgencyDraft.status:type_name -> codevaldagency.v1.AgencyDraftStatus
+	52, // 17: codevaldagency.v1.AgencyDraft.created_at:type_name -> google.protobuf.Timestamp
+	52, // 18: codevaldagency.v1.AgencyDraft.updated_at:type_name -> google.protobuf.Timestamp
+	24, // 19: codevaldagency.v1.ListDraftsResponse.drafts:type_name -> codevaldagency.v1.AgencyDraft
+	33, // 20: codevaldagency.v1.ContextSource.git:type_name -> codevaldagency.v1.GitContextSource
+	34, // 21: codevaldagency.v1.ContextSource.comm:type_name -> codevaldagency.v1.CommContextSource
+	35, // 22: codevaldagency.v1.ContextSource.work:type_name -> codevaldagency.v1.WorkContextSource
+	32, // 23: codevaldagency.v1.WorkPlanMatch.work_plan:type_name -> codevaldagency.v1.WorkPlan
+	36, // 24: codevaldagency.v1.WorkPlanMatch.context_sources:type_name -> codevaldagency.v1.ContextSource
+	32, // 25: codevaldagency.v1.ListWorkPlansResponse.work_plans:type_name -> codevaldagency.v1.WorkPlan
+	33, // 26: codevaldagency.v1.AddContextSourceRequest.git:type_name -> codevaldagency.v1.GitContextSource
+	34, // 27: codevaldagency.v1.AddContextSourceRequest.comm:type_name -> codevaldagency.v1.CommContextSource
+	35, // 28: codevaldagency.v1.AddContextSourceRequest.work:type_name -> codevaldagency.v1.WorkContextSource
+	36, // 29: codevaldagency.v1.ListContextSourcesResponse.context_sources:type_name -> codevaldagency.v1.ContextSource
+	37, // 30: codevaldagency.v1.MatchWorkPlansResponse.matches:type_name -> codevaldagency.v1.WorkPlanMatch
+	10, // 31: codevaldagency.v1.AgencyService.SetAgencyDetails:input_type -> codevaldagency.v1.SetAgencyDetailsRequest
+	9,  // 32: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
+	12, // 33: codevaldagency.v1.AgencyService.PublishAgency:input_type -> codevaldagency.v1.PublishAgencyRequest
+	13, // 34: codevaldagency.v1.AgencyService.GetPublication:input_type -> codevaldagency.v1.GetPublicationRequest
+	14, // 35: codevaldagency.v1.AgencyService.ListPublications:input_type -> codevaldagency.v1.ListPublicationsRequest
+	16, // 36: codevaldagency.v1.AgencyService.GetGoals:input_type -> codevaldagency.v1.GetGoalsRequest
+	18, // 37: codevaldagency.v1.AgencyService.GetWorkflows:input_type -> codevaldagency.v1.GetWorkflowsRequest
+	20, // 38: codevaldagency.v1.AgencyService.GetConfiguredRoles:input_type -> codevaldagency.v1.GetConfiguredRolesRequest
+	22, // 39: codevaldagency.v1.AgencyService.GetWorkItems:input_type -> codevaldagency.v1.GetWorkItemsRequest
+	25, // 40: codevaldagency.v1.AgencyService.CreateDraft:input_type -> codevaldagency.v1.CreateDraftRequest
+	26, // 41: codevaldagency.v1.AgencyService.GetDraft:input_type -> codevaldagency.v1.GetDraftRequest
+	27, // 42: codevaldagency.v1.AgencyService.ListDrafts:input_type -> codevaldagency.v1.ListDraftsRequest
+	29, // 43: codevaldagency.v1.AgencyService.UpdateDraftDescription:input_type -> codevaldagency.v1.UpdateDraftDescriptionRequest
+	30, // 44: codevaldagency.v1.AgencyService.PromoteDraft:input_type -> codevaldagency.v1.PromoteDraftRequest
+	31, // 45: codevaldagency.v1.AgencyService.ArchiveDraft:input_type -> codevaldagency.v1.ArchiveDraftRequest
+	50, // 46: codevaldagency.v1.AgencyService.ImportDraft:input_type -> codevaldagency.v1.ImportDraftRequest
+	38, // 47: codevaldagency.v1.AgencyService.CreateWorkPlan:input_type -> codevaldagency.v1.CreateWorkPlanRequest
+	39, // 48: codevaldagency.v1.AgencyService.GetWorkPlan:input_type -> codevaldagency.v1.GetWorkPlanRequest
+	40, // 49: codevaldagency.v1.AgencyService.ListWorkPlans:input_type -> codevaldagency.v1.ListWorkPlansRequest
+	42, // 50: codevaldagency.v1.AgencyService.UpdateWorkPlan:input_type -> codevaldagency.v1.UpdateWorkPlanRequest
+	43, // 51: codevaldagency.v1.AgencyService.DeleteWorkPlan:input_type -> codevaldagency.v1.DeleteWorkPlanRequest
+	44, // 52: codevaldagency.v1.AgencyService.AddContextSource:input_type -> codevaldagency.v1.AddContextSourceRequest
+	45, // 53: codevaldagency.v1.AgencyService.ListContextSources:input_type -> codevaldagency.v1.ListContextSourcesRequest
+	47, // 54: codevaldagency.v1.AgencyService.RemoveContextSource:input_type -> codevaldagency.v1.RemoveContextSourceRequest
+	48, // 55: codevaldagency.v1.AgencyService.MatchWorkPlans:input_type -> codevaldagency.v1.MatchWorkPlansRequest
+	8,  // 56: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
+	8,  // 57: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
+	11, // 58: codevaldagency.v1.AgencyService.PublishAgency:output_type -> codevaldagency.v1.AgencyPublication
+	11, // 59: codevaldagency.v1.AgencyService.GetPublication:output_type -> codevaldagency.v1.AgencyPublication
+	15, // 60: codevaldagency.v1.AgencyService.ListPublications:output_type -> codevaldagency.v1.ListPublicationsResponse
+	17, // 61: codevaldagency.v1.AgencyService.GetGoals:output_type -> codevaldagency.v1.GetGoalsResponse
+	19, // 62: codevaldagency.v1.AgencyService.GetWorkflows:output_type -> codevaldagency.v1.GetWorkflowsResponse
+	21, // 63: codevaldagency.v1.AgencyService.GetConfiguredRoles:output_type -> codevaldagency.v1.GetConfiguredRolesResponse
+	23, // 64: codevaldagency.v1.AgencyService.GetWorkItems:output_type -> codevaldagency.v1.GetWorkItemsResponse
+	24, // 65: codevaldagency.v1.AgencyService.CreateDraft:output_type -> codevaldagency.v1.AgencyDraft
+	24, // 66: codevaldagency.v1.AgencyService.GetDraft:output_type -> codevaldagency.v1.AgencyDraft
+	28, // 67: codevaldagency.v1.AgencyService.ListDrafts:output_type -> codevaldagency.v1.ListDraftsResponse
+	24, // 68: codevaldagency.v1.AgencyService.UpdateDraftDescription:output_type -> codevaldagency.v1.AgencyDraft
+	8,  // 69: codevaldagency.v1.AgencyService.PromoteDraft:output_type -> codevaldagency.v1.Agency
+	24, // 70: codevaldagency.v1.AgencyService.ArchiveDraft:output_type -> codevaldagency.v1.AgencyDraft
+	51, // 71: codevaldagency.v1.AgencyService.ImportDraft:output_type -> codevaldagency.v1.ImportDraftResponse
+	32, // 72: codevaldagency.v1.AgencyService.CreateWorkPlan:output_type -> codevaldagency.v1.WorkPlan
+	32, // 73: codevaldagency.v1.AgencyService.GetWorkPlan:output_type -> codevaldagency.v1.WorkPlan
+	41, // 74: codevaldagency.v1.AgencyService.ListWorkPlans:output_type -> codevaldagency.v1.ListWorkPlansResponse
+	32, // 75: codevaldagency.v1.AgencyService.UpdateWorkPlan:output_type -> codevaldagency.v1.WorkPlan
+	53, // 76: codevaldagency.v1.AgencyService.DeleteWorkPlan:output_type -> google.protobuf.Empty
+	36, // 77: codevaldagency.v1.AgencyService.AddContextSource:output_type -> codevaldagency.v1.ContextSource
+	46, // 78: codevaldagency.v1.AgencyService.ListContextSources:output_type -> codevaldagency.v1.ListContextSourcesResponse
+	53, // 79: codevaldagency.v1.AgencyService.RemoveContextSource:output_type -> google.protobuf.Empty
+	49, // 80: codevaldagency.v1.AgencyService.MatchWorkPlans:output_type -> codevaldagency.v1.MatchWorkPlansResponse
+	56, // [56:81] is the sub-list for method output_type
+	31, // [31:56] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_codevaldagency_v1_agency_proto_init() }
@@ -3335,7 +3428,7 @@ func file_codevaldagency_v1_agency_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_codevaldagency_v1_agency_proto_rawDesc), len(file_codevaldagency_v1_agency_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   47,
+			NumMessages:   49,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

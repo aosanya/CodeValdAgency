@@ -97,24 +97,49 @@ func (m *agencyManager) ListWorkPlans(ctx context.Context) ([]WorkPlan, error) {
 // Returns [ErrWorkPlanNotFound] if no WorkPlan entity with that ID exists.
 // Returns [ErrInvalidRegex] if TriggerTopic or PayloadCondition is not a valid Go regexp.
 func (m *agencyManager) UpdateWorkPlan(ctx context.Context, workPlanID string, req UpdateWorkPlanRequest) (WorkPlan, error) {
-	if err := validateWorkPlanRegex(req.TriggerTopic, req.PayloadCondition); err != nil {
+	topic := ""
+	if req.TriggerTopic != nil {
+		topic = *req.TriggerTopic
+	}
+	cond := ""
+	if req.PayloadCondition != nil {
+		cond = *req.PayloadCondition
+	}
+	if err := validateWorkPlanRegex(topic, cond); err != nil {
 		return WorkPlan{}, err
 	}
 	if _, err := m.GetWorkPlan(ctx, workPlanID); err != nil {
 		return WorkPlan{}, err
 	}
 
+	props := map[string]any{}
+	if req.Name != nil {
+		props["name"] = *req.Name
+	}
+	if req.Description != nil {
+		props["description"] = *req.Description
+	}
+	if req.TriggerTopic != nil {
+		props["trigger_topic"] = *req.TriggerTopic
+	}
+	if req.PayloadCondition != nil {
+		props["payload_condition"] = *req.PayloadCondition
+	}
+	if req.Instructions != nil {
+		props["instructions"] = *req.Instructions
+	}
+	if req.AgentID != nil {
+		props["agent_id"] = *req.AgentID
+	}
+	if req.Enabled != nil {
+		props["enabled"] = *req.Enabled
+	}
+	if req.Ordinality != nil {
+		props["ordinality"] = *req.Ordinality
+	}
+
 	updated, err := m.dm.UpdateEntity(ctx, m.agencyID, workPlanID, entitygraph.UpdateEntityRequest{
-		Properties: map[string]any{
-			"name":              req.Name,
-			"description":       req.Description,
-			"trigger_topic":     req.TriggerTopic,
-			"payload_condition": req.PayloadCondition,
-			"instructions":      req.Instructions,
-			"agent_id":          req.AgentID,
-			"enabled":           req.Enabled,
-			"ordinality":        req.Ordinality,
-		},
+		Properties: props,
 	})
 	if err != nil {
 		return WorkPlan{}, fmt.Errorf("UpdateWorkPlan %s: %w", workPlanID, err)

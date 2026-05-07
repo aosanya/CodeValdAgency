@@ -670,15 +670,19 @@ func (m *agencyManager) nextPublicationVersion(ctx context.Context) (int, error)
 }
 
 // draftContentHash computes a deterministic SHA-256 fingerprint of the
-// logical content of the given draft. It collects DraftGoal, DraftWorkflow,
-// DraftWorkItem, and DraftConfiguredRole entities whose draft_ref_code property
-// equals draftID, excludes infrastructure properties (draft_ref_code,
-// draft_workflow_ref_code, created_at, updated_at), JSON-encodes each entity's
-// remaining properties together with its type, sorts the resulting strings for
-// determinism, and returns the hex-encoded SHA-256 of the joined output.
+// logical content of the given draft. It collects:
+//   - DraftGoal, DraftWorkflow, DraftWorkItem, DraftConfiguredRole entities
+//     scoped to draftID via their draft_ref_code property
+//   - All live WorkPlan entities (which are always live and never draft-scoped)
 //
-// Two drafts whose sub-entity logical content is identical produce the same
-// hash regardless of entity creation order or internal IDs.
+// Infrastructure properties (draft_ref_code, draft_workflow_ref_code,
+// created_at, updated_at) are excluded. Each entity's remaining properties are
+// JSON-encoded together with its type, the resulting strings are sorted for
+// determinism, and the hex-encoded SHA-256 of the joined output is returned.
+//
+// Including WorkPlan ensures that a published version reflects the complete
+// agency dispatch configuration, so a work plan change between two publishes
+// always produces a different content hash.
 func (m *agencyManager) draftContentHash(ctx context.Context, draftID string) (string, error) {
 	listByDraft := func(typeID string) ([]entitygraph.Entity, error) {
 		all, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
@@ -698,6 +702,8 @@ func (m *agencyManager) draftContentHash(ctx context.Context, draftID string) (s
 	}
 
 	var records []string
+
+	// Draft sub-entity types scoped by draftID.
 	for _, typeID := range []string{"DraftGoal", "DraftWorkflow", "DraftWorkItem", "DraftConfiguredRole"} {
 		entities, err := listByDraft(typeID)
 		if err != nil {
@@ -713,6 +719,25 @@ func (m *agencyManager) draftContentHash(ctx context.Context, draftID string) (s
 			records = append(records, string(b))
 		}
 	}
+
+	// Live WorkPlan entities are not draft-scoped; include them so that work
+	// plan edits between publishes always produce a distinct hash.
+	workPlans, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
+		AgencyID: m.agencyID,
+		TypeID:   "WorkPlan",
+	})
+	if err != nil {
+		return "", fmt.Errorf("draftContentHash WorkPlan: %w", err)
+	}
+	for _, e := range workPlans {
+		props := copyPropsExcluding(e.Properties, "created_at", "updated_at")
+		b, err := json.Marshal(map[string]any{"type": "WorkPlan", "props": props})
+		if err != nil {
+			return "", fmt.Errorf("draftContentHash marshal WorkPlan: %w", err)
+		}
+		records = append(records, string(b))
+	}
+
 	sort.Strings(records)
 	sum := sha256.Sum256([]byte(strings.Join(records, "\n")))
 	return hex.EncodeToString(sum[:]), nil

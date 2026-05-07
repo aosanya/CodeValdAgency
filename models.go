@@ -409,31 +409,16 @@ type CreateWorkPlanRequest struct {
 }
 
 // UpdateWorkPlanRequest carries the fields that may be changed on an existing [WorkPlan].
+// Only non-nil pointer fields are written; nil means "leave unchanged".
 type UpdateWorkPlanRequest struct {
-	// Name is a human-readable label for the work plan.
-	Name string
-
-	// Description is the work plan brief.
-	Description string
-
-	// TriggerTopic is a Go regex matched against the incoming Cross event topic.
-	TriggerTopic string
-
-	// PayloadCondition is a Go regex matched against the raw JSON payload.
-	// Empty string matches all payloads.
-	PayloadCondition string
-
-	// Instructions is the prompt template injected into the triggered AgentRun.
-	Instructions string
-
-	// AgentID is a cross-service reference to a CodeValdAI Agent entity ID.
-	AgentID string
-
-	// Enabled controls whether this work plan participates in MatchWorkPlans dispatch.
-	Enabled bool
-
-	// Ordinality controls ascending sort order when multiple work plans match.
-	Ordinality int
+	Name             *string
+	Description      *string
+	TriggerTopic     *string
+	PayloadCondition *string
+	Instructions     *string
+	AgentID          *string
+	Enabled          *bool
+	Ordinality       *int
 }
 
 // AddContextSourceRequest carries the typed configuration for a new [ContextSource].

@@ -273,6 +273,54 @@ func agencyRoutes() []types.RouteInfo {
 				{URLParam: "sourceId", Field: "source_id"},
 			},
 		},
+
+		// ── Draft routes — override dynamic entity CRUD for write operations ─────
+		// POST /agency/{agencyId}/drafts — fork a new editable draft from live or
+		// draft, deep-copying the relevant sub-entity graph. GET and single-draft
+		// GET remain on the dynamic entity CRUD routes so the frontend's
+		// ListEntitiesResponse format is preserved.
+		{
+			Method:     "POST",
+			Pattern:    "/agency/{agencyId}/drafts",
+			Capability: "create_draft",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/CreateDraft",
+		},
+		// PATCH /agency/{agencyId}/drafts/{draftId} — update draft description.
+		{
+			Method:     "PATCH",
+			Pattern:    "/agency/{agencyId}/drafts/{draftId}",
+			Capability: "update_draft_description",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/UpdateDraftDescription",
+			PathBindings: []types.PathBinding{
+				{URLParam: "draftId", Field: "draft_id"},
+			},
+		},
+
+		// ── WorkPlan routes — override dynamic entity CRUD for write operations ─────
+		// GET list and GET single remain on dynamic entity CRUD so the frontend's
+		// ListEntitiesResponse format ({entities:[]}) is preserved.
+		//
+		// PUT uses UpdateWorkPlan for partial-update semantics (only non-zero fields
+		// are written); entity CRUD UpdateEntity would require the full document.
+		{
+			Method:     "PUT",
+			Pattern:    "/agency/{agencyId}/work-plans/{workPlanId}",
+			Capability: "update_work_plan",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/UpdateWorkPlan",
+			PathBindings: []types.PathBinding{
+				{URLParam: "workPlanId", Field: "work_plan_id"},
+			},
+		},
+		// DELETE /agency/{agencyId}/work-plans/{workPlanId} — delete a work plan.
+		{
+			Method:     "DELETE",
+			Pattern:    "/agency/{agencyId}/work-plans/{workPlanId}",
+			Capability: "delete_work_plan",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/DeleteWorkPlan",
+			PathBindings: []types.PathBinding{
+				{URLParam: "workPlanId", Field: "work_plan_id"},
+			},
+		},
 	}
 
 	// Dynamic routes: one CRUD set per TypeDefinition with a non-empty PathSegment.

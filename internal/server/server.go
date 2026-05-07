@@ -209,6 +209,27 @@ func timeToProto(t time.Time) *timestamppb.Timestamp {
 	return timestamppb.New(t)
 }
 
+func optStr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func optBool(b bool) *bool {
+	if !b {
+		return nil
+	}
+	return &b
+}
+
+func optInt(i int) *int {
+	if i == 0 {
+		return nil
+	}
+	return &i
+}
+
 func publicationToProto(p codevaldagency.AgencyPublication) *pb.AgencyPublication {
 	return &pb.AgencyPublication{
 		Id:          p.ID,
@@ -279,14 +300,14 @@ func (s *Server) ListWorkPlans(ctx context.Context, _ *pb.ListWorkPlansRequest) 
 // UpdateWorkPlan implements pb.AgencyServiceServer.
 func (s *Server) UpdateWorkPlan(ctx context.Context, req *pb.UpdateWorkPlanRequest) (*pb.WorkPlan, error) {
 	wp, err := s.mgr.UpdateWorkPlan(ctx, req.GetWorkPlanId(), codevaldagency.UpdateWorkPlanRequest{
-		Name:             req.GetName(),
-		Description:      req.GetDescription(),
-		TriggerTopic:     req.GetTriggerTopic(),
-		PayloadCondition: req.GetPayloadCondition(),
-		Instructions:     req.GetInstructions(),
-		AgentID:          req.GetAgentId(),
-		Enabled:          req.GetEnabled(),
-		Ordinality:       int(req.GetOrdinality()),
+		Name:             optStr(req.GetName()),
+		Description:      optStr(req.GetDescription()),
+		TriggerTopic:     optStr(req.GetTriggerTopic()),
+		PayloadCondition: optStr(req.GetPayloadCondition()),
+		Instructions:     optStr(req.GetInstructions()),
+		AgentID:          optStr(req.GetAgentId()),
+		Enabled:          optBool(req.GetEnabled()),
+		Ordinality:       optInt(int(req.GetOrdinality())),
 	})
 	if err != nil {
 		return nil, toGRPCError(err)

@@ -1771,11 +1771,15 @@ type WorkPlan struct {
 	// instructions is the prompt template injected into the triggered AgentRun.
 	Instructions string `protobuf:"bytes,7,opt,name=instructions,proto3" json:"instructions,omitempty"`
 	// agent_id is a cross-service reference to a CodeValdAI Agent entity ID.
-	AgentId       string `protobuf:"bytes,8,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Enabled       bool   `protobuf:"varint,9,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Ordinality    int32  `protobuf:"varint,10,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	AgentId    string `protobuf:"bytes,8,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Enabled    bool   `protobuf:"varint,9,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Ordinality int32  `protobuf:"varint,10,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
+	// handler_service is the CodeVald service responsible for executing this plan
+	// (e.g. "codevaldai", "codevaldcomm"). Each service subscribes only to topics
+	// from plans where handler_service matches its own service name.
+	HandlerService string `protobuf:"bytes,11,opt,name=handler_service,json=handlerService,proto3" json:"handler_service,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *WorkPlan) Reset() {
@@ -1876,6 +1880,13 @@ func (x *WorkPlan) GetOrdinality() int32 {
 		return x.Ordinality
 	}
 	return 0
+}
+
+func (x *WorkPlan) GetHandlerService() string {
+	if x != nil {
+		return x.HandlerService
+	}
+	return ""
 }
 
 // GitContextSource configures what to fetch from CodeValdGit when a work plan matches.
@@ -2213,6 +2224,7 @@ type CreateWorkPlanRequest struct {
 	AgentId          string                 `protobuf:"bytes,6,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	Enabled          bool                   `protobuf:"varint,7,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	Ordinality       int32                  `protobuf:"varint,8,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
+	HandlerService   string                 `protobuf:"bytes,9,opt,name=handler_service,json=handlerService,proto3" json:"handler_service,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -2301,6 +2313,13 @@ func (x *CreateWorkPlanRequest) GetOrdinality() int32 {
 		return x.Ordinality
 	}
 	return 0
+}
+
+func (x *CreateWorkPlanRequest) GetHandlerService() string {
+	if x != nil {
+		return x.HandlerService
+	}
+	return ""
 }
 
 // GetWorkPlanRequest selects a WorkPlan by its entity ID.
@@ -2442,6 +2461,7 @@ type UpdateWorkPlanRequest struct {
 	AgentId          string                 `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	Enabled          bool                   `protobuf:"varint,8,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	Ordinality       int32                  `protobuf:"varint,9,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
+	HandlerService   string                 `protobuf:"bytes,10,opt,name=handler_service,json=handlerService,proto3" json:"handler_service,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -2537,6 +2557,13 @@ func (x *UpdateWorkPlanRequest) GetOrdinality() int32 {
 		return x.Ordinality
 	}
 	return 0
+}
+
+func (x *UpdateWorkPlanRequest) GetHandlerService() string {
+	if x != nil {
+		return x.HandlerService
+	}
+	return ""
 }
 
 // DeleteWorkPlanRequest selects a WorkPlan by its entity ID.
@@ -3110,7 +3137,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x13PromoteDraftRequest\x12\x19\n" +
 	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"0\n" +
 	"\x13ArchiveDraftRequest\x12\x19\n" +
-	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"\xb8\x02\n" +
+	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"\xe1\x02\n" +
 	"\bWorkPlan\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tagency_id\x18\x02 \x01(\tR\bagencyId\x12\x12\n" +
@@ -3124,7 +3151,8 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\n" +
 	"ordinality\x18\n" +
 	" \x01(\x05R\n" +
-	"ordinality\"\xa5\x01\n" +
+	"ordinality\x12'\n" +
+	"\x0fhandler_service\x18\v \x01(\tR\x0ehandlerService\"\xa5\x01\n" +
 	"\x10GitContextSource\x12\x18\n" +
 	"\asignals\x18\x01 \x01(\tR\asignals\x12\x1f\n" +
 	"\vmax_results\x18\x02 \x01(\x05R\n" +
@@ -3152,7 +3180,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x04work\x18\x06 \x01(\v2$.codevaldagency.v1.WorkContextSourceR\x04work\"\x94\x01\n" +
 	"\rWorkPlanMatch\x128\n" +
 	"\twork_plan\x18\x01 \x01(\v2\x1b.codevaldagency.v1.WorkPlanR\bworkPlan\x12I\n" +
-	"\x0fcontext_sources\x18\x02 \x03(\v2 .codevaldagency.v1.ContextSourceR\x0econtextSources\"\x98\x02\n" +
+	"\x0fcontext_sources\x18\x02 \x03(\v2 .codevaldagency.v1.ContextSourceR\x0econtextSources\"\xc1\x02\n" +
 	"\x15CreateWorkPlanRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12#\n" +
@@ -3163,14 +3191,15 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\aenabled\x18\a \x01(\bR\aenabled\x12\x1e\n" +
 	"\n" +
 	"ordinality\x18\b \x01(\x05R\n" +
-	"ordinality\"6\n" +
+	"ordinality\x12'\n" +
+	"\x0fhandler_service\x18\t \x01(\tR\x0ehandlerService\"6\n" +
 	"\x12GetWorkPlanRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\"\x16\n" +
 	"\x14ListWorkPlansRequest\"S\n" +
 	"\x15ListWorkPlansResponse\x12:\n" +
 	"\n" +
-	"work_plans\x18\x01 \x03(\v2\x1b.codevaldagency.v1.WorkPlanR\tworkPlans\"\xba\x02\n" +
+	"work_plans\x18\x01 \x03(\v2\x1b.codevaldagency.v1.WorkPlanR\tworkPlans\"\xe3\x02\n" +
 	"\x15UpdateWorkPlanRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\x12\x12\n" +
@@ -3183,7 +3212,9 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\aenabled\x18\b \x01(\bR\aenabled\x12\x1e\n" +
 	"\n" +
 	"ordinality\x18\t \x01(\x05R\n" +
-	"ordinality\"9\n" +
+	"ordinality\x12'\n" +
+	"\x0fhandler_service\x18\n" +
+	" \x01(\tR\x0ehandlerService\"9\n" +
 	"\x15DeleteWorkPlanRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\"\x87\x02\n" +

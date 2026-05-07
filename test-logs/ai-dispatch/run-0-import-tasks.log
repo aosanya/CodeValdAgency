@@ -1,0 +1,50 @@
+## Run 0 — Import Project Tasks from gittesting.json
+Date: 2026-05-07
+
+### Request
+POST http://localhost:8080/work/utility-app-builder/projects/import
+Content-Type: application/json
+Authorization: Basic codevald:***
+
+Body: <contents of /workspaces/CodeVald-AIProject/CodeValdWork/documentation/4-QA/sampleProject/gittesting.json>
+
+### Response
+HTTP Status: 200
+
+{
+  "project": {
+    "id": "6ed9d041-7210-4a27-b17f-1a8590b73648",
+    "agencyId": "utility-app-builder",
+    "name": "SharedFarms",
+    "createdAt": "2026-05-07T18:26:27Z",
+    "updatedAt": "2026-05-07T18:26:27Z",
+    "projectName": "sharedfarms",
+    "taskPrefix": "MVP-SF-"
+  },
+  "tasks": [
+    { "taskName": "MVP-SF-011", "id": "9cb04f93-9498-4fd4-ad46-c5ae7103040e", "status": "TASK_STATUS_PENDING" },
+    { "taskName": "MVP-SF-010", "id": "6cb5cccf-33cb-455a-a61e-f8e1a22fcf7a", "status": "TASK_STATUS_PENDING" },
+    { "taskName": "MVP-SF-009", "id": "afd63ca4-2503-4bb4-b6f3-d7e152a80976", "status": "TASK_STATUS_PENDING" },
+    { "taskName": "MVP-SF-008", "id": "1e9a9344-8fcf-4f7c-9d95-9ce017b16ea9", "status": "TASK_STATUS_PENDING" },
+    { "taskName": "MVP-SF-007", "id": "0e1e359f-1027-440f-a3d0-323f053dcb46", "status": "TASK_STATUS_PENDING" },
+    { "taskName": "MVP-SF-006", "id": "f6aa54c6-43d4-4a3a-b34f-c387f6eb86dc", "status": "TASK_STATUS_PENDING" },
+    { "taskName": "MVP-SF-005", "id": "abe5b5dc-1877-4ef0-b7b3-092698ed1259", "status": "TASK_STATUS_PENDING" },
+    { "taskName": "MVP-SF-004", "id": "3c97793a-858a-419b-9dbe-ce3846c93a3b", "status": "TASK_STATUS_PENDING" },
+    { "taskName": "MVP-SF-003", "id": "efb5efef-0669-4bcf-9696-c13976291457", "status": "TASK_STATUS_PENDING" },
+    { "taskName": "MVP-SF-002", "id": "a1bedb27-2f83-4500-8f6d-93c8442a6439", "status": "TASK_STATUS_PENDING" },
+    { "taskName": "MVP-SF-001", "id": "3992e3b8-929c-4b55-abd7-4a413329f58b", "status": "TASK_STATUS_PENDING" }
+  ],
+  "depsCreated": 21
+}
+
+### Assertions
+1. Status 200 ✅
+2. tasks[] length == 11 ✅  (MVP-SF-001 through MVP-SF-011)
+3. depsCreated > 0 ✅  (21)
+4. No error field ✅
+
+### Variables
+$PROJECT_ID = 6ed9d041-7210-4a27-b17f-1a8590b73648
+
+### Verdict
+PASS

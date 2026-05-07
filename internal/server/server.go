@@ -266,6 +266,7 @@ func (s *Server) CreateWorkPlan(ctx context.Context, req *pb.CreateWorkPlanReque
 		PayloadCondition: req.GetPayloadCondition(),
 		Instructions:     req.GetInstructions(),
 		AgentID:          req.GetAgentId(),
+		HandlerService:   req.GetHandlerService(),
 		Enabled:          req.GetEnabled(),
 		Ordinality:       int(req.GetOrdinality()),
 	})
@@ -306,6 +307,7 @@ func (s *Server) UpdateWorkPlan(ctx context.Context, req *pb.UpdateWorkPlanReque
 		PayloadCondition: optStr(req.GetPayloadCondition()),
 		Instructions:     optStr(req.GetInstructions()),
 		AgentID:          optStr(req.GetAgentId()),
+		HandlerService:   optStr(req.GetHandlerService()),
 		Enabled:          optBool(req.GetEnabled()),
 		Ordinality:       optInt(int(req.GetOrdinality())),
 	})
@@ -409,6 +411,7 @@ func workPlanToProto(r codevaldagency.WorkPlan) *pb.WorkPlan {
 		PayloadCondition: r.PayloadCondition,
 		Instructions:     r.Instructions,
 		AgentId:          r.AgentID,
+		HandlerService:   r.HandlerService,
 		Enabled:          r.Enabled,
 		Ordinality:       int32(r.Ordinality),
 	}

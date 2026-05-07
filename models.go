@@ -308,6 +308,10 @@ type WorkPlan struct {
 	// Enabled controls whether this work plan is included in MatchWorkPlans results.
 	Enabled bool
 
+	// HandlerService is the CodeVald service responsible for executing this plan
+	// (e.g. "codevaldai", "codevaldcomm").
+	HandlerService string
+
 	// Ordinality controls the ascending sort order when multiple work plans match.
 	Ordinality int
 }
@@ -401,6 +405,9 @@ type CreateWorkPlanRequest struct {
 	// AgentID is a cross-service reference to a CodeValdAI Agent entity ID.
 	AgentID string
 
+	// HandlerService is the CodeVald service responsible for executing this plan.
+	HandlerService string
+
 	// Enabled controls whether this work plan participates in MatchWorkPlans dispatch.
 	Enabled bool
 
@@ -417,6 +424,7 @@ type UpdateWorkPlanRequest struct {
 	PayloadCondition *string
 	Instructions     *string
 	AgentID          *string
+	HandlerService   *string
 	Enabled          *bool
 	Ordinality       *int
 }

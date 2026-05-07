@@ -1,0 +1,54 @@
+## Run 2 — Assign Task to Developer Role
+Date: 2026-05-07
+
+### Step 1 — Upsert Developer Agent
+PUT http://localhost:8080/work/utility-app-builder/agents/developer-01
+Content-Type: application/json
+Authorization: Basic codevald:***
+
+{
+  "agent": {
+    "agentId": "developer-01",
+    "displayName": "Developer Agent",
+    "roleName": "Developer",
+    "capability": "software-development"
+  }
+}
+
+Response — HTTP Status: 200
+{
+  "agent": {
+    "id": "5d5abbc1-fcf4-49f1-9f75-c0dfec9a632e",
+    "agentId": "developer-01",
+    "displayName": "Developer Agent",
+    "roleName": "Developer",
+    "capability": "software-development"
+  }
+}
+
+$AGENT_ID = 5d5abbc1-fcf4-49f1-9f75-c0dfec9a632e
+
+### Step 2 — Assign Task to Agent
+PUT http://localhost:8080/work/utility-app-builder/tasks/4431c48c-f668-443d-805d-9b0227dbe888/assignee/5d5abbc1-fcf4-49f1-9f75-c0dfec9a632e
+Content-Type: application/json
+Authorization: Basic codevald:***
+
+{}
+
+Response — HTTP Status: 200
+{}
+
+$ASSIGN_TIME = 2026-05-07T18:27:23Z
+
+### Assertions
+1. Step 1 status 200 ✅; agent.roleName == "Developer" ✅
+2. Step 2 status 200 ✅; empty {} response body ✅
+3. No error in either response ✅
+
+### Expected side-effect
+CodeValdWork should publish work.task.assigned to PubSub with:
+  "RoleName": "Developer"
+  "TaskID": "4431c48c-f668-443d-805d-9b0227dbe888"
+
+### Verdict
+PASS

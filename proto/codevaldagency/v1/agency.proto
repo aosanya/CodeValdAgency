@@ -250,6 +250,10 @@ message WorkPlan {
   string agent_id          = 8;
   bool   enabled           = 9;
   int32  ordinality        = 10;
+  // handler_service is the CodeVald service responsible for executing this plan
+  // (e.g. "codevaldai", "codevaldcomm"). Each service subscribes only to topics
+  // from plans where handler_service matches its own service name.
+  string handler_service   = 11;
 }
 
 // GitContextSource configures what to fetch from CodeValdGit when a work plan matches.
@@ -302,6 +306,7 @@ message CreateWorkPlanRequest {
   string agent_id          = 6;
   bool   enabled           = 7;
   int32  ordinality        = 8;
+  string handler_service   = 9;
 }
 
 // GetWorkPlanRequest selects a WorkPlan by its entity ID.
@@ -328,6 +333,7 @@ message UpdateWorkPlanRequest {
   string agent_id          = 7;
   bool   enabled           = 8;
   int32  ordinality        = 9;
+  string handler_service   = 10;
 }
 
 // DeleteWorkPlanRequest selects a WorkPlan by its entity ID.

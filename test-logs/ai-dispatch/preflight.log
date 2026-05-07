@@ -1,0 +1,23 @@
+=== PRE-FLIGHT LOG (PubSub-layer) ===
+Date: 2026-05-07T18:45:00Z
+
+--- Service registry (utility-app-builder) ---
+GET http://localhost:8080/services/registry?agencyId=utility-app-builder
+
+Initial state (08:45):
+  codevaldpubsub NOT in registry — was running with PUBSUB_AGENCY_ID=agency-123 (wrong)
+  Root cause: process started without .env being sourced
+  Fix: cd CodeValdPubSub && make restart
+  After restart: registered with PUBSUB_AGENCY_ID=utility-app-builder
+
+Final registry (after fix):
+  [{"service":"codevaldwork","addr":":50053"},{"service":"codevaldpubsub","addr":":50055"},{"service":"codevaldagency","addr":":50054"}]
+
+--- codevaldai in registry? ---
+NOT present — expected for Part B (codevaldai is only needed for Part C)
+NOTE: codevaldai absence is a stop condition for 05-codevaldai-dispatch-and-run.md
+
+--- Pre-flight verdict ---
+codevaldpubsub: PASS (after make restart fix)
+codevaldai:     N/A for this part — will be addressed in Part C
+PROCEED to Run 3

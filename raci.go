@@ -33,6 +33,7 @@ func (m *agencyManager) CreateWorkPlan(ctx context.Context, req CreateWorkPlanRe
 			"payload_condition": req.PayloadCondition,
 			"instructions":      req.Instructions,
 			"agent_id":          req.AgentID,
+			"handler_service":   req.HandlerService,
 			"enabled":           req.Enabled,
 			"ordinality":        req.Ordinality,
 		},
@@ -130,6 +131,9 @@ func (m *agencyManager) UpdateWorkPlan(ctx context.Context, workPlanID string, r
 	}
 	if req.AgentID != nil {
 		props["agent_id"] = *req.AgentID
+	}
+	if req.HandlerService != nil {
+		props["handler_service"] = *req.HandlerService
 	}
 	if req.Enabled != nil {
 		props["enabled"] = *req.Enabled
@@ -372,6 +376,7 @@ func entityToWorkPlan(e entitygraph.Entity, agencyID string) WorkPlan {
 		PayloadCondition: strProp(p, "payload_condition"),
 		Instructions:     strProp(p, "instructions"),
 		AgentID:          strProp(p, "agent_id"),
+		HandlerService:   strProp(p, "handler_service"),
 		Enabled:          boolProp(p, "enabled"),
 		Ordinality:       intProp(p, "ordinality"),
 	}

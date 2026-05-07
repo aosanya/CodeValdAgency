@@ -1,0 +1,128 @@
+## Run 3 — PubSub Event Delivery Verification
+Date: 2026-05-07
+
+$TASK_ID:     4431c48c-f668-443d-805d-9b0227dbe888
+$ASSIGN_TIME: 2026-05-07T19:01:15Z  (re-triggered; see note)
+
+---
+
+### Pre-Flight — Registry Check
+
+Command:
+  curl -s "http://localhost:8080/services/registry?agencyId=utility-app-builder" | jq '.[] | {ServiceName, Produces, Consumes}'
+
+Result:
+  codevaldpubsub   — registered, no Consumes
+  codevaldagency   — registered, no Consumes
+  codevaldwork     — registered, Produces includes "work.task.assigned"
+  codevaldai       — NOT in registry
+
+Stop condition triggered:
+  ❌ codevaldai not in registry → AGENCY_GRPC_ADDR in CodeValdAI needs fixing
+     (run `make restart` in CodeValdAI/ before Part C)
+
+---
+
+### Run 3 — PubSub Event Verification
+
+Note on timing:
+  The original assignment (Run 2) was at 2026-05-07T18:27:23Z. CodeValdPubSub was
+  restarted via `make restart` at ~18:45 (fresh ArangoDB state), so the Run 2
+  event was not present. The task was unassigned and re-assigned at 19:01:15Z to
+  re-trigger the pipeline — confirmed end-to-end delivery.
+
+Event received by PubSub:
+  GET http://localhost:8080/pubsub/utility-app-builder/events
+
+Response (relevant entry):
+  {
+    "id": "e95cc420-23c9-4e48-8a9a-aa9f2bf7c4e0",
+    "agencyId": "utility-app-builder",
+    "topic": "work.task.assigned",
+    "source": "codevaldwork",
+    "payload": "{\"TaskID\":\"4431c48c-f668-443d-805d-9b0227dbe888\",\"AgentID\":\"5d5abbc1-fcf4-49f1-9f75-c0dfec9a632e\",\"RoleName\":\"Developer\"}",
+    "createdAt": "2026-05-07T19:01:15Z"
+  }
+
+Assertions:
+  1. topic=work.task.assigned at timestamp ≥ $ASSIGN_TIME ✅
+  2. payload contains "RoleName":"Developer" ✅
+  3. payload contains TaskID 4431c48c-f668-443d-805d-9b0227dbe888 ✅
+
+Forwarded to:
+  fanOutToConsumers called — zero consumers registered for work.task.assigned
+  (codevaldai not in registry; no fan-out occurred)
+
+Verdict: PASS
+
+---
+
+### UI-Run 3a — Events List
+
+URL: http://localhost:5055/agencies/utility-app-builder/events
+PubSubFrontend was NOT running; started with `npm run dev` in CodeValdPubSubFrontend/
+Pre-flight: HTTP 200 ✅
+
+SSR response confirmed:
+  - Two work.task.assigned rows visible in table ✅
+  - Source column: "codevaldwork" ✅
+  - Payload column: truncated JSON snippet with TaskID and RoleName ✅
+  - Created At: relative timestamps ("8 minutes ago", "3 minutes ago") ✅
+  - Topic filter link (href with ?topic=work.task.assigned) present in detail page ✅
+
+Verdict: PASS
+
+---
+
+### UI-Run 3b — Event Detail
+
+URL: http://localhost:5055/agencies/utility-app-builder/events/e95cc420-23c9-4e48-8a9a-aa9f2bf7c4e0
+
+SSR response confirmed:
+  1. Card title: "work.task.assigned" ✅
+  2. Payload rendered as JsonTable (key-value rows: TaskID / AgentID / RoleName) ✅
+  3. RoleName: "Developer" ✅
+  4. TaskID: "4431c48c-f668-443d-805d-9b0227dbe888" ✅
+  5. Source: "codevaldwork" ✅
+  6. Agency ID: "utility-app-builder" ✅
+  7. Topic link href="/agencies/utility-app-builder/events?topic=work.task.assigned" ✅
+
+Verdict: PASS
+
+---
+
+### UI-Run 3c — Publish Panel
+
+Pre-condition: registered qa.test.ping topic via:
+  POST http://localhost:8080/pubsub/utility-app-builder/topics
+  {"pattern":"qa.test.ping","domain":"qa","action":"ping","sourceService":"qa-agent"}
+  → HTTP 200, topic ID: a9eff733-da7f-45d0-b455-3a50c48952de
+
+Form action POST to http://localhost:5055/agencies/utility-app-builder/events:
+  intent=publish, topic=qa.test.ping, source=qa-agent, payload={"test":true}
+
+Response stream data:
+  "published": true ✅
+  New event: id=54d1d567-a35b-4ad9-bc9f-7e6ea4cc34de, createdAt=2026-05-07T19:04:39Z ✅
+  qa.test.ping row appears in refreshed events list ✅
+
+Verdict: PASS
+
+---
+
+## Log Analysis Summary
+
+Run 3 — PubSub event (API):       PASS
+UI-Run 3a — Events list:          PASS
+UI-Run 3b — Event detail payload: PASS
+UI-Run 3c — Publish panel:        PASS
+
+$TASK_ID:     4431c48c-f668-443d-805d-9b0227dbe888
+$ASSIGN_TIME: 2026-05-07T19:01:15Z
+
+Event payload:
+  {"TaskID":"4431c48c-f668-443d-805d-9b0227dbe888","AgentID":"5d5abbc1-fcf4-49f1-9f75-c0dfec9a632e","RoleName":"Developer"}
+
+Forwarded to:
+  None — codevaldai not in registry; fan-out had zero consumers.
+  Fix required before Part C: start CodeValdAI with correct AGENCY_GRPC_ADDR and run `make restart`.

@@ -620,6 +620,8 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "instructions", Type: types.PropertyTypeString, Required: false},
 					// agent_id is a cross-service reference to a CodeValdAI Agent entity ID.
 					{Name: "agent_id", Type: types.PropertyTypeString, Required: false},
+					// handler_service is the CodeVald service responsible for executing this plan.
+					{Name: "handler_service", Type: types.PropertyTypeString, Required: false},
 					{Name: "enabled", Type: types.PropertyTypeBoolean, Required: true},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
 				},

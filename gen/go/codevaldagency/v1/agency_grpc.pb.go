@@ -28,6 +28,7 @@ const (
 	AgencyService_GetGoals_FullMethodName               = "/codevaldagency.v1.AgencyService/GetGoals"
 	AgencyService_GetWorkflows_FullMethodName           = "/codevaldagency.v1.AgencyService/GetWorkflows"
 	AgencyService_GetConfiguredRoles_FullMethodName     = "/codevaldagency.v1.AgencyService/GetConfiguredRoles"
+	AgencyService_GetWorkItems_FullMethodName           = "/codevaldagency.v1.AgencyService/GetWorkItems"
 	AgencyService_CreateDraft_FullMethodName            = "/codevaldagency.v1.AgencyService/CreateDraft"
 	AgencyService_GetDraft_FullMethodName               = "/codevaldagency.v1.AgencyService/GetDraft"
 	AgencyService_ListDrafts_FullMethodName             = "/codevaldagency.v1.AgencyService/ListDrafts"
@@ -75,6 +76,8 @@ type AgencyServiceClient interface {
 	GetWorkflows(ctx context.Context, in *GetWorkflowsRequest, opts ...grpc.CallOption) (*GetWorkflowsResponse, error)
 	// GetConfiguredRoles returns all live ConfiguredRole entities linked to the Agency.
 	GetConfiguredRoles(ctx context.Context, in *GetConfiguredRolesRequest, opts ...grpc.CallOption) (*GetConfiguredRolesResponse, error)
+	// GetWorkItems returns all live WorkItem entities linked to the Agency.
+	GetWorkItems(ctx context.Context, in *GetWorkItemsRequest, opts ...grpc.CallOption) (*GetWorkItemsResponse, error)
 	// CreateDraft creates a new editable draft by deep-copying the sub-entity
 	// graph from the nominated source.
 	// Error: NOT_FOUND if no agency document exists.
@@ -218,6 +221,16 @@ func (c *agencyServiceClient) GetConfiguredRoles(ctx context.Context, in *GetCon
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetConfiguredRolesResponse)
 	err := c.cc.Invoke(ctx, AgencyService_GetConfiguredRoles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) GetWorkItems(ctx context.Context, in *GetWorkItemsRequest, opts ...grpc.CallOption) (*GetWorkItemsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWorkItemsResponse)
+	err := c.cc.Invoke(ctx, AgencyService_GetWorkItems_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -413,6 +426,8 @@ type AgencyServiceServer interface {
 	GetWorkflows(context.Context, *GetWorkflowsRequest) (*GetWorkflowsResponse, error)
 	// GetConfiguredRoles returns all live ConfiguredRole entities linked to the Agency.
 	GetConfiguredRoles(context.Context, *GetConfiguredRolesRequest) (*GetConfiguredRolesResponse, error)
+	// GetWorkItems returns all live WorkItem entities linked to the Agency.
+	GetWorkItems(context.Context, *GetWorkItemsRequest) (*GetWorkItemsResponse, error)
 	// CreateDraft creates a new editable draft by deep-copying the sub-entity
 	// graph from the nominated source.
 	// Error: NOT_FOUND if no agency document exists.
@@ -505,6 +520,9 @@ func (UnimplementedAgencyServiceServer) GetWorkflows(context.Context, *GetWorkfl
 }
 func (UnimplementedAgencyServiceServer) GetConfiguredRoles(context.Context, *GetConfiguredRolesRequest) (*GetConfiguredRolesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetConfiguredRoles not implemented")
+}
+func (UnimplementedAgencyServiceServer) GetWorkItems(context.Context, *GetWorkItemsRequest) (*GetWorkItemsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetWorkItems not implemented")
 }
 func (UnimplementedAgencyServiceServer) CreateDraft(context.Context, *CreateDraftRequest) (*AgencyDraft, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateDraft not implemented")
@@ -715,6 +733,24 @@ func _AgencyService_GetConfiguredRoles_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgencyServiceServer).GetConfiguredRoles(ctx, req.(*GetConfiguredRolesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_GetWorkItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).GetWorkItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_GetWorkItems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).GetWorkItems(ctx, req.(*GetWorkItemsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1045,6 +1081,10 @@ var AgencyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetConfiguredRoles",
 			Handler:    _AgencyService_GetConfiguredRoles_Handler,
+		},
+		{
+			MethodName: "GetWorkItems",
+			Handler:    _AgencyService_GetWorkItems_Handler,
 		},
 		{
 			MethodName: "CreateDraft",

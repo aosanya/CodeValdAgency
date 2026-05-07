@@ -106,6 +106,15 @@ func (s *Server) GetConfiguredRoles(ctx context.Context, _ *pb.GetConfiguredRole
 	return &pb.GetConfiguredRolesResponse{ConfiguredRoles: configuredRolesToProto(roles)}, nil
 }
 
+// GetWorkItems implements pb.AgencyServiceServer.
+func (s *Server) GetWorkItems(ctx context.Context, _ *pb.GetWorkItemsRequest) (*pb.GetWorkItemsResponse, error) {
+	items, err := s.mgr.GetWorkItems(ctx)
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &pb.GetWorkItemsResponse{WorkItems: workItemsToProto(items)}, nil
+}
+
 // ── Domain → Proto converters ─────────────────────────────────────────────────
 
 func agencyToProto(a codevaldagency.Agency) *pb.Agency {
@@ -177,11 +186,48 @@ func configuredRolesToProto(roles []codevaldagency.ConfiguredRole) []*pb.Configu
 	return out
 }
 
+func workItemsToProto(items []codevaldagency.WorkItem) []*pb.WorkItem {
+	if len(items) == 0 {
+		return nil
+	}
+	out := make([]*pb.WorkItem, len(items))
+	for i, wi := range items {
+		out[i] = &pb.WorkItem{
+			Id:          wi.ID,
+			Title:       wi.Title,
+			Description: wi.Description,
+			Order:       int32(wi.Ordinality),
+		}
+	}
+	return out
+}
+
 func timeToProto(t time.Time) *timestamppb.Timestamp {
 	if t.IsZero() {
 		return nil
 	}
 	return timestamppb.New(t)
+}
+
+func optStr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func optBool(b bool) *bool {
+	if !b {
+		return nil
+	}
+	return &b
+}
+
+func optInt(i int) *int {
+	if i == 0 {
+		return nil
+	}
+	return &i
 }
 
 func publicationToProto(p codevaldagency.AgencyPublication) *pb.AgencyPublication {
@@ -254,14 +300,14 @@ func (s *Server) ListWorkPlans(ctx context.Context, _ *pb.ListWorkPlansRequest) 
 // UpdateWorkPlan implements pb.AgencyServiceServer.
 func (s *Server) UpdateWorkPlan(ctx context.Context, req *pb.UpdateWorkPlanRequest) (*pb.WorkPlan, error) {
 	wp, err := s.mgr.UpdateWorkPlan(ctx, req.GetWorkPlanId(), codevaldagency.UpdateWorkPlanRequest{
-		Name:             req.GetName(),
-		Description:      req.GetDescription(),
-		TriggerTopic:     req.GetTriggerTopic(),
-		PayloadCondition: req.GetPayloadCondition(),
-		Instructions:     req.GetInstructions(),
-		AgentID:          req.GetAgentId(),
-		Enabled:          req.GetEnabled(),
-		Ordinality:       int(req.GetOrdinality()),
+		Name:             optStr(req.GetName()),
+		Description:      optStr(req.GetDescription()),
+		TriggerTopic:     optStr(req.GetTriggerTopic()),
+		PayloadCondition: optStr(req.GetPayloadCondition()),
+		Instructions:     optStr(req.GetInstructions()),
+		AgentID:          optStr(req.GetAgentId()),
+		Enabled:          optBool(req.GetEnabled()),
+		Ordinality:       optInt(int(req.GetOrdinality())),
 	})
 	if err != nil {
 		return nil, toGRPCError(err)

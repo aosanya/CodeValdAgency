@@ -51,6 +51,7 @@ func main() {
 	defer cancel()
 
 	var pub codevaldagency.CrossPublisher
+	var syncer *registrar.Registrar
 	if cfg.CrossGRPCAddr != "" {
 		reg, err := registrar.New(
 			cfg.CrossGRPCAddr,
@@ -65,6 +66,7 @@ func main() {
 			defer reg.Close()
 			go reg.Run(ctx)
 			pub = reg
+			syncer = reg
 		}
 	} else {
 		log.Println("codevaldagency: CROSS_GRPC_ADDR not set — skipping CodeValdCross registration")
@@ -110,13 +112,24 @@ func main() {
 		seedCancel()
 	}
 
+	// Sync PubSub subscriptions from enabled work plans at startup.
+	if syncer != nil && cfg.AgencyID != "" {
+		syncCtx, syncCancel := context.WithTimeout(ctx, 10*time.Second)
+		if plans, err := mgr.ListWorkPlans(syncCtx); err == nil {
+			syncer.SyncSubscriptions(syncCtx, cfg.AgencyID, plans)
+		} else {
+			log.Printf("codevaldagency: startup SyncSubscriptions: ListWorkPlans: %v", err)
+		}
+		syncCancel()
+	}
+
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 	if err != nil {
 		log.Fatalf("codevaldagency: failed to listen on :%s: %v", cfg.GRPCPort, err)
 	}
 
 	grpcServer, _ := serverutil.NewGRPCServer()
-	pb.RegisterAgencyServiceServer(grpcServer, server.New(mgr, backend))
+	pb.RegisterAgencyServiceServer(grpcServer, server.New(mgr, backend, syncer))
 	entitygraphpb.RegisterEntityServiceServer(grpcServer, server.NewEntityServer(backend))
 	healthpb.RegisterHealthServiceServer(grpcServer, health.New("codevaldagency"))
 

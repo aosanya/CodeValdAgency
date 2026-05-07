@@ -307,6 +307,7 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 	}
 
 	log.Printf("[ImportDraft] %s: done draftID=%s", agencyID, draftID)
+	go s.syncSubscriptions(context.Background())
 	return &pb.ImportDraftResponse{AgencyId: agencyID, DraftId: draftID}, nil
 }
 

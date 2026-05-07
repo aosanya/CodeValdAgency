@@ -14,20 +14,46 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// SubscriptionSyncer syncs PubSub subscriptions derived from work plan
+// handler_service + trigger_topic fields. Implemented by the Agency registrar;
+// nil disables sync (no Cross connection).
+type SubscriptionSyncer interface {
+	SyncSubscriptions(ctx context.Context, agencyID string, plans []codevaldagency.WorkPlan)
+}
+
 // Server implements pb.AgencyServiceServer by wrapping a codevaldagency.AgencyManager.
 // Construct via New; register with grpc.Server using
 // pb.RegisterAgencyServiceServer.
 type Server struct {
 	pb.UnimplementedAgencyServiceServer
-	mgr codevaldagency.AgencyManager
-	dm  entitygraph.DataManager
+	mgr    codevaldagency.AgencyManager
+	dm     entitygraph.DataManager
+	syncer SubscriptionSyncer // nil when no Cross connection
 }
 
 // New constructs a Server backed by the given AgencyManager and DataManager.
-// dm is used by ImportDraft to write draft sub-entities directly without an
-// HTTP round-trip back through CodeValdCross.
-func New(mgr codevaldagency.AgencyManager, dm entitygraph.DataManager) *Server {
-	return &Server{mgr: mgr, dm: dm}
+// syncer may be nil (disables subscription sync). dm is used by ImportDraft to
+// write draft sub-entities directly without an HTTP round-trip back through
+// CodeValdCross.
+func New(mgr codevaldagency.AgencyManager, dm entitygraph.DataManager, syncer SubscriptionSyncer) *Server {
+	return &Server{mgr: mgr, dm: dm, syncer: syncer}
+}
+
+// syncSubscriptions is a convenience helper — calls syncer.SyncSubscriptions
+// after listing all enabled work plans. No-ops when syncer is nil.
+func (s *Server) syncSubscriptions(ctx context.Context) {
+	if s.syncer == nil {
+		return
+	}
+	plans, err := s.mgr.ListWorkPlans(ctx)
+	if err != nil {
+		return
+	}
+	agencyID := ""
+	if a, err := s.mgr.GetAgency(ctx); err == nil {
+		agencyID = a.ID
+	}
+	s.syncer.SyncSubscriptions(ctx, agencyID, plans)
 }
 
 // GetAgency implements pb.AgencyServiceServer.
@@ -54,6 +80,7 @@ func (s *Server) PublishAgency(ctx context.Context, req *pb.PublishAgencyRequest
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
+	go s.syncSubscriptions(context.Background())
 	return publicationToProto(pub), nil
 }
 

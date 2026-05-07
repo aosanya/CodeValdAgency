@@ -75,6 +75,28 @@ func (r *Registrar) Close() {
 	r.heartbeat.Close()
 }
 
+// SyncSubscriptions registers every enabled work plan's handler_service as a
+// subscriber to its trigger_topic via Cross → PubSub. Duplicate
+// (subscriber_service, topic_pattern) pairs are deduplicated before calling.
+// Called on Agency startup and after every import or publish so subscriptions
+// are active regardless of whether the handler services are running.
+func (r *Registrar) SyncSubscriptions(ctx context.Context, agencyID string, plans []codevaldagency.WorkPlan) {
+	seen := map[string]bool{}
+	for _, wp := range plans {
+		if !wp.Enabled || wp.HandlerService == "" || wp.TriggerTopic == "" {
+			continue
+		}
+		key := wp.HandlerService + "\x00" + wp.TriggerTopic
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		if err := r.heartbeat.SubscribeTopic(ctx, agencyID, wp.HandlerService, wp.TriggerTopic); err != nil {
+			log.Printf("registrar[codevaldagency]: SyncSubscriptions: subscribe %q → %q: %v", wp.HandlerService, wp.TriggerTopic, err)
+		}
+	}
+}
+
 // Publish implements [eventbus.Publisher].
 // Marshals the event payload to JSON and forwards it to CodeValdCross via the
 // OrchestratorService.Publish RPC, which routes it on to CodeValdPubSub.

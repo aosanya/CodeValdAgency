@@ -105,6 +105,7 @@ type importWorkPlanSpec struct {
 	PayloadCondition string `yaml:"payload_condition"`
 	Instructions     string `yaml:"instructions"`
 	AgentID          string `yaml:"agent_id"`
+	HandlerService   string `yaml:"handler_service"`
 	Enabled          bool   `yaml:"enabled"`
 	Ordinality       int    `yaml:"ordinality"`
 }
@@ -295,6 +296,7 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			"payload_condition": clean(wp.PayloadCondition),
 			"instructions":      clean(wp.Instructions),
 			"agent_id":          clean(wp.AgentID),
+			"handler_service":   clean(wp.HandlerService),
 			"enabled":           wp.Enabled,
 			"ordinality":        wp.Ordinality,
 		}

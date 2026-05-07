@@ -403,10 +403,20 @@ func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (Agen
 		return AgencyPublication{}, fmt.Errorf("PublishAgency: link status entity: %w", err)
 	}
 
-	// Mark the draft as promoted.
+	// When a draftID is provided, promote sub-entities to live and clean up old ones.
 	if draftID != "" {
+		oldIDs, err := m.collectLiveSubEntityIDs(ctx)
+		if err != nil {
+			return AgencyPublication{}, fmt.Errorf("PublishAgency: collect old entities: %w", err)
+		}
+		if err := m.promoteSubEntities(ctx, agency.ID, draftID); err != nil {
+			return AgencyPublication{}, fmt.Errorf("PublishAgency: %w", err)
+		}
+		for _, id := range oldIDs {
+			_ = m.dm.DeleteEntity(ctx, m.agencyID, id)
+		}
 		if _, err := m.dm.UpdateEntity(ctx, m.agencyID, draftID, entitygraph.UpdateEntityRequest{
-			Properties: map[string]any{"status": "promoted"},
+			Properties: map[string]any{"status": string(DraftStatusPromoted)},
 		}); err != nil {
 			return AgencyPublication{}, fmt.Errorf("PublishAgency: promote draft: %w", err)
 		}

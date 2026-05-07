@@ -167,6 +167,29 @@ func agencyRoutes() []types.RouteInfo {
 			},
 		},
 
+		// ── Live blueprint entity routes (read-only; written by PublishAgency) ─────
+		// GET /agency/{agencyId}/goals — list promoted live goals.
+		{
+			Method:     "GET",
+			Pattern:    "/agency/{agencyId}/goals",
+			Capability: "get_goals",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/GetGoals",
+		},
+		// GET /agency/{agencyId}/workflows — list promoted live workflows.
+		{
+			Method:     "GET",
+			Pattern:    "/agency/{agencyId}/workflows",
+			Capability: "get_workflows",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/GetWorkflows",
+		},
+		// GET /agency/{agencyId}/configured-roles — list promoted live configured roles.
+		{
+			Method:     "GET",
+			Pattern:    "/agency/{agencyId}/configured-roles",
+			Capability: "get_configured_roles",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/GetConfiguredRoles",
+		},
+
 		// ── RACI role routes ──────────────────────────────────────────────────────
 		// POST /agency/{agencyId}/roles — create a new dispatch role.
 		{

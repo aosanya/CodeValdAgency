@@ -105,9 +105,12 @@ type importWorkPlanSpec struct {
 	PayloadCondition string `yaml:"payload_condition"`
 	Instructions     string `yaml:"instructions"`
 	AgentID          string `yaml:"agent_id"`
-	HandlerService   string `yaml:"handler_service"`
-	Enabled          bool   `yaml:"enabled"`
-	Ordinality       int    `yaml:"ordinality"`
+	// AgentCode is a symbolic reference resolved by CodeValdAI on startup.
+	// It identifies which agent in ai_config should handle this work plan.
+	AgentCode      string `yaml:"agent_code"`
+	HandlerService string `yaml:"handler_service"`
+	Enabled        bool   `yaml:"enabled"`
+	Ordinality     int    `yaml:"ordinality"`
 }
 
 // ── RPC handler ───────────────────────────────────────────────────────────────

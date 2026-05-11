@@ -1,0 +1,24 @@
+Run 1 — Verify Organization Initialized
+Date: 2026-05-11
+
+Request:
+  GET http://localhost:8080/utility-app-builder/org
+
+Response HTTP: 200
+Response body:
+{
+  "agencyId": "utility-app-builder",
+  "name": "Flutter Utility App Agency",
+  "enabled": true,
+  "description": "Build and deliver focused utility applications using Flutter.",
+  "contactEmail": "admin@utility-app-builder.local",
+  "createdAt": "2026-05-11T07:01:02Z",
+  "updatedAt": "2026-05-11T07:01:02Z"
+}
+
+Assertions:
+  1. Status 200                       PASS
+  2. agency_id == "utility-app-builder" PASS (field: agencyId)
+  3. name is non-empty                PASS ("Flutter Utility App Agency")
+
+Verdict: PASS

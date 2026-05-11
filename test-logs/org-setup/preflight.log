@@ -1,0 +1,33 @@
+QA Part D — Pre-Flight Log
+Date: 2026-05-11
+
+=== P1: CodeValdOrg registered in Cross ===
+
+Command:
+  curl -s "http://localhost:8080/services/registry?agencyId=utility-app-builder" | jq '.[] | select(.ServiceName == "codevaldorg")'
+
+Result: ServiceName=codevaldorg, AgencyID=utility-app-builder, Addr=:9090, LastPing=2026-05-11T07:27:38Z
+PASS — CodeValdOrg is registered and recently pinged.
+
+=== P2: Blueprint configured_roles present ===
+
+Command:
+  curl -s "http://localhost:8080/agency/utility-app-builder/configured-roles" | jq '[.configuredRoles[] | {role, actorType}]'
+
+Response:
+[
+  { "role": "Domain Expert",        "actorType": "ACTOR_TYPE_HUMAN" },
+  { "role": "Developer",            "actorType": "ACTOR_TYPE_AI"   },
+  { "role": "AI Code Reviewer",     "actorType": "ACTOR_TYPE_AI"   },
+  { "role": "Human Code Reviewer",  "actorType": "ACTOR_TYPE_HUMAN"},
+  { "role": "AI Documentor",        "actorType": "ACTOR_TYPE_AI"   }
+]
+
+PASS — 5 configured roles present.
+
+NOTE: The `role` field in configured_roles returns display names ("Domain Expert")
+not slug codes ("domain-expert"). This will need to match against org role `name`
+values in Run 3. If org roles are created with slug codes, the comparison will
+show a mismatch and should be flagged as a data-model gap.
+
+=== Overall Pre-Flight: PASS ===

@@ -1,0 +1,39 @@
+Run 6 — Grant Memberships (Human Users → Roles)
+Date: 2026-05-11
+
+=== domain-expert user → domain-expert role ===
+Request:
+  POST http://localhost:8080/utility-app-builder/org/memberships
+  user_id: f586acfa-846e-4909-9e8e-d3e7f7010fc9
+  role_id: 4ab7af81-528e-44cc-b9da-117b9a9af496
+
+Response:
+{
+  "agencyId": "utility-app-builder",
+  "membershipId": "044dc729-c663-4ea1-b292-659ada04172c",
+  "grantedBy": "system",
+  "grantedAt": "2026-05-11T07:35:29Z"
+}
+
+=== human-code-reviewer user → human-code-reviewer role ===
+Request:
+  POST http://localhost:8080/utility-app-builder/org/memberships
+  user_id: baa7594b-d3ba-4887-b82e-699acc8eec1c
+  role_id: b7f24687-b936-4056-b5a2-ba2b331dff26
+
+Response:
+{
+  "agencyId": "utility-app-builder",
+  "membershipId": "ebc87909-c393-4995-b581-62bce75c908a",
+  "grantedBy": "system",
+  "grantedAt": "2026-05-11T07:35:29Z"
+}
+
+Assertions:
+  1. Both responses return non-empty membership_id    PASS
+  2. user_id and role_id in response match request    PARTIAL
+     — GrantMembership response does not echo back user_id/role_id;
+       only membershipId, grantedBy, grantedAt are returned.
+       Non-blocking: the membership IDs confirm the records were created.
+
+Verdict: PARTIAL (assertion 2 cannot be verified from response; memberships created successfully)

@@ -1,0 +1,63 @@
+Run 5 — Create OAuth Clients for AI Roles
+Date: 2026-05-11
+
+=== Developer client ===
+Request: POST http://localhost:8080/utility-app-builder/org/oauth-clients
+  name: developer-agent, client_type: confidential, grant: client_credentials
+
+Response:
+{
+  "client": {
+    "agencyId": "utility-app-builder",
+    "clientId": "c2c31af5-7bb3-4617-8e90-1367044830db",
+    "clientType": "confidential",
+    "name": "developer-agent",
+    "allowedGrantTypes": ["client_credentials"]
+  },
+  "plaintextSecret": "cv_cs_1329094e-ebcf-45fa-8310-7158d71dee88"
+}
+$CLIENT_ID_DEVELOPER:     c2c31af5-7bb3-4617-8e90-1367044830db
+$CLIENT_SECRET_DEVELOPER: cv_cs_1329094e-ebcf-45fa-8310-7158d71dee88
+
+=== AI Code Reviewer client ===
+Request: POST http://localhost:8080/utility-app-builder/org/oauth-clients
+  name: ai-code-reviewer-agent, client_type: confidential, grant: client_credentials
+
+Response:
+{
+  "client": {
+    "agencyId": "utility-app-builder",
+    "clientId": "55ee3d5e-309b-42bf-a8be-f23d929eab5a",
+    "clientType": "confidential",
+    "name": "ai-code-reviewer-agent",
+    "allowedGrantTypes": ["client_credentials"]
+  },
+  "plaintextSecret": "cv_cs_2ddd971b-a91b-44e7-883b-74603baca9c1"
+}
+$CLIENT_ID_AI_CODE_REVIEWER:     55ee3d5e-309b-42bf-a8be-f23d929eab5a
+$CLIENT_SECRET_AI_CODE_REVIEWER: cv_cs_2ddd971b-a91b-44e7-883b-74603baca9c1
+
+=== AI Documentor client ===
+Request: POST http://localhost:8080/utility-app-builder/org/oauth-clients
+  name: ai-documentor-agent, client_type: confidential, grant: client_credentials
+
+Response:
+{
+  "client": {
+    "agencyId": "utility-app-builder",
+    "clientId": "888db78b-5605-4971-bc7d-8b324d517147",
+    "clientType": "confidential",
+    "name": "ai-documentor-agent",
+    "allowedGrantTypes": ["client_credentials"]
+  },
+  "plaintextSecret": "cv_cs_baa28c03-3087-4e92-9bb8-fc6d16cb4bd3"
+}
+$CLIENT_ID_AI_DOCUMENTOR:     888db78b-5605-4971-bc7d-8b324d517147
+$CLIENT_SECRET_AI_DOCUMENTOR: cv_cs_baa28c03-3087-4e92-9bb8-fc6d16cb4bd3
+
+Assertions:
+  1. Each response has non-empty client.client_id  PASS (all 3)
+  2. Each response has non-empty plaintext_secret  PASS (all 3)
+  3. client.client_type == "confidential"          PASS (all 3)
+
+Verdict: PASS

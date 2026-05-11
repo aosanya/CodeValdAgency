@@ -1,0 +1,40 @@
+Run 2a — Verify Roles Were Auto-Seeded
+Date: 2026-05-11
+
+Request:
+  GET http://localhost:8080/utility-app-builder/org/roles
+
+Full response (non-builtin roles):
+[
+  { "name": "domain-expert",       "roleId": "4ab7af81-528e-44cc-b9da-117b9a9af496", "displayName": "Domain Expert"       },
+  { "name": "developer",           "roleId": "7cab7de4-619e-4ac1-808d-dcfd319f1a06", "displayName": "Developer"           },
+  { "name": "ai-code-reviewer",    "roleId": "fbd6d226-8c11-4c8c-bbbc-7baa0193c171", "displayName": "AI Code Reviewer"    },
+  { "name": "human-code-reviewer", "roleId": "b7f24687-b936-4056-b5a2-ba2b331dff26", "displayName": "Human Code Reviewer" },
+  { "name": "ai-documentor",       "roleId": "b3929425-9774-41e1-8b4f-06ac4c2b647e", "displayName": "AI Documentor"       }
+]
+
+Builtin roles also present (excluded from assertions): super_admin, admin, member, viewer
+
+Assertions:
+  1. At least 5 roles returned               PASS (9 total, 5 non-builtin)
+  2. All 5 expected name values present      PASS
+  3. Each role has non-empty role_id         PASS
+
+SyncOrgRoles gap note:
+  The QA doc listed SyncOrgRoles as "not yet implemented". Verified:
+  - grep confirms SyncOrgRoles is called in:
+      CodeValdAgency/cmd/main.go
+      CodeValdAgency/internal/registrar/registrar.go
+      CodeValdAgency/internal/server/server.go
+  - Latest commit: "feat: implement role synchronization and update ConfiguredRole structure"
+  - Roles were created at 07:22:12, 21 min after org init (07:01:02) — consistent
+    with being triggered after a promote/publish action at startup or after blueprint promotion.
+  Gap is RESOLVED.
+
+$ROLE_ID_DOMAIN_EXPERT:        4ab7af81-528e-44cc-b9da-117b9a9af496
+$ROLE_ID_DEVELOPER:            7cab7de4-619e-4ac1-808d-dcfd319f1a06
+$ROLE_ID_AI_CODE_REVIEWER:     fbd6d226-8c11-4c8c-bbbc-7baa0193c171
+$ROLE_ID_HUMAN_CODE_REVIEWER:  b7f24687-b936-4056-b5a2-ba2b331dff26
+$ROLE_ID_AI_DOCUMENTOR:        b3929425-9774-41e1-8b4f-06ac4c2b647e
+
+Verdict: PASS

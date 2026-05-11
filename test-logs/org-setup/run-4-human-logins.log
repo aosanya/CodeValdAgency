@@ -1,0 +1,69 @@
+Run 4 — Create Logins for Human Roles
+Date: 2026-05-11
+
+=== 4a — Invite domain-expert ===
+Request:
+  POST http://localhost:8080/utility-app-builder/org/users/invite
+  role_ids: ["4ab7af81-528e-44cc-b9da-117b9a9af496"]
+
+Response:
+{
+  "agencyId": "utility-app-builder",
+  "invitationId": "28635c17-563f-4539-afbd-a55dc601ac96",
+  "token": "cv_iv_vRv7J2_SJo2eUjT2YdM7y1sOqRd3Hu2sW7IUqpTLTek",
+  "status": "INVITATION_STATUS_PENDING",
+  "expiresAt": "2026-05-12T07:34:13Z"
+}
+$INVITE_TOKEN_DOMAIN_EXPERT: cv_iv_vRv7J2_SJo2eUjT2YdM7y1sOqRd3Hu2sW7IUqpTLTek
+
+=== 4b — Accept domain-expert invitation ===
+Request:
+  POST http://localhost:8080/utility-app-builder/org/invitations/accept
+  token: cv_iv_vRv7J2_SJo2eUjT2YdM7y1sOqRd3Hu2sW7IUqpTLTek
+
+Response:
+{
+  "agencyId": "utility-app-builder",
+  "userId": "f586acfa-846e-4909-9e8e-d3e7f7010fc9",
+  "email": "domain-expert@utility-app-builder.local",
+  "status": "USER_STATUS_ACTIVE",
+  "displayName": "Domain Expert"
+}
+$USER_ID_DOMAIN_EXPERT: f586acfa-846e-4909-9e8e-d3e7f7010fc9
+
+=== 4c — Invite human-code-reviewer ===
+Request:
+  POST http://localhost:8080/utility-app-builder/org/users/invite
+  role_ids: ["b7f24687-b936-4056-b5a2-ba2b331dff26"]
+
+Response:
+{
+  "agencyId": "utility-app-builder",
+  "invitationId": "8615827a-86de-405f-90e1-2ba549699c32",
+  "token": "cv_iv_32KU9O18QszqVZj8agdCRhF7HxndthgMgNcBLsO6YnI",
+  "status": "INVITATION_STATUS_PENDING",
+  "expiresAt": "2026-05-12T07:34:25Z"
+}
+$INVITE_TOKEN_HUMAN_CODE_REVIEWER: cv_iv_32KU9O18QszqVZj8agdCRhF7HxndthgMgNcBLsO6YnI
+
+=== 4d — Accept human-code-reviewer invitation ===
+Request:
+  POST http://localhost:8080/utility-app-builder/org/invitations/accept
+  token: cv_iv_32KU9O18QszqVZj8agdCRhF7HxndthgMgNcBLsO6YnI
+
+Response:
+{
+  "agencyId": "utility-app-builder",
+  "userId": "baa7594b-d3ba-4887-b82e-699acc8eec1c",
+  "email": "human-code-reviewer@utility-app-builder.local",
+  "status": "USER_STATUS_ACTIVE",
+  "displayName": "Human Code Reviewer"
+}
+$USER_ID_HUMAN_CODE_REVIEWER: baa7594b-d3ba-4887-b82e-699acc8eec1c
+
+Assertions:
+  1. Both invite responses return non-empty token    PASS
+  2. Both accept responses return USER_STATUS_ACTIVE PASS
+  3. Both accept responses return non-empty user_id  PASS
+
+Verdict: PASS

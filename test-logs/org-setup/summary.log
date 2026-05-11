@@ -1,0 +1,47 @@
+QA Part D — CodeValdOrg: Role Seeding & Logins — Summary
+Date: 2026-05-11
+
+Run 1   — Org initialized:               PASS
+Run 2a  — 5 roles auto-seeded:           PASS
+Run 2b  — Roles created manually:        SKIP  (SyncOrgRoles is implemented; roles already present)
+Run 3   — Roles match configured_roles:  PASS  (after bug fix — see Non-blocking notes)
+Run 4   — Human logins created:          PASS
+Run 5   — AI OAuth clients created:      PASS
+Run 6   — Memberships granted:           PARTIAL (membership IDs returned; response does not echo user_id/role_id)
+
+UI-Run 1a — Org in registry:             NOT RUN (no browser access in this environment)
+UI-Run 2a — Blueprint roles listed:      NOT RUN
+UI-Run 3a — Agency roles UI:             NOT RUN
+
+$ROLE_ID_DOMAIN_EXPERT:        4ab7af81-528e-44cc-b9da-117b9a9af496
+$ROLE_ID_DEVELOPER:            7cab7de4-619e-4ac1-808d-dcfd319f1a06
+$ROLE_ID_AI_CODE_REVIEWER:     fbd6d226-8c11-4c8c-bbbc-7baa0193c171
+$ROLE_ID_HUMAN_CODE_REVIEWER:  b7f24687-b936-4056-b5a2-ba2b331dff26
+$ROLE_ID_AI_DOCUMENTOR:        b3929425-9774-41e1-8b4f-06ac4c2b647e
+
+$USER_ID_DOMAIN_EXPERT:        f586acfa-846e-4909-9e8e-d3e7f7010fc9
+$USER_ID_HUMAN_CODE_REVIEWER:  baa7594b-d3ba-4887-b82e-699acc8eec1c
+
+$CLIENT_ID_DEVELOPER:            c2c31af5-7bb3-4617-8e90-1367044830db
+$CLIENT_SECRET_DEVELOPER:        cv_cs_1329094e-ebcf-45fa-8310-7158d71dee88
+$CLIENT_ID_AI_CODE_REVIEWER:     55ee3d5e-309b-42bf-a8be-f23d929eab5a
+$CLIENT_SECRET_AI_CODE_REVIEWER: cv_cs_2ddd971b-a91b-44e7-883b-74603baca9c1
+$CLIENT_ID_AI_DOCUMENTOR:        888db78b-5605-4971-bc7d-8b324d517147
+$CLIENT_SECRET_AI_DOCUMENTOR:    cv_cs_baa28c03-3087-4e92-9bb8-fc6d16cb4bd3
+
+Blocking gaps:
+- [ ] NONE — all API runs completed; UI runs not attempted (no browser)
+
+Non-blocking notes:
+- [x] BUG FIXED: configuredRolesToProto() in internal/server/server.go was
+      mapping r.Name ("Domain Expert") into the proto Role field instead of
+      r.Code ("domain-expert"). Fixed to use r.Code. This caused Run 3
+      assertion 1 to fail before the fix. Service restarted; verified correct.
+- [x] SyncOrgRoles gap RESOLVED: The QA doc listed SyncOrgRoles as "not yet
+      implemented" but it is now implemented and called from cmd/main.go,
+      internal/server/server.go (PublishAgency + PromoteDraft). All 5 roles
+      were auto-seeded before this run.
+- [ ] GrantMembership response does not echo back user_id/role_id — assertion 2
+      of Run 6 cannot be verified from the response alone. Non-blocking; records
+      were created (membership IDs returned). Consider adding user_id/role_id
+      to the GrantMembership response proto for completeness.

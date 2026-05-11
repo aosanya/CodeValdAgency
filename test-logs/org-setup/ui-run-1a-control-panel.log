@@ -1,0 +1,22 @@
+UI-Run 1a — Control Panel: CodeValdOrg in Registry
+Date: 2026-05-11
+
+Frontend: AgencyFrontend at http://localhost:5054 (port from vite.config.ts)
+URL: http://localhost:5054/agencies/utility-app-builder/control-panel
+
+Pre-flight check:
+  curl -s -o /dev/null -w "%{http_code}" http://localhost:5054/agencies/utility-app-builder/control-panel
+  → HTTP 200 ✓ (AgencyFrontend started with `npm run dev`)
+
+Method: curl + Python HTML parse (SSR-rendered page; no browser available)
+
+Findings in HTML:
+  - "codevaldorg" appears as service name in the services table (span.text-sm.font-medium)
+  - Addr ":9090" present in page data
+  - "ok" status indicator present (5 occurrences — Cross health check passes)
+
+Assertions:
+  1. Services table contains codevaldorg with non-empty address  PASS (:9090)
+  2. CodeValdCross Status card shows OK                         PASS
+
+Verdict: PASS

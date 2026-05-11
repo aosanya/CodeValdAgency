@@ -224,7 +224,7 @@ func configuredRolesToProto(roles []codevaldagency.ConfiguredRole) []*pb.Configu
 	out := make([]*pb.ConfiguredRole, len(roles))
 	for i, r := range roles {
 		out[i] = &pb.ConfiguredRole{
-			Role:      r.Name,
+			Role:      r.Code,
 			ActorType: actorTypeToProto(r.ActorType),
 		}
 	}

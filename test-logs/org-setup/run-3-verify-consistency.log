@@ -1,0 +1,39 @@
+Run 3 — Verify Roles Match configured_roles
+Date: 2026-05-11
+
+Bug fixed before this run:
+  configuredRolesToProto() in internal/server/server.go was mapping r.Name
+  (display name "Domain Expert") into the proto Role field instead of r.Code
+  (slug "domain-expert"). Fixed to use r.Code. Service restarted.
+
+=== CodeValdOrg roles (non-builtin, sorted) ===
+[
+  { "name": "ai-code-reviewer",    "displayName": "AI Code Reviewer"    },
+  { "name": "ai-documentor",       "displayName": "AI Documentor"       },
+  { "name": "developer",           "displayName": "Developer"           },
+  { "name": "domain-expert",       "displayName": "Domain Expert"       },
+  { "name": "human-code-reviewer", "displayName": "Human Code Reviewer" }
+]
+
+=== Blueprint configured_roles (sorted, after fix) ===
+[
+  { "role": "ai-code-reviewer",    "actorType": "ACTOR_TYPE_AI"    },
+  { "role": "ai-documentor",       "actorType": "ACTOR_TYPE_AI"    },
+  { "role": "developer",           "actorType": "ACTOR_TYPE_AI"    },
+  { "role": "domain-expert",       "actorType": "ACTOR_TYPE_HUMAN" },
+  { "role": "human-code-reviewer", "actorType": "ACTOR_TYPE_HUMAN" }
+]
+
+=== Match results ===
+  MATCH: ai-code-reviewer
+  MATCH: ai-documentor
+  MATCH: developer
+  MATCH: domain-expert
+  MATCH: human-code-reviewer
+
+Assertions:
+  1. Every configured_role.role has a matching role.name in org   PASS (all 5 match)
+  2. No extra org roles not in configured_roles (builtins excluded) PASS (0 extra)
+  3. All 5 roles represented                                       PASS
+
+Verdict: PASS

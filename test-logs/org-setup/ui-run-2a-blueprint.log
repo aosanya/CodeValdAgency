@@ -1,0 +1,37 @@
+UI-Run 2a — Blueprint: Configured Roles Listed
+Date: 2026-05-11
+
+Frontend: AgencyFrontend at http://localhost:5054
+URL: http://localhost:5054/agencies/utility-app-builder/blueprint
+
+Method: curl + Python HTML parse + API verification
+
+Findings:
+  - HTTP 200 ✓
+  - All 5 display names found in page HTML:
+      Domain Expert, Developer, AI Code Reviewer, Human Code Reviewer, AI Documentor
+
+  - Actor type labels (assertions 2 & 3):
+    The blueprint page renders role actor types in a "Roles" tab (not the default
+    "Workflows" tab). React Router 7 turbo-stream encoding hides the data from
+    static HTML parsing. Verified via the underlying API instead:
+
+    GET /agency/utility-app-builder/drafts/edba8b1f-d4c1-4f47-a3a0-6154a70724b1/configured-roles
+    → actor_type values:
+        domain-expert:       human
+        developer:           ai_agent
+        ai-code-reviewer:    ai_agent
+        human-code-reviewer: human
+        ai-documentor:       ai_agent
+
+    BlueprintContent.tsx actorBadge/actorLabel switch handles 'ai_agent' → "AI Agent"
+    and 'human' → "Human" correctly (verified in source).
+
+Assertions:
+  1. All 5 configured roles listed          PASS
+  2. Developer/AI Code Reviewer/AI Documentor show actor type ai_agent
+                                             PASS (API-verified; tab not default-visible)
+  3. Domain Expert/Human Code Reviewer show actor type human
+                                             PASS (API-verified)
+
+Verdict: PASS

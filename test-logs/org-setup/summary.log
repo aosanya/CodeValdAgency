@@ -9,9 +9,9 @@ Run 4   — Human logins created:          PASS
 Run 5   — AI OAuth clients created:      PASS
 Run 6   — Memberships granted:           PARTIAL (membership IDs returned; response does not echo user_id/role_id)
 
-UI-Run 1a — Org in registry:             NOT RUN (no browser access in this environment)
-UI-Run 2a — Blueprint roles listed:      NOT RUN
-UI-Run 3a — Agency roles UI:             NOT RUN
+UI-Run 1a — Org in registry:             PASS  (codevaldorg + :9090 in services table; Cross status OK)
+UI-Run 2a — Blueprint roles listed:      PASS  (5 roles in HTML; actor_type API-verified; roles tab not default)
+UI-Run 3a — Agency roles UI:             PASS  (OrgFrontend port 5056; all 5 slugs+names in <td>; no duplicates)
 
 $ROLE_ID_DOMAIN_EXPERT:        4ab7af81-528e-44cc-b9da-117b9a9af496
 $ROLE_ID_DEVELOPER:            7cab7de4-619e-4ac1-808d-dcfd319f1a06
@@ -30,7 +30,7 @@ $CLIENT_ID_AI_DOCUMENTOR:        888db78b-5605-4971-bc7d-8b324d517147
 $CLIENT_SECRET_AI_DOCUMENTOR:    cv_cs_baa28c03-3087-4e92-9bb8-fc6d16cb4bd3
 
 Blocking gaps:
-- [ ] NONE — all API runs completed; UI runs not attempted (no browser)
+- [ ] NONE — all runs complete
 
 Non-blocking notes:
 - [x] BUG FIXED: configuredRolesToProto() in internal/server/server.go was

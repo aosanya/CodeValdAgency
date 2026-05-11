@@ -1,0 +1,27 @@
+UI-Run 3a — Roles: Seeded Roles Visible in Agency UI
+Date: 2026-05-11
+
+Frontend: OrgFrontend at http://localhost:5056 (CodeValdOrgFrontend)
+URL: http://localhost:5056/agencies/utility-app-builder/roles
+
+Note: QA doc references port 5054 (AgencyFrontend), but the Org roles UI
+is served by the OrgFrontend at port 5056. The AgencyFrontend has its own
+roles route (draft-level), but the seeded CodeValdOrg roles are at OrgFrontend.
+
+Method: curl + Python HTML parse (SSR-rendered; no browser available)
+  HTTP: 200 ✓
+
+Role names found in <td> cells (no duplication):
+  Codes:   domain-expert, developer, ai-code-reviewer, human-code-reviewer, ai-documentor
+  Display: Domain Expert, Developer, AI Code Reviewer, Human Code Reviewer, AI Documentor
+
+Table structure:
+  <tr> count: 10 = 1 header + 4 builtin roles (super_admin, admin, member, viewer) + 5 configured roles
+  Each configured role: exactly 1 code cell + 1 display name cell — no duplicates
+
+Assertions:
+  1. All 5 roles listed                              PASS
+  2. Role codes match agency.json name values        PASS (domain-expert, developer, etc.)
+  3. No duplicate roles                              PASS (each appears once in <td> cells)
+
+Verdict: PASS

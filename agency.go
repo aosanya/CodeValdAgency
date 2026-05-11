@@ -829,6 +829,7 @@ func entityToConfiguredRole(e entitygraph.Entity) ConfiguredRole {
 	}
 	return ConfiguredRole{
 		ID:          e.ID,
+		Code:        strProp(p, "code"),
 		Name:        strProp(p, "name"),
 		Description: strProp(p, "description"),
 		ActorType:   ActorType(strProp(p, "actor_type")),

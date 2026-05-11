@@ -138,7 +138,10 @@ type ConfiguredRole struct {
 	// ID is the unique identifier for this configured role.
 	ID string
 
-	// Name is the human-readable label for this role (e.g. "domain_expert").
+	// Code is the machine-readable role code (e.g. "domain-expert"). Unique key.
+	Code string
+
+	// Name is the human-readable label for this role (e.g. "Domain Expert").
 	Name string
 
 	// Description is the role brief — responsibilities, boundaries, and

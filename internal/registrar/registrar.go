@@ -97,6 +97,26 @@ func (r *Registrar) SyncSubscriptions(ctx context.Context, agencyID string, plan
 	}
 }
 
+// SyncOrgRoles creates any configured role not yet present in CodeValdOrg for
+// this agency. Roles without a code are skipped; duplicates are deduplicated
+// before calling. Mirrors SyncSubscriptions — called on startup and after every
+// publish or promote.
+func (r *Registrar) SyncOrgRoles(ctx context.Context, agencyID string, roles []codevaldagency.ConfiguredRole) {
+	seen := map[string]bool{}
+	for _, role := range roles {
+		if role.Code == "" {
+			continue
+		}
+		if seen[role.Code] {
+			continue
+		}
+		seen[role.Code] = true
+		if err := r.heartbeat.CreateOrgRole(ctx, agencyID, role.Code, role.Name, role.Description); err != nil {
+			log.Printf("registrar[codevaldagency]: SyncOrgRoles: create role %q: %v", role.Code, err)
+		}
+	}
+}
+
 // Publish implements [eventbus.Publisher].
 // Marshals the event payload to JSON and forwards it to CodeValdCross via the
 // OrchestratorService.Publish RPC, which routes it on to CodeValdPubSub.

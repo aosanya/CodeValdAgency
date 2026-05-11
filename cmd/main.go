@@ -123,6 +123,17 @@ func main() {
 		syncCancel()
 	}
 
+	// Sync CodeValdOrg roles from promoted configured_roles at startup.
+	if syncer != nil && cfg.AgencyID != "" {
+		syncCtx, syncCancel := context.WithTimeout(ctx, 10*time.Second)
+		if roles, err := mgr.GetConfiguredRoles(syncCtx); err == nil {
+			syncer.SyncOrgRoles(syncCtx, cfg.AgencyID, roles)
+		} else {
+			log.Printf("codevaldagency: startup SyncOrgRoles: GetConfiguredRoles: %v", err)
+		}
+		syncCancel()
+	}
+
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 	if err != nil {
 		log.Fatalf("codevaldagency: failed to listen on :%s: %v", cfg.GRPCPort, err)

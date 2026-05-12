@@ -45,7 +45,7 @@ CodeValdAgency introduces the **Agency** as the top-level unit of purpose in the
 When an Agency is created:
 
 1. It is persisted to ArangoDB with a unique name
-2. A `cross.agency.created` event is published — triggering **CodeValdGit** to initialize a repository and **CodeValdWork** to set up task management
+2. A `agency.created` event is published — triggering **CodeValdGit** to initialize a repository and **CodeValdWork** to set up task management
 
 Each Agency progresses through a lifecycle:
 

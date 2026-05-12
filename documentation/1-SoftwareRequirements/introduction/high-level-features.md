@@ -88,7 +88,7 @@ See [stakeholders.md](stakeholders.md) for the RACI model and role assignment pa
 On successful `CreateAgency`, CodeValdAgency publishes:
 
 ```
-cross.agency.created
+agency.created
 ```
 
 This event is consumed by:

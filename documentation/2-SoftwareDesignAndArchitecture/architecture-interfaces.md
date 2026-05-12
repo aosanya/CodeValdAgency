@@ -35,7 +35,7 @@ type AgencyManager interface {
     // It creates the initial Agency entity and the first open draft.
     // Returns ErrAgencyReadOnly if a live agency already exists — use
     // CreateDraft + PromoteDraft for subsequent changes.
-    // Publishes cross.agency.created after a successful create.
+    // Publishes agency.created after a successful create.
     SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
 
     // ── Drafts ────────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ type AgencyManager interface {
 
     // PromoteDraft replaces the live agency with the full sub-graph of the given draft.
     // The draft transitions from "open" to "promoted". Other open drafts are unaffected.
-    // Publishes cross.agency.promoted on success.
+    // Publishes agency.promoted on success.
     // Returns ErrDraftNotFound if the draft does not exist.
     // Returns ErrDraftNotOpen if the draft is not open.
     PromoteDraft(ctx context.Context, draftID string) (Agency, error)
@@ -148,7 +148,7 @@ The concrete implementation is unexported. `cmd/main.go` constructs it via
 type agencyManager struct {
     dataManager   entitygraph.DataManager   // graph CRUD — injected by cmd/main.go
     schemaManager AgencySchemaManager       // schema versioning — injected by cmd/main.go
-    publisher     CrossPublisher            // publishes cross.agency.* events
+    publisher     CrossPublisher            // publishes agency.* events
     agencyID      string                    // loaded from the stored Agency entity at startup
 }
 

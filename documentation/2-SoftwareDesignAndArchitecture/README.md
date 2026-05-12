@@ -42,7 +42,7 @@ This directory contains the design and architecture documentation for the **Code
 | Storage injection | `Backend` interface injected by `cmd/main.go` | Backend-agnostic core; easy to test with mocks |
 | Downstream communication | gRPC only — no direct Go imports | Stable, versioned contracts; independent deployment |
 | Cross registration | `OrchestratorService.Register` RPC on startup + heartbeat | Standard CodeVald onboarding pattern; liveness via repeat calls |
-| Pub/sub event | `cross.agency.created` published on every `CreateAgency` | Cross listens to trigger `GitInitRepo` + Work setup |
+| Pub/sub event | `agency.created` published on every `CreateAgency` | Cross listens to trigger `GitInitRepo` + Work setup |
 | Error types | `errors.go` at module root | All exported errors in one place; no scattered sentinels |
 
 ---

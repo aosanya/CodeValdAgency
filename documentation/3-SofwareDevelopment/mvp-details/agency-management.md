@@ -52,7 +52,7 @@ type AgencyManager interface {
     // SetAgencyDetails — bootstrap-only write path.
     // Returns ErrInvalidJSON if the payload cannot be parsed or "id" is missing.
     // Returns ErrAgencyReadOnly once the live agency has been published.
-    // Publishes cross.agency.created on success.
+    // Publishes agency.created on success.
     SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
 
     // GetAgency retrieves the single live agency.
@@ -198,7 +198,7 @@ message SetAgencyDetailsRequest {
 ### Goal
 
 Register with CodeValdCross on startup and send periodic heartbeats. Publish
-`cross.agency.created` after every successful `SetAgencyDetails`.
+`agency.created` after every successful `SetAgencyDetails`.
 
 ### Files to Create/Modify
 
@@ -210,14 +210,14 @@ Register with CodeValdCross on startup and send periodic heartbeats. Publish
 
 | Direction | Topic |
 |---|---|
-| Produces | `cross.agency.created` |
+| Produces | `agency.created` |
 
 ### Acceptance Tests
 
 - When `CROSS_GRPC_ADDR` is unset, server starts without error and skips registration
 - When `CROSS_GRPC_ADDR` is set but unreachable, server continues running (non-fatal)
 - Registrar sends heartbeat at configured interval
-- `cross.agency.created` is published once per successful `SetAgencyDetails` call
+- `agency.created` is published once per successful `SetAgencyDetails` call
 
 ---
 
@@ -267,7 +267,7 @@ versions that have been released to consumers.
 | Immutability | The `AgencyPublication` entity is write-once | Audit integrity — every published version is permanent |
 | Mutable status | A separate `AgencyPublicationStatus` entity, linked via `has_status` | Lets ops transition `draft → active → archived` without mutating the publication record |
 | Storage | `agency_publications` entries in `agency_entities`, status in same collection linked via `agency_relationships` edge | Same entitygraph storage model as the rest of the schema |
-| Event | `cross.agency.published` after every successful publish | Downstream services react to a new version |
+| Event | `agency.published` after every successful publish | Downstream services react to a new version |
 
 ### Model (shipped — see [models.go](../../../models.go))
 
@@ -346,7 +346,7 @@ The publication-specific routes:
 
 | Direction | Topic | Trigger |
 |---|---|---|
-| Produces | `cross.agency.published` | After every successful `PublishAgency` |
+| Produces | `agency.published` | After every successful `PublishAgency` |
 
 ### Error Mapping
 
@@ -370,5 +370,5 @@ The publication-specific routes:
 - `ListPublications` returns publications in ascending version order
 - `UpdatePublicationStatus(v, "active")` from `draft` succeeds; from `archived` → `ErrInvalidPublicationStatus`
 - `UpdatePublicationStatus(v, "archived")` from `active` succeeds; from `draft` → `ErrInvalidPublicationStatus`
-- `cross.agency.published` is published once per successful `PublishAgency` call
+- `agency.published` is published once per successful `PublishAgency` call
 - `POST /agency/{agencyId}/publish` proxied through CodeValdCross returns 200 with `AgencyPublication` JSON

@@ -14,7 +14,7 @@ The MVP delivers:
 3. An ArangoDB `entitygraph.DataManager` + `entitygraph.SchemaManager` implementation with `agency_` prefixed collections
 4. A pre-delivered agency schema (TypeDefinitions for Agency, Goal, Workflow, WorkItem, ConfiguredRole, AgencySnapshot, AgencyPublication) seeded on first use
 5. An `AgencyService` gRPC service exposing all CRUD + convenience operations
-6. CodeValdCross heartbeat registration and `cross.agency.created` / `cross.agency.published` event publishing
+6. CodeValdCross heartbeat registration and `agency.created` / `agency.published` event publishing
 7. Integration tests for all gRPC operations
 
 ---
@@ -66,10 +66,10 @@ The MVP delivers:
 - [ ] `PromoteDraft` writes an `AgencySnapshot` entity to `agency_entities`
 - [ ] Direct edits to a published agency return `ErrAgencyReadOnly` → `FAILED_PRECONDITION`
 - [ ] Invalid draft-status transitions (`promoted`/`archived` → anything) return `ErrDraftNotOpen` → `FAILED_PRECONDITION`
-- [ ] `cross.agency.created` is published after every successful `SetAgencyDetails`
+- [ ] `agency.created` is published after every successful `SetAgencyDetails`
 - [ ] Routes declared in `RegisterRequest` and proxied via CodeValdCross dynamic proxy
 - [ ] `PublishAgency` creates an immutable versioned publication (`v1`, `v2`, …) without touching agency status
-- [ ] `cross.agency.published` is fired after every successful publish
+- [ ] `agency.published` is fired after every successful publish
 - [ ] `POST /agency/publish` is proxied through CodeValdCross
 - [ ] `AgencyManager` is a convenience facade over `entitygraph.DataManager` — no bespoke `Backend` interface
 - [ ] Storage uses `agency_entities`, `agency_drafts`, `agency_draft_entities`, `agency_relationships` (edge), `agency_schemas_draft`, and `agency_schemas_published` collections (snapshots and publications live as `TypeID`s within `agency_entities`)

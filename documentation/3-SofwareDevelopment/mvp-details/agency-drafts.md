@@ -152,7 +152,7 @@ UpdateDraftDescription(ctx context.Context, draftID, description string) (Agency
 // PromoteDraft replaces the live agency with the full graph of the given draft.
 // The draft status transitions from "open" to "promoted".
 // Other open drafts are unaffected (remain open; may still be promoted later).
-// Publishes "cross.agency.promoted" on success.
+// Publishes "agency.promoted" on success.
 // Returns ErrDraftNotFound if the draft does not exist.
 // Returns ErrDraftNotOpen if the draft is not open.
 PromoteDraft(ctx context.Context, draftID string) (Agency, error)
@@ -308,9 +308,9 @@ from the live `agency_entities` collection. Routing is driven by
 
 | Topic | Trigger |
 |---|---|
-| `cross.agency.promoted` | `PromoteDraft` — a draft became the live agency |
-| `cross.agency.draft.created` | `CreateDraft` — a new draft was forked |
-| `cross.agency.draft.archived` | `ArchiveDraft` — a draft was soft-discarded |
+| `agency.promoted` | `PromoteDraft` — a draft became the live agency |
+| `agency.draft.created` | `CreateDraft` — a new draft was forked |
+| `agency.draft.archived` | `ArchiveDraft` — a draft was soft-discarded |
 
 ---
 

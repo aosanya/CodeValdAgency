@@ -24,5 +24,5 @@ An **Agency** is an entity with a specific Mission. It coordinates AI agents tow
 | **gRPC Port** | `:50053` |
 | **Storage** | ArangoDB — `agencies` collection |
 | **Registers with** | CodeValdCross `OrchestratorService.Register` |
-| **Publishes** | `cross.agency.created` on successful creation |
+| **Publishes** | `agency.created` on successful creation |
 | **Module** | `github.com/aosanya/CodeValdAgency` |

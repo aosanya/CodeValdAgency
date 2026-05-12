@@ -135,13 +135,13 @@ The current API surface — and therefore the acceptance bar for a green PR:
 
 | Scenario | Expected |
 |---|---|
-| `SetAgencyDetails` with valid JSON | Returns the stored `Agency`; publishes `cross.agency.created` |
+| `SetAgencyDetails` with valid JSON | Returns the stored `Agency`; publishes `agency.created` |
 | `SetAgencyDetails` with malformed JSON | `INVALID_ARGUMENT` (`ErrInvalidJSON`) |
 | `SetAgencyDetails` after a successful `PromoteDraft` | `FAILED_PRECONDITION` (`ErrAgencyReadOnly`) |
 | `GetAgency` on empty database | `NOT_FOUND` (`ErrAgencyNotFound`) |
 | `CreateDraft` from live or open draft | Returns new `AgencyDraft` with `Status = "open"` |
 | `CreateDraft` from promoted/archived draft | `FAILED_PRECONDITION` (`ErrDraftNotOpen`) |
-| `PromoteDraft` | Replaces live sub-graph; sets `Agency.Enabled = true`; writes `AgencySnapshot`; publishes `cross.agency.promoted` |
+| `PromoteDraft` | Replaces live sub-graph; sets `Agency.Enabled = true`; writes `AgencySnapshot`; publishes `agency.promoted` |
 | `PublishAgency(draftID)` re-using an unchanged draft | `FAILED_PRECONDITION` (`ErrNoChangesDetected`) |
 | `UpdatePublicationStatus(v, "active")` from `draft` | Succeeds; the immutable `AgencyPublication` entity is **not** mutated; the linked `AgencyPublicationStatus` entity flips |
 | Cross registration with `CROSS_GRPC_ADDR` unreachable | Service stays up; loop retries silently |

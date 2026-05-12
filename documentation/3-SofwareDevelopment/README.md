@@ -61,7 +61,7 @@ MVP-AGENCY-001 → MVP-AGENCY-002 → MVP-AGENCY-003 → MVP-AGENCY-004 → MVP-
 
 | Direction | Topic |
 |-----------|-------|
-| **Produces** | `cross.agency.created` |
+| **Produces** | `agency.created` |
 | **Consumes** | *(none in Layer 1)* |
 
 ---

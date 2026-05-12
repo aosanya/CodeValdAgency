@@ -144,6 +144,14 @@ message ListPublicationsResponse {
   repeated AgencyPublication publications = 1;
 }
 
+// UpdatePublicationStatusRequest transitions a publication lifecycle status.
+// Allowed transitions: draft → active, active → archived.
+message UpdatePublicationStatusRequest {
+  int32  version = 1;
+  string status  = 2;
+}
+
+
 // GetGoalsRequest is intentionally empty — goals are scoped to the single
 // agency in this database.
 message GetGoalsRequest {}
@@ -422,6 +430,12 @@ service AgencyService {
 
   // ListPublications returns all publications in ascending version order.
   rpc ListPublications(ListPublicationsRequest) returns (ListPublicationsResponse);
+
+  // UpdatePublicationStatus transitions a publication to a new lifecycle status.
+  // Allowed transitions: draft → active, active → archived.
+  // Error: NOT_FOUND if no publication with that version exists.
+  // Error: INVALID_ARGUMENT if the transition is not allowed.
+  rpc UpdatePublicationStatus(UpdatePublicationStatusRequest) returns (AgencyPublication);
 
   // GetGoals returns all live Goal entities linked to the Agency.
   rpc GetGoals(GetGoalsRequest) returns (GetGoalsResponse);

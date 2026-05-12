@@ -9,7 +9,7 @@ of **Agencies** in the CodeVald platform.
 An Agency is the top-level organisational unit. Every other service in the
 platform scopes its data by `agencyID`. CodeValdAgency owns the authoritative
 record of what agencies exist, registers those agencies with
-[CodeValdCross](../CodeValdCross/README.md), and publishes `cross.agency.created`
+[CodeValdCross](../CodeValdCross/README.md), and publishes `agency.created`
 so that CodeValdCross can trigger downstream onboarding (git repo init, work
 setup, etc.).
 
@@ -36,7 +36,7 @@ Those concerns belong to other services.
 - CodeValdAgency **never** imports CodeValdGit, CodeValdWork, or CodeValdCross packages — gRPC only
 - All cross-service communication flows through the `Register` RPC on CodeValdCross
 - The `AgencyManager` interface is the only business-logic entry point — gRPC handlers delegate to it
-- `cross.agency.created` **must** be published after every successful `CreateAgency` call
+- `agency.created` **must** be published after every successful `CreateAgency` call
 - Storage backends are injected — the core library is backend-agnostic
 
 ---
@@ -117,7 +117,7 @@ git branch -d feature/AGENCY-XXX_description
 - **No direct imports of other CodeVald services** — all cross-service calls go through gRPC
 - **All public functions must have godoc comments**
 - **Context propagation** — every public method takes `context.Context` as first argument
-- **`cross.agency.created` must be published** on every successful `CreateAgency` — never silently skip
+- **`agency.created` must be published** on every successful `CreateAgency` — never silently skip
 
 ### Naming Conventions
 
@@ -143,17 +143,17 @@ git branch -d feature/AGENCY-XXX_description
 - ❌ **Git operations** — belongs in CodeValdGit
 - ❌ **Business logic in gRPC handlers** — handlers delegate to `AgencyManager`
 - ❌ **Hardcoded storage** — inject `Backend` via constructor
-- ❌ **Skipping `cross.agency.created`** — always publish on agency creation
+- ❌ **Skipping `agency.created`** — always publish on agency creation
 
 ---
 
 ## Integration with CodeValdCross
 
-CodeValdCross consumes `cross.agency.created` to:
+CodeValdCross consumes `agency.created` to:
 
 1. Call `CodeValdGit.InitRepo(agencyID)` — create the agency git repository
 2. Notify CodeValdWork to prepare the agency task scope
-3. Emit `cross.agency.created` downstream to any other listeners
+3. Emit `agency.created` downstream to any other listeners
 
 CodeValdAgency does **not** orchestrate these steps — it only publishes the event
 and lets Cross handle sequencing.

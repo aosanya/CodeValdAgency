@@ -50,7 +50,7 @@ record of every Agency. Every other service scopes its data by `agencyID`.
 
 | Topic | Direction | Description |
 |---|---|---|
-| `cross.agency.created` | **produces** | Published after every successful `CreateAgency` |
+| `agency.created` | **produces** | Published after every successful `CreateAgency` |
 
 ### Key Design Properties
 - **Single interface** — `AgencyManager` is the only business-logic entry point

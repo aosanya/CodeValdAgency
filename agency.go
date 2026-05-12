@@ -240,10 +240,6 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 			Properties: props,
 		})
 	} else {
-		// Reject edits once the agency has been published.
-		if boolProp(existing[0].Properties, "enabled") {
-			return Agency{}, ErrAgencyReadOnly
-		}
 		entity, err = m.dm.UpdateEntity(ctx, m.agencyID, existing[0].ID, entitygraph.UpdateEntityRequest{
 			Properties: props,
 		})
@@ -348,7 +344,9 @@ func (m *agencyManager) GetWorkItems(ctx context.Context) ([]WorkItem, error) {
 
 // PublishAgency creates an immutable [AgencyPublication] entity with an
 // auto-incremented version linked to the given draftID, then creates a linked
-// mutable [AgencyPublicationStatus] entity seeded at status "draft".
+// mutable [AgencyPublicationStatus] entity seeded at status "active".
+// Any previously active publication is automatically archived first, so only
+// one publication is active at a time.
 // When draftID is non-empty, the draft's content is hashed and compared
 // against all existing publications — [ErrNoChangesDetected] is returned if
 // the hash matches, preventing a re-publish with no new content.
@@ -399,6 +397,11 @@ func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (Agen
 	})
 	if err != nil {
 		return AgencyPublication{}, fmt.Errorf("PublishAgency: create entity: %w", err)
+	}
+
+	// Archive any currently active publications — only one may be active at a time.
+	if archiveErr := m.archiveActivePublications(ctx); archiveErr != nil {
+		return AgencyPublication{}, fmt.Errorf("PublishAgency: archive active publications: %w", archiveErr)
 	}
 
 	// Create the mutable status node for this publication, seeded as active.
@@ -458,7 +461,7 @@ func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (Agen
 		Version:     version,
 		Tag:         fmt.Sprintf("v%d", version),
 		PublishedAt: now,
-		Status:      "draft",
+		Status:      "active",
 	}
 
 	eventbus.SafePublish(ctx, m.publisher, eventbus.Event{
@@ -605,6 +608,30 @@ func (m *agencyManager) UpdatePublicationStatus(ctx context.Context, version int
 	return pub, nil
 }
 
+// archiveActivePublications transitions every currently active publication to
+// archived, enforcing the one-active-at-a-time invariant before a new publish.
+func (m *agencyManager) archiveActivePublications(ctx context.Context) error {
+	pubs, err := m.ListPublications(ctx)
+	if err != nil {
+		return err
+	}
+	for _, p := range pubs {
+		if p.Status != "active" {
+			continue
+		}
+		statusEntityID, err := m.findStatusEntityID(ctx, p.ID)
+		if err != nil {
+			return err
+		}
+		if _, err := m.dm.UpdateEntity(ctx, m.agencyID, statusEntityID, entitygraph.UpdateEntityRequest{
+			Properties: map[string]any{"status": "archived"},
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // findStatusEntityID returns the ID of the [AgencyPublicationStatus] entity
 // linked to the given publication entity via the has_status edge.
 // Returns [ErrPublicationNotFound] if the edge or entity is missing.
@@ -729,6 +756,25 @@ func (m *agencyManager) draftContentHash(ctx context.Context, draftID string) (s
 		}
 		records = append(records, string(b))
 	}
+
+	// Include agency name/mission/vision so a metadata-only change still
+	// produces a distinct hash and is not rejected as "no changes detected".
+	agency, err := m.GetAgency(ctx)
+	if err != nil {
+		return "", fmt.Errorf("draftContentHash agency: %w", err)
+	}
+	b, err := json.Marshal(map[string]any{
+		"type": "Agency",
+		"props": map[string]any{
+			"name":    agency.Name,
+			"mission": agency.Mission,
+			"vision":  agency.Vision,
+		},
+	})
+	if err != nil {
+		return "", fmt.Errorf("draftContentHash marshal Agency: %w", err)
+	}
+	records = append(records, string(b))
 
 	sort.Strings(records)
 	sum := sha256.Sum256([]byte(strings.Join(records, "\n")))

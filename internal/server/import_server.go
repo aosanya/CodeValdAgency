@@ -20,12 +20,10 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
 
-	codevaldagency "github.com/aosanya/CodeValdAgency"
 	pb "github.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1"
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
 	"google.golang.org/grpc/codes"
@@ -150,15 +148,11 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 
 	agencyID := spec.Agency.Code
 
-	// 1. Set agency details — skip if the agency is already published.
+	// 1. Set agency details.
 	log.Printf("[ImportDraft] %s: setting agency details", agencyID)
 	if err := s.importSetDetails(ctx, agencyID, spec.Agency); err != nil {
-		if errors.Is(err, codevaldagency.ErrAgencyReadOnly) {
-			log.Printf("[ImportDraft] %s: agency already published — skipping details update", agencyID)
-		} else {
-			log.Printf("[ImportDraft] %s: set details failed: %v", agencyID, err)
-			return nil, status.Errorf(codes.Internal, "ImportDraft %s: set details: %v", agencyID, err)
-		}
+		log.Printf("[ImportDraft] %s: set details failed: %v", agencyID, err)
+		return nil, status.Errorf(codes.Internal, "ImportDraft %s: set details: %v", agencyID, err)
 	}
 
 	// 2. Ensure open draft.
@@ -367,8 +361,9 @@ func (s *Server) importEnsureDraft(ctx context.Context, agencyID string, a impor
 		}
 	}
 
-	// Create a fresh draft entity.
-	entity, err := s.dm.UpsertEntity(ctx, entitygraph.CreateEntityRequest{
+	// No open draft found — create a fresh one. Use CreateEntity (not UpsertEntity)
+	// so the UniqueKey match on code never resets a promoted draft back to open.
+	entity, err := s.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 		AgencyID: agencyID,
 		TypeID:   "AgencyDraft",
 		Properties: map[string]any{

@@ -16,14 +16,14 @@ Follow the **mandatory task startup process** for CodeValdAgency tasks:
    - Check `documentation/3-SofwareDevelopment/mvp-details/` for detailed specs per topic
    - Check `documentation/1-SoftwareRequirements/requirements.md` for unimplemented functional requirements
    - Follow the onion approach — Layer 1 (raw core) before Layer 2 (integration)
-   - Layer 1 priority: `CreateAgency` → `GetAgency` → `Register with Cross` → `cross.agency.created`
+   - Layer 1 priority: `CreateAgency` → `GetAgency` → `Register with Cross` → `agency.created`
 
 2. **Read the specification**
    - Re-read the relevant FRs in `documentation/1-SoftwareRequirements/requirements.md`
    - Re-read the corresponding section in `documentation/2-SoftwareDesignAndArchitecture/architecture.md`
    - Read the task spec in `documentation/3-SofwareDevelopment/mvp-details/{topic-file}.md`
    - Understand how the task fits into the single-interface design (`AgencyManager`)
-   - Note the mandatory `cross.agency.created` publish requirement for `CreateAgency`
+   - Note the mandatory `agency.created` publish requirement for `CreateAgency`
 
 3. **Create feature branch from `main`**
    ```bash
@@ -36,7 +36,7 @@ Follow the **mandatory task startup process** for CodeValdAgency tasks:
 
 4. **Read project guidelines**
    - Review `.github/instructions/rules.instructions.md`
-   - Key rules: interface-first, inject Backend, publish `cross.agency.created`, no AI/frontend logic, context propagation, godoc on all exports
+   - Key rules: interface-first, inject Backend, publish `agency.created`, no AI/frontend logic, context propagation, godoc on all exports
 
 5. **Create a todo list**
    - Break the task into actionable steps
@@ -56,7 +56,7 @@ Before starting:
 
 - **No AI/LLM logic, no frontend serving** — this service manages agencies only
 - **`AgencyManager` is the only entry point** — gRPC handlers delegate to it
-- **`cross.agency.created` is mandatory** — publish on every successful `CreateAgency`
+- **`agency.created` is mandatory** — publish on every successful `CreateAgency`
 - **Backend is injected** — never hardcode ArangoDB connection in manager
 - **Every exported symbol** must have a godoc comment
 - **Every exported method** takes `context.Context` as the first argument

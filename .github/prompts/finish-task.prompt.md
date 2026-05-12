@@ -33,7 +33,7 @@ Follow the **mandatory completion process** for CodeValdAgency tasks:
    - [ ] All new exported symbols have godoc comments
    - [ ] All new exported methods accept `context.Context` as first argument
    - [ ] `Backend` is injected — no hardcoded ArangoDB in manager
-   - [ ] `cross.agency.created` is published on every successful `CreateAgency`
+   - [ ] `agency.created` is published on every successful `CreateAgency`
    - [ ] No AI/LLM logic, no frontend serving added
    - [ ] Errors are typed (`ErrAgencyNotFound`, not raw strings)
    - [ ] No file exceeds 500 lines

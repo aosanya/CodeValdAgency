@@ -13,9 +13,9 @@ clean up before merging.
 
 ## Common Failure Scenarios
 
-### Scenario 1: `CreateAgency` Succeeds but Cross Never Receives `cross.agency.created`
+### Scenario 1: `CreateAgency` Succeeds but Cross Never Receives `agency.created`
 **Symptom**: Agency appears in ArangoDB but CodeValdCross never triggers git init
-**Cause**: `cross.agency.created` publish is missing or the Cross client is nil
+**Cause**: `agency.created` publish is missing or the Cross client is nil
 **Check**: Confirm `m.crossClient.Publish(...)` is called after `backend.Insert`; check Cross client wiring in `cmd/main.go`
 
 ### Scenario 2: `Register` Always Fails with `DeadlineExceeded`
@@ -61,7 +61,7 @@ Add debug prints at:
    - `log.Printf("[AGENCY-XXX] Agency inserted: id=%s", agency.ID)`
 
 3. **Before and After Pub/Sub Publish**
-   - `log.Printf("[AGENCY-XXX] Publishing cross.agency.created: agencyID=%s", agency.ID)`
+   - `log.Printf("[AGENCY-XXX] Publishing agency.created: agencyID=%s", agency.ID)`
 
 4. **Heartbeat Loop**
    - `log.Printf("[AGENCY-XXX] Register: attempt addr=%s err=%v", addr, err)`

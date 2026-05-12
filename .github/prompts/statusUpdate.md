@@ -28,10 +28,10 @@ record of every Agency. Every other service scopes its data by `agencyID`.
 
 | Service | Method | Description |
 |---|---|---|
-| `AgencyService` | `SetAgencyDetails` | Replaces the full agency document from a JSON string; publishes `cross.agency.created` |
+| `AgencyService` | `SetAgencyDetails` | Replaces the full agency document from a JSON string; publishes `agency.created` |
 | `AgencyService` | `GetAgency` | Returns the single agency for this database |
 | `AgencyService` | `UpdateAgency` | Applies incremental field edits with lifecycle validation |
-| `AgencyService` | `PublishAgency` | Creates an immutable versioned publication; publishes `cross.agency.published` |
+| `AgencyService` | `PublishAgency` | Creates an immutable versioned publication; publishes `agency.published` |
 | `AgencyService` | `GetPublication` | Retrieves a single publication by version number |
 | `AgencyService` | `ListPublications` | Returns all publications in ascending version order |
 

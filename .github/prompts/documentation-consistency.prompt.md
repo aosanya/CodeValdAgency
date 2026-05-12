@@ -40,7 +40,7 @@ Key interfaces:
   - Backend: Insert, Get, Update, Delete, List
 
 Cross-service events:
-  Produces: cross.agency.created
+  Produces: agency.created
   Consumes: (none in Layer 1)
 
 Documentation structure:

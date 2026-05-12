@@ -59,14 +59,14 @@ cmd/main.go                          → Dependency wiring only
 **`CreateAgency` is the most critical operation in this service.**
 
 ```go
-// ✅ CORRECT — publish cross.agency.created after every successful creation
+// ✅ CORRECT — publish agency.created after every successful creation
 func (m *manager) CreateAgency(ctx context.Context, req CreateAgencyRequest) (Agency, error) {
     agency, err := m.backend.Insert(ctx, req)
     if err != nil {
         return Agency{}, err
     }
     // MANDATORY: publish so Cross can trigger git init + work setup
-    m.crossClient.Publish(ctx, "cross.agency.created", agency.ID)
+    m.crossClient.Publish(ctx, "agency.created", agency.ID)
     return agency, nil
 }
 
@@ -142,7 +142,7 @@ func register(ctx context.Context, crossAddr string) {
     req := &pb.RegisterRequest{
         ServiceName: "codevaldagency",
         Addr:        ":50053",
-        Produces:    []string{"cross.agency.created"},
+        Produces:    []string{"agency.created"},
         Consumes:    []string{},
         Routes:      agencyRoutes(),
     }
@@ -228,5 +228,5 @@ func toGRPCError(err error) error {
 - ❌ **Pub/sub topic strings as raw literals** — define as constants
 - ❌ **Business logic in gRPC handlers** — delegate to `AgencyManager`
 - ❌ **Hardcoded ArangoDB connection in manager** — inject `Backend`
-- ❌ **Skipping `cross.agency.created`** — always publish on creation
+- ❌ **Skipping `agency.created`** — always publish on creation
 ````

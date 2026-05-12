@@ -4,7 +4,7 @@
 // [types.Schema] for CodeValdAgency. cmd/main.go seeds this schema
 // idempotently on startup via AgencySchemaManager.SetSchema.
 //
-// The schema declares twenty-four TypeDefinitions:
+// The schema declares twenty-six TypeDefinitions:
 //   - Agency                    — root entity (mutable)
 //   - Goal                      — strategic objective (mutable)
 //   - Workflow                  — ordered container of WorkItems (mutable)
@@ -29,6 +29,8 @@
 //   - GitContextSource          — context source: CodeValdGit file signals (mutable)
 //   - CommContextSource         — context source: CodeValdComm thread lookback (mutable)
 //   - WorkContextSource         — context source: CodeValdWork task details (mutable)
+//   - AIProvider                — LLM provider configuration declared in ai_config (mutable)
+//   - AIAgent                   — LLM agent configuration declared in ai_config (mutable)
 //
 // Relationship graph:
 //
@@ -134,6 +136,8 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "has_snapshot", Label: "Snapshots", PathSegment: "snapshots", ToType: "AgencySnapshot", ToMany: true, Inverse: "belongs_to_agency"},
 					{Name: "has_publication", Label: "Publications", PathSegment: "publications", ToType: "AgencyPublication", ToMany: true, Inverse: "belongs_to_agency"},
 					{Name: "has_work_plan", Label: "Work Plans", PathSegment: "work-plans", ToType: "WorkPlan", ToMany: true, Inverse: "belongs_to_agency"},
+					{Name: "has_ai_provider", Label: "AI Providers", PathSegment: "ai-providers", ToType: "AIProvider", ToMany: true, Inverse: "belongs_to_agency"},
+					{Name: "has_ai_agent", Label: "AI Agents", PathSegment: "ai-agents", ToType: "AIAgent", ToMany: true, Inverse: "belongs_to_agency"},
 				},
 			},
 			{
@@ -703,6 +707,50 @@ func DefaultAgencySchema() types.Schema {
 				},
 				Relationships: []types.RelationshipDefinition{
 					{Name: "belongs_to_work_plan", Label: "Work Plan", PathSegment: "work-plan", ToType: "WorkPlan", ToMany: false, Required: true},
+				},
+			},
+			{
+				Name:              "AIProvider",
+				DisplayName:       "AI Provider",
+				PathSegment:       "ai-providers",
+				EntityIDParam:     "aiProviderId",
+				StorageCollection: "agency_ai_providers",
+				UniqueKey:         []string{"code"},
+				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: true},
+					{Name: "name", Type: types.PropertyTypeString, Required: true},
+					{Name: "provider_type", Type: types.PropertyTypeString, Required: false},
+					{Name: "api_key_env", Type: types.PropertyTypeString, Required: false},
+					{Name: "base_url", Type: types.PropertyTypeString, Required: false},
+					{Name: "provider_route", Type: types.PropertyTypeString, Required: false},
+				},
+				Relationships: []types.RelationshipDefinition{
+					{Name: "belongs_to_agency", Label: "Agency", PathSegment: "agency", ToType: "Agency", ToMany: false, Required: true},
+				},
+			},
+			{
+				Name:              "AIAgent",
+				DisplayName:       "AI Agent",
+				PathSegment:       "ai-agents",
+				EntityIDParam:     "aiAgentId",
+				StorageCollection: "agency_ai_agents",
+				UniqueKey:         []string{"code"},
+				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: true},
+					{Name: "name", Type: types.PropertyTypeString, Required: true},
+					{Name: "provider_code", Type: types.PropertyTypeString, Required: false},
+					{Name: "model", Type: types.PropertyTypeString, Required: false},
+					{Name: "system_prompt", Type: types.PropertyTypeString, Required: false},
+					{Name: "temperature", Type: types.PropertyTypeFloat, Required: false},
+					{Name: "max_tokens", Type: types.PropertyTypeInteger, Required: false},
+					{Name: "session_max_seconds", Type: types.PropertyTypeInteger, Required: false},
+					{Name: "session_max_tokens", Type: types.PropertyTypeInteger, Required: false},
+					{Name: "session_max_sessions", Type: types.PropertyTypeInteger, Required: false},
+				},
+				Relationships: []types.RelationshipDefinition{
+					{Name: "belongs_to_agency", Label: "Agency", PathSegment: "agency", ToType: "Agency", ToMany: false, Required: true},
 				},
 			},
 		},

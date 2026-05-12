@@ -39,6 +39,34 @@ type importAgencyYAML struct {
 	Goals           []importGoalSpec      `yaml:"goals"`
 	Workflows       []importWorkflowSpec  `yaml:"workflows"`
 	WorkPlans       []importWorkPlanSpec  `yaml:"work_plans"`
+	AIConfig        importAIConfigSpec    `yaml:"ai_config"`
+}
+
+type importAIConfigSpec struct {
+	Providers []importAIProviderSpec `yaml:"providers"`
+	Agents    []importAIAgentSpec    `yaml:"agents"`
+}
+
+type importAIProviderSpec struct {
+	Code          string `yaml:"code"`
+	Name          string `yaml:"name"`
+	ProviderType  string `yaml:"provider_type"`
+	APIKeyEnv     string `yaml:"api_key_env"`
+	BaseURL       string `yaml:"base_url"`
+	ProviderRoute string `yaml:"provider_route"`
+}
+
+type importAIAgentSpec struct {
+	Code               string  `yaml:"code"`
+	Name               string  `yaml:"name"`
+	ProviderCode       string  `yaml:"provider_code"`
+	Model              string  `yaml:"model"`
+	SystemPrompt       string  `yaml:"system_prompt"`
+	Temperature        float64 `yaml:"temperature"`
+	MaxTokens          int     `yaml:"max_tokens"`
+	SessionMaxSeconds  int     `yaml:"session_max_seconds"`
+	SessionMaxTokens   int     `yaml:"session_max_tokens"`
+	SessionMaxSessions int     `yaml:"session_max_sessions"`
 }
 
 type importAgencySpec struct {
@@ -306,6 +334,44 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 		if err := s.importUpsert(ctx, agencyID, "WorkPlan", props); err != nil {
 			log.Printf("[ImportDraft] %s: work plan %s upsert failed: %v", agencyID, wp.Code, err)
 			return nil, status.Errorf(codes.Internal, "ImportDraft %s: work plan %s: %v", agencyID, wp.Code, err)
+		}
+	}
+
+	// 7. AI Providers (live entities, not draft-scoped).
+	log.Printf("[ImportDraft] %s: upserting %d ai_config providers", agencyID, len(spec.AIConfig.Providers))
+	for _, p := range spec.AIConfig.Providers {
+		log.Printf("[ImportDraft] %s: upsert ai provider code=%s", agencyID, p.Code)
+		if err := s.importUpsert(ctx, agencyID, "AIProvider", map[string]any{
+			"code":           p.Code,
+			"name":           p.Name,
+			"provider_type":  p.ProviderType,
+			"api_key_env":    p.APIKeyEnv,
+			"base_url":       p.BaseURL,
+			"provider_route": p.ProviderRoute,
+		}); err != nil {
+			log.Printf("[ImportDraft] %s: ai provider %s upsert failed: %v", agencyID, p.Code, err)
+			return nil, status.Errorf(codes.Internal, "ImportDraft %s: ai_provider %s: %v", agencyID, p.Code, err)
+		}
+	}
+
+	// 8. AI Agents (live entities, not draft-scoped).
+	log.Printf("[ImportDraft] %s: upserting %d ai_config agents", agencyID, len(spec.AIConfig.Agents))
+	for _, a := range spec.AIConfig.Agents {
+		log.Printf("[ImportDraft] %s: upsert ai agent code=%s", agencyID, a.Code)
+		if err := s.importUpsert(ctx, agencyID, "AIAgent", map[string]any{
+			"code":                 a.Code,
+			"name":                 a.Name,
+			"provider_code":        a.ProviderCode,
+			"model":                a.Model,
+			"system_prompt":        clean(a.SystemPrompt),
+			"temperature":          a.Temperature,
+			"max_tokens":           a.MaxTokens,
+			"session_max_seconds":  a.SessionMaxSeconds,
+			"session_max_tokens":   a.SessionMaxTokens,
+			"session_max_sessions": a.SessionMaxSessions,
+		}); err != nil {
+			log.Printf("[ImportDraft] %s: ai agent %s upsert failed: %v", agencyID, a.Code, err)
+			return nil, status.Errorf(codes.Internal, "ImportDraft %s: ai_agent %s: %v", agencyID, a.Code, err)
 		}
 	}
 

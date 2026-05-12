@@ -25,7 +25,7 @@ func TestServer_CreateWorkPlan_OK(t *testing.T) {
 			Ordinality:   1,
 		},
 	}
-	srv := server.New(mgr, nil)
+	srv := server.New(mgr, nil, nil)
 	got, err := srv.CreateWorkPlan(context.Background(), &pb.CreateWorkPlanRequest{
 		Name:         "dispatcher",
 		TriggerTopic: `work\.task\..*`,
@@ -49,7 +49,7 @@ func TestServer_CreateWorkPlan_OK(t *testing.T) {
 func TestServer_CreateWorkPlan_InvalidRegex_ReturnsInvalidArgument(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{createWorkPlanErr: codevaldagency.ErrInvalidRegex}
-	srv := server.New(mgr, nil)
+	srv := server.New(mgr, nil, nil)
 	_, err := srv.CreateWorkPlan(context.Background(), &pb.CreateWorkPlanRequest{
 		Name:         "bad",
 		TriggerTopic: `[invalid`,
@@ -60,7 +60,7 @@ func TestServer_CreateWorkPlan_InvalidRegex_ReturnsInvalidArgument(t *testing.T)
 func TestServer_GetWorkPlan_NotFound_ReturnsNotFound(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{getWorkPlanErr: codevaldagency.ErrWorkPlanNotFound}
-	srv := server.New(mgr, nil)
+	srv := server.New(mgr, nil, nil)
 	_, err := srv.GetWorkPlan(context.Background(), &pb.GetWorkPlanRequest{WorkPlanId: "missing"})
 	requireCode(t, err, codes.NotFound)
 }
@@ -93,7 +93,7 @@ func TestServer_MatchWorkPlans_ReturnsMatchesWithSources(t *testing.T) {
 			},
 		},
 	}
-	srv := server.New(mgr, nil)
+	srv := server.New(mgr, nil, nil)
 	resp, err := srv.MatchWorkPlans(context.Background(), &pb.MatchWorkPlansRequest{
 		Topic:   "work.task.status.changed",
 		Payload: `{"status":"open"}`,
@@ -129,7 +129,7 @@ func TestServer_MatchWorkPlans_ReturnsMatchesWithSources(t *testing.T) {
 func TestServer_MatchWorkPlans_Empty_ReturnsEmptyList(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{matchWorkPlansResult: nil}
-	srv := server.New(mgr, nil)
+	srv := server.New(mgr, nil, nil)
 	resp, err := srv.MatchWorkPlans(context.Background(), &pb.MatchWorkPlansRequest{
 		Topic: "unknown.topic",
 	})

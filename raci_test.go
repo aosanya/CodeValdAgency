@@ -8,6 +8,8 @@ import (
 	codevaldagency "github.com/aosanya/CodeValdAgency"
 )
 
+func ptrStr(s string) *string { return &s }
+
 // mustSetupWorkPlan creates a role via CreateRole, failing the test on any error.
 func mustSetupWorkPlan(t *testing.T, mgr codevaldagency.AgencyManager, topic string, enabled bool, ordinality int) codevaldagency.WorkPlan {
 	t.Helper()
@@ -157,7 +159,7 @@ func TestUpdateRole_NotFound_ReturnsErrWorkPlanNotFound(t *testing.T) {
 	mgr, _ := mustNewManager(t)
 
 	_, err := mgr.UpdateWorkPlan(context.Background(), "no-such-id", codevaldagency.UpdateWorkPlanRequest{
-		TriggerTopic: `work\..*`,
+		TriggerTopic: ptrStr(`work\..*`),
 	})
 	if !errors.Is(err, codevaldagency.ErrWorkPlanNotFound) {
 		t.Fatalf("expected ErrWorkPlanNotFound, got %v", err)
@@ -171,7 +173,7 @@ func TestUpdateRole_InvalidRegex_ReturnsErrInvalidRegex(t *testing.T) {
 	role := mustSetupWorkPlan(t, mgr, `work\..*`, true, 1)
 
 	_, err := mgr.UpdateWorkPlan(context.Background(), role.ID, codevaldagency.UpdateWorkPlanRequest{
-		TriggerTopic: `[bad`,
+		TriggerTopic: ptrStr(`[bad`),
 	})
 	if !errors.Is(err, codevaldagency.ErrInvalidRegex) {
 		t.Fatalf("expected ErrInvalidRegex, got %v", err)

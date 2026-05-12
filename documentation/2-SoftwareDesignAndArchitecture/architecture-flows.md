@@ -53,7 +53,7 @@ AgencyManager.SetAgencyDetails(ctx, jsonStr)
     │
     ├─ dataManager.CreateEntity — Agency entity
     │
-    └─ publisher.Publish(ctx, "cross.agency.created", agencyID)
+    └─ publisher.Publish(ctx, "agency.created", agencyID)
             publish errors are logged; never returned to caller
 ```
 
@@ -85,7 +85,7 @@ AgencyManager.CreateDraft(ctx, description, forkedFromID, forkedFromType)
     │         CreateEntity (new ID, same properties)
     │         CreateRelationship (draft → entity, preserving internal edges)
     │
-    └─ publisher.Publish(ctx, "cross.agency.draft.created", agencyID)
+    └─ publisher.Publish(ctx, "agency.draft.created", agencyID)
 ```
 
 ---
@@ -118,7 +118,7 @@ AgencyManager.PromoteDraft(ctx, draftID)
     │
     ├─ dataManager.CreateEntity — AgencySnapshot (immutable, promotion record)
     │
-    └─ publisher.Publish(ctx, "cross.agency.promoted", agencyID)
+    └─ publisher.Publish(ctx, "agency.promoted", agencyID)
 
 Post-promotion workflow:
     ↓
@@ -142,7 +142,7 @@ AgencyManager.ArchiveDraft(ctx, draftID)
     │
     ├─ dataManager.UpdateEntity — AgencyDraft {status: "archived"}
     │
-    └─ publisher.Publish(ctx, "cross.agency.draft.archived", agencyID)
+    └─ publisher.Publish(ctx, "agency.draft.archived", agencyID)
 ```
 
 ---
@@ -171,7 +171,7 @@ AgencyManager.PublishAgency(ctx, draftID)
     ├─ dataManager.CreateEntity — AgencyPublicationStatus{status: "draft"}
     ├─ dataManager.CreateRelationship — has_status: publication → status
     │
-    └─ publisher.Publish(ctx, "cross.agency.published", agencyID)
+    └─ publisher.Publish(ctx, "agency.published", agencyID)
 ```
 
 `UpdatePublicationStatus(version, status)` mutates the linked

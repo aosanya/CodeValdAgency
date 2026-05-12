@@ -4,9 +4,9 @@
 
 | Consumer | Role | Integration |
 |---|---|---|
-| **CodeValdCross** | Orchestrator — routes HTTP requests; registers CodeValdAgency as a service | Receives heartbeat every 20s; brokers `cross.agency.created` events |
-| **CodeValdGit** | Consumes `cross.agency.created` | Calls `RepoManager.InitRepo(agencyID)` to initialize the Agency's Git repository |
-| **CodeValdWork** | Consumes `cross.agency.created` | Sets up task management context for the Agency |
+| **CodeValdCross** | Orchestrator — routes HTTP requests; registers CodeValdAgency as a service | Receives heartbeat every 20s; brokers `agency.created` events |
+| **CodeValdGit** | Consumes `agency.created` | Calls `RepoManager.InitRepo(agencyID)` to initialize the Agency's Git repository |
+| **CodeValdWork** | Consumes `agency.created` | Sets up task management context for the Agency |
 
 ---
 

@@ -11,7 +11,7 @@ This directory captures the requirements for the **CodeValdAgency** microservice
 CodeValdAgency is responsible for:
 - Creating, reading, updating, deleting, and listing **Agency** entities
 - Persisting agencies to **ArangoDB** (`agencies` collection)
-- Publishing `cross.agency.created` events on successful creation
+- Publishing `agency.created` events on successful creation
 - Registering with **CodeValdCross** `OrchestratorService.Register` on startup
 
 ---
@@ -21,7 +21,7 @@ CodeValdAgency is responsible for:
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | REQ-001 | `CreateAgency` validates name uniqueness before insert | P0 |
-| REQ-002 | `CreateAgency` publishes `cross.agency.created` after successful insert | P0 |
+| REQ-002 | `CreateAgency` publishes `agency.created` after successful insert | P0 |
 | REQ-003 | `GetAgency` returns typed `ErrNotFound` for unknown IDs | P0 |
 | REQ-004 | All operations are context-cancellable (deadline propagated to ArangoDB) | P0 |
 | REQ-005 | Service registers with CodeValdCross within 30s of startup; heartbeat every 20s | P0 |

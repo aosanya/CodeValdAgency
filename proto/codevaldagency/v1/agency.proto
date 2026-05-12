@@ -123,6 +123,8 @@ message AgencyPublication {
   // same hash; PublishAgency rejects a publish when the hash matches an
   // existing publication.
   string                    content_hash = 7;
+  // status is the lifecycle state: draft → active → archived.
+  string                    status       = 8;
 }
 
 // PublishAgencyRequest carries the draft to publish.

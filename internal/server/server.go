@@ -124,6 +124,15 @@ func (s *Server) ListPublications(ctx context.Context, _ *pb.ListPublicationsReq
 	return &pb.ListPublicationsResponse{Publications: out}, nil
 }
 
+// UpdatePublicationStatus implements pb.AgencyServiceServer.
+func (s *Server) UpdatePublicationStatus(ctx context.Context, req *pb.UpdatePublicationStatusRequest) (*pb.AgencyPublication, error) {
+	pub, err := s.mgr.UpdatePublicationStatus(ctx, int(req.GetVersion()), req.GetStatus())
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return publicationToProto(pub), nil
+}
+
 // GetGoals implements pb.AgencyServiceServer.
 func (s *Server) GetGoals(ctx context.Context, _ *pb.GetGoalsRequest) (*pb.GetGoalsResponse, error) {
 	goals, err := s.mgr.GetGoals(ctx)
@@ -283,6 +292,7 @@ func publicationToProto(p codevaldagency.AgencyPublication) *pb.AgencyPublicatio
 		PublishedAt: timeToProto(p.PublishedAt),
 		DraftId:     p.DraftID,
 		ContentHash: p.ContentHash,
+		Status:      p.Status,
 	}
 }
 

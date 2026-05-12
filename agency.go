@@ -401,12 +401,12 @@ func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (Agen
 		return AgencyPublication{}, fmt.Errorf("PublishAgency: create entity: %w", err)
 	}
 
-	// Create the mutable status node for this publication.
+	// Create the mutable status node for this publication, seeded as active.
 	statusEntity, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
 		AgencyID: m.agencyID,
 		TypeID:   "AgencyPublicationStatus",
 		Properties: map[string]any{
-			"status": "draft",
+			"status": "active",
 		},
 	})
 	if err != nil {
@@ -560,23 +560,15 @@ func (m *agencyManager) pubStatusMap(ctx context.Context) (map[string]string, er
 // canTransitionPublicationStatus reports whether transitioning from current
 // to next is a valid publication lifecycle move.
 //
-// Allowed transitions:
+// Allowed transition:
 //
-//	draft  → active
 //	active → archived
 func canTransitionPublicationStatus(current, next string) bool {
-	switch current {
-	case "draft":
-		return next == "active"
-	case "active":
-		return next == "archived"
-	default:
-		return false // archived is terminal
-	}
+	return current == "active" && next == "archived"
 }
 
 // UpdatePublicationStatus transitions the publication at the given version to
-// a new status. Allowed: draft → active, active → archived.
+// a new status. Allowed: active → archived.
 // Returns [ErrPublicationNotFound] if no matching version exists.
 // Returns [ErrInvalidPublicationStatus] if the transition is not permitted.
 //

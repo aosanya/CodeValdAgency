@@ -24,7 +24,7 @@
 //   - DraftDeliverableResult    — copy of DeliverableResult inside a draft, stored in agency_draft_entities (mutable)
 //   - AgencySnapshot            — immutable activation record (draft → active)
 //   - AgencyPublication         — immutable versioned publication snapshot
-//   - AgencyPublicationStatus   — mutable status node for a publication (draft → active → archived)
+//   - AgencyPublicationStatus   — mutable status node for a publication (active → archived)
 //   - WorkPlan                  — execution plan binding a trigger topic, Role, and WorkItem (mutable)
 //   - GitContextSource          — context source: CodeValdGit file signals (mutable)
 //   - CommContextSource         — context source: CodeValdComm thread lookback (mutable)
@@ -569,7 +569,7 @@ func DefaultAgencySchema() types.Schema {
 			},
 			// AgencyPublicationStatus is the mutable counterpart to the immutable
 			// AgencyPublication entity. It holds the current lifecycle status
-			// (draft → active → archived) so that UpdatePublicationStatus can call
+			// (active → archived) so that UpdatePublicationStatus can call
 			// UpdateEntity on this type without hitting ErrImmutableType.
 			{
 				Name:              "AgencyPublicationStatus",
@@ -581,7 +581,7 @@ func DefaultAgencySchema() types.Schema {
 				Properties: []types.PropertyDefinition{
 					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
 					{Name: "code", Type: types.PropertyTypeString, Required: false},
-					// status valid values: "draft", "active", "archived"
+					// status valid values: "active", "archived"
 					{Name: "status", Type: types.PropertyTypeOption, Required: true},
 					// draft_ref_code references the AgencyDraft entity that was published to create the parent publication.
 					{Name: "draft_ref_code", Type: types.PropertyTypeString, Required: false},

@@ -61,7 +61,7 @@ type AgencyManager interface {
 	// Returns [ErrDraftNotFound] if draftID is provided but not found.
 	// Returns [ErrNoChangesDetected] if draftID is non-empty and the draft's
 	// content hash matches an existing publication.
-	// Publishes "cross.agency.published" after every successful write.
+	// Publishes "agency.published" after every successful write.
 	PublishAgency(ctx context.Context, draftID string) (AgencyPublication, error)
 
 	// GetPublication retrieves a single publication by its version number.
@@ -106,7 +106,7 @@ type AgencyManager interface {
 	// the draft as "promoted", and writes an [AgencySnapshot].
 	// Returns [ErrDraftNotFound] if the draft does not exist.
 	// Returns [ErrDraftNotOpen] if the draft is already promoted or archived.
-	// Publishes "cross.agency.promoted" on success.
+	// Publishes "agency.promoted" on success.
 	PromoteDraft(ctx context.Context, draftID string) (Agency, error)
 
 	// ArchiveDraft marks an open draft as "archived" without promoting it.
@@ -352,7 +352,7 @@ func (m *agencyManager) GetWorkItems(ctx context.Context) ([]WorkItem, error) {
 // When draftID is non-empty, the draft's content is hashed and compared
 // against all existing publications — [ErrNoChangesDetected] is returned if
 // the hash matches, preventing a re-publish with no new content.
-// Publishes "cross.agency.published" on success.
+// Publishes "agency.published" on success.
 // Returns [ErrAgencyNotFound] if no agency entity exists yet.
 func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (AgencyPublication, error) {
 	agency, err := m.GetAgency(ctx)
@@ -462,7 +462,7 @@ func (m *agencyManager) PublishAgency(ctx context.Context, draftID string) (Agen
 	}
 
 	eventbus.SafePublish(ctx, m.publisher, eventbus.Event{
-		Topic:    "cross.agency.published",
+		Topic:    "agency.published",
 		AgencyID: agency.ID,
 	})
 	return pub, nil

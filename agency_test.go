@@ -484,7 +484,7 @@ func TestPublishAgency_PublishesEvent(t *testing.T) {
 	t.Parallel()
 	mgr, _, fp := mustNewManagerWithPublisher(t)
 	set := mustSetupAgency(t, mgr, "agency-001", "Alpha")
-	fp.events = nil // reset; SetAgencyDetails fires cross.agency.created
+	fp.events = nil // reset; SetAgencyDetails fires agency.published
 
 	if _, err := mgr.PublishAgency(context.Background(), ""); err != nil {
 		t.Fatalf("PublishAgency: %v", err)
@@ -492,8 +492,8 @@ func TestPublishAgency_PublishesEvent(t *testing.T) {
 	if len(fp.events) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(fp.events))
 	}
-	if fp.events[0].topic != "cross.agency.published" {
-		t.Errorf("topic: want %q, got %q", "cross.agency.published", fp.events[0].topic)
+	if fp.events[0].topic != "agency.published" {
+		t.Errorf("topic: want %q, got %q", "agency.published", fp.events[0].topic)
 	}
 	if fp.events[0].id != set.ID {
 		t.Errorf("agencyID: want %q, got %q", set.ID, fp.events[0].id)

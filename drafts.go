@@ -330,7 +330,7 @@ func (m *agencyManager) UpdateDraftDescription(ctx context.Context, draftID, des
 
 // PromoteDraft replaces the live agency sub-entity graph with the draft
 // sub-entities, enables the agency, marks the draft as "promoted", and writes
-// an AgencySnapshot. Publishes "cross.agency.promoted" on success.
+// an AgencySnapshot. Publishes "agency.promoted" on success.
 //
 // Returns [ErrDraftNotFound] if the draft does not exist.
 // Returns [ErrDraftNotOpen] if the draft is already promoted or archived.
@@ -393,7 +393,7 @@ func (m *agencyManager) PromoteDraft(ctx context.Context, draftID string) (Agenc
 
 	// 9. Publish event.
 	eventbus.SafePublish(ctx, m.publisher, eventbus.Event{
-		Topic:    "cross.agency.promoted",
+		Topic:    "agency.promoted",
 		AgencyID: agencyEntity.ID,
 	})
 

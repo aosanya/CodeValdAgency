@@ -129,6 +129,9 @@ func (m *mockManager) RemoveContextSource(_ context.Context, _, _ string) error 
 func (m *mockManager) MatchWorkPlans(_ context.Context, _, _ string) ([]codevaldagency.WorkPlanMatch, error) {
 	return m.matchWorkPlansResult, m.matchWorkPlansErr
 }
+func (m *mockManager) GetWorkItems(_ context.Context) ([]codevaldagency.WorkItem, error) {
+	return nil, nil
+}
 
 // requireCode asserts that err is a gRPC status error with the expected code.
 func requireCode(t *testing.T, err error, want codes.Code) {

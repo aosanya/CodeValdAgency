@@ -25,7 +25,7 @@
 //   - AgencySnapshot            — immutable activation record (draft → active)
 //   - AgencyPublication         — immutable versioned publication snapshot
 //   - AgencyPublicationStatus   — mutable status node for a publication (active → archived)
-//   - WorkPlan                  — execution plan binding a trigger topic, Role, and WorkItem (mutable)
+//   - WorkPlan                  — execution plan binding a trigger topic, handler_service, and optional function_code/function_params or agent_id/instructions (mutable)
 //   - GitContextSource          — context source: CodeValdGit file signals (mutable)
 //   - CommContextSource         — context source: CodeValdComm thread lookback (mutable)
 //   - WorkContextSource         — context source: CodeValdWork task details (mutable)
@@ -621,11 +621,22 @@ func DefaultAgencySchema() types.Schema {
 					// Empty string means match all payloads.
 					{Name: "payload_condition", Type: types.PropertyTypeString, Required: false},
 					// instructions is a prompt template injected into the triggered AgentRun.
+					// Only used when handler_service == "codevaldai".
 					{Name: "instructions", Type: types.PropertyTypeString, Required: false},
 					// agent_id is a cross-service reference to a CodeValdAI Agent entity ID.
+					// Only used when handler_service == "codevaldai".
 					{Name: "agent_id", Type: types.PropertyTypeString, Required: false},
 					// handler_service is the CodeVald service responsible for executing this plan.
+					// Valid values: "codevaldai", "codevaldfunction", "codevaldcomm".
 					{Name: "handler_service", Type: types.PropertyTypeString, Required: false},
+					// function_code identifies the function binary to invoke.
+					// Only used when handler_service == "codevaldfunction".
+					{Name: "function_code", Type: types.PropertyTypeString, Required: false},
+					// function_params is a JSON-encoded object of named parameters forwarded to
+					// the function binary at invocation time. Only used when handler_service ==
+					// "codevaldfunction". Follows the same encoding pattern as RunField.options.
+					// Example: {"todo_type":"compile-fix","max_runs":3,"on_run_limit_exceeded":"work.task.fail"}
+					{Name: "function_params", Type: types.PropertyTypeString, Required: false},
 					{Name: "enabled", Type: types.PropertyTypeBoolean, Required: true},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
 				},

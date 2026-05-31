@@ -137,6 +137,8 @@ type importWorkPlanSpec struct {
 	// It identifies which agent in ai_config should handle this work plan.
 	AgentCode      string `yaml:"agent_code"`
 	HandlerService string `yaml:"handler_service"`
+	FunctionCode   string `yaml:"function_code"`
+	FunctionParams string `yaml:"function_params"`
 	Enabled        bool   `yaml:"enabled"`
 	Ordinality     int    `yaml:"ordinality"`
 }
@@ -327,7 +329,10 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			"payload_condition": clean(wp.PayloadCondition),
 			"instructions":      clean(wp.Instructions),
 			"agent_id":          clean(wp.AgentID),
+			"agent_code":        clean(wp.AgentCode),
 			"handler_service":   clean(wp.HandlerService),
+			"function_code":     clean(wp.FunctionCode),
+			"function_params":   clean(wp.FunctionParams),
 			"enabled":           wp.Enabled,
 			"ordinality":        wp.Ordinality,
 		}

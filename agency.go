@@ -208,10 +208,11 @@ func NewAgencyManager(
 // Returns [ErrAgencyReadOnly] when the live agency is already published.
 func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error) {
 	var raw struct {
-		ID      string `json:"id"`
-		Name    string `json:"name"`
-		Mission string `json:"mission"`
-		Vision  string `json:"vision"`
+		ID                           string `json:"id"`
+		Name                         string `json:"name"`
+		Mission                      string `json:"mission"`
+		Vision                       string `json:"vision"`
+		DefaultFailurePipelineBudget int    `json:"default_failure_pipeline_budget"`
 	}
 	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
 		return Agency{}, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
@@ -221,9 +222,10 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 	}
 
 	props := map[string]any{
-		"name":    raw.Name,
-		"mission": raw.Mission,
-		"vision":  raw.Vision,
+		"name":                            raw.Name,
+		"mission":                         raw.Mission,
+		"vision":                          raw.Vision,
+		"default_failure_pipeline_budget": raw.DefaultFailurePipelineBudget,
 	}
 
 	// Check whether an Agency entity already exists.
@@ -786,13 +788,14 @@ func (m *agencyManager) draftContentHash(ctx context.Context, draftID string) (s
 func entityToAgency(e entitygraph.Entity) Agency {
 	p := e.Properties
 	return Agency{
-		ID:        e.ID,
-		Name:      strProp(p, "name"),
-		Mission:   strProp(p, "mission"),
-		Vision:    strProp(p, "vision"),
-		Enabled:   boolProp(p, "enabled"),
-		CreatedAt: e.CreatedAt,
-		UpdatedAt: e.UpdatedAt,
+		ID:                           e.ID,
+		Name:                         strProp(p, "name"),
+		Mission:                      strProp(p, "mission"),
+		Vision:                       strProp(p, "vision"),
+		Enabled:                      boolProp(p, "enabled"),
+		DefaultFailurePipelineBudget: intProp(p, "default_failure_pipeline_budget"),
+		CreatedAt:                    e.CreatedAt,
+		UpdatedAt:                    e.UpdatedAt,
 	}
 }
 

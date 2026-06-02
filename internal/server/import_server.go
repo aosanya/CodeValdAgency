@@ -74,6 +74,10 @@ type importAgencySpec struct {
 	Name    string `yaml:"name"`
 	Mission string `yaml:"mission"`
 	Vision  string `yaml:"vision"`
+	// DefaultFailurePipelineBudget is the per-WorkflowRun recovery-activation
+	// cap for runs under this agency. Zero/unset falls back to the
+	// WORKFLOW_RUN_FAILURE_BUDGET env default. See FEAT-20260602-007.
+	DefaultFailurePipelineBudget int `yaml:"default_failure_pipeline_budget"`
 }
 
 type importRoleSpec struct {
@@ -141,6 +145,12 @@ type importWorkPlanSpec struct {
 	FunctionParams string `yaml:"function_params"`
 	Enabled        bool   `yaml:"enabled"`
 	Ordinality     int    `yaml:"ordinality"`
+	// SuccessEvent/FailureEvent/OnFailurePipeline implement FEAT-20260602-005
+	// — the synthesized-success failure-pipeline contract. See
+	// CodeValdCross/.../mvp-details/FEAT-20260602-005_failure_pipelines_synthesized_success.md.
+	SuccessEvent      string `yaml:"success_event"`
+	FailureEvent      string `yaml:"failure_event"`
+	OnFailurePipeline string `yaml:"on_failure_pipeline"`
 }
 
 // ── RPC handler ───────────────────────────────────────────────────────────────
@@ -322,19 +332,22 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 	for _, wp := range spec.WorkPlans {
 		log.Printf("[ImportDraft] %s: upsert work plan code=%s", agencyID, wp.Code)
 		props := map[string]any{
-			"code":              wp.Code,
-			"name":              wp.Name,
-			"description":       clean(wp.Description),
-			"trigger_topic":     wp.TriggerTopic,
-			"payload_condition": clean(wp.PayloadCondition),
-			"instructions":      clean(wp.Instructions),
-			"agent_id":          clean(wp.AgentID),
-			"agent_code":        clean(wp.AgentCode),
-			"handler_service":   clean(wp.HandlerService),
-			"function_code":     clean(wp.FunctionCode),
-			"function_params":   clean(wp.FunctionParams),
-			"enabled":           wp.Enabled,
-			"ordinality":        wp.Ordinality,
+			"code":                wp.Code,
+			"name":                wp.Name,
+			"description":         clean(wp.Description),
+			"trigger_topic":       wp.TriggerTopic,
+			"payload_condition":   clean(wp.PayloadCondition),
+			"instructions":        clean(wp.Instructions),
+			"agent_id":            clean(wp.AgentID),
+			"agent_code":          clean(wp.AgentCode),
+			"handler_service":    clean(wp.HandlerService),
+			"function_code":      clean(wp.FunctionCode),
+			"function_params":    clean(wp.FunctionParams),
+			"enabled":            wp.Enabled,
+			"ordinality":         wp.Ordinality,
+			"success_event":      clean(wp.SuccessEvent),
+			"failure_event":      clean(wp.FailureEvent),
+			"on_failure_pipeline": clean(wp.OnFailurePipeline),
 		}
 		if err := s.importUpsert(ctx, agencyID, "WorkPlan", props); err != nil {
 			log.Printf("[ImportDraft] %s: work plan %s upsert failed: %v", agencyID, wp.Code, err)
@@ -390,11 +403,12 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 // importSetDetails updates the root agency document.
 func (s *Server) importSetDetails(ctx context.Context, agencyID string, a importAgencySpec) error {
 	body, err := json.Marshal(map[string]any{
-		"id":      agencyID,
-		"name":    a.Name,
-		"mission": clean(a.Mission),
-		"vision":  clean(a.Vision),
-		"code":    a.Code,
+		"id":                              agencyID,
+		"name":                            a.Name,
+		"mission":                         clean(a.Mission),
+		"vision":                          clean(a.Vision),
+		"code":                            a.Code,
+		"default_failure_pipeline_budget": a.DefaultFailurePipelineBudget,
 	})
 	if err != nil {
 		return fmt.Errorf("importSetDetails: marshal: %w", err)

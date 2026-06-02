@@ -69,6 +69,13 @@ type Agency struct {
 	// [AgencyManager.PromoteDraft] call succeeds, at which point it is set to true.
 	Enabled bool
 
+	// DefaultFailurePipelineBudget is the per-WorkflowRun cap on recovery
+	// pipeline activations for runs created under this agency. Zero means
+	// "unset" — start-pipeline falls back to the WORKFLOW_RUN_FAILURE_BUDGET
+	// env default. Overridden by the work.pipeline.requested payload's
+	// failure_pipeline_budget. See FEAT-20260602-007.
+	DefaultFailurePipelineBudget int
+
 	// CreatedAt is the time at which the agency was first persisted.
 	CreatedAt time.Time
 
@@ -317,6 +324,23 @@ type WorkPlan struct {
 
 	// Ordinality controls the ascending sort order when multiple work plans match.
 	Ordinality int
+
+	// SuccessEvent is the Cross topic the plan's handler publishes on terminal
+	// success (e.g. "functions.job.completed"). A recovery pipeline for this
+	// plan must synthesize this event on success — restoring the downstream
+	// event sequence. Empty means use the handler-service default. See
+	// FEAT-20260602-005.
+	SuccessEvent string
+
+	// FailureEvent is the Cross topic the plan's handler publishes on failure.
+	// Cross's failure-dispatch loop looks up plans by this field and routes to
+	// OnFailurePipeline when set. Empty means use the handler-service default.
+	FailureEvent string
+
+	// OnFailurePipeline is the `code` of another work plan in the same agency
+	// that recovers from this plan's failure. Empty means the failure is
+	// terminal (Cross publishes work.run.failed).
+	OnFailurePipeline string
 }
 
 // GitContextSourceConfig holds the configuration for a GitContextSource entity.
@@ -416,20 +440,33 @@ type CreateWorkPlanRequest struct {
 
 	// Ordinality controls ascending sort order when multiple work plans match.
 	Ordinality int
+
+	// SuccessEvent is the Cross topic published on terminal success. Empty for
+	// handler-service default. See FEAT-20260602-005.
+	SuccessEvent string
+
+	// FailureEvent is the Cross topic published on failure. Empty for default.
+	FailureEvent string
+
+	// OnFailurePipeline is the code of the recovery work plan, empty for none.
+	OnFailurePipeline string
 }
 
 // UpdateWorkPlanRequest carries the fields that may be changed on an existing [WorkPlan].
 // Only non-nil pointer fields are written; nil means "leave unchanged".
 type UpdateWorkPlanRequest struct {
-	Name             *string
-	Description      *string
-	TriggerTopic     *string
-	PayloadCondition *string
-	Instructions     *string
-	AgentID          *string
-	HandlerService   *string
-	Enabled          *bool
-	Ordinality       *int
+	Name              *string
+	Description       *string
+	TriggerTopic      *string
+	PayloadCondition  *string
+	Instructions      *string
+	AgentID           *string
+	HandlerService    *string
+	Enabled           *bool
+	Ordinality        *int
+	SuccessEvent      *string
+	FailureEvent      *string
+	OnFailurePipeline *string
 }
 
 // AddContextSourceRequest carries the typed configuration for a new [ContextSource].

@@ -27,15 +27,18 @@ func (m *agencyManager) CreateWorkPlan(ctx context.Context, req CreateWorkPlanRe
 		AgencyID: m.agencyID,
 		TypeID:   "WorkPlan",
 		Properties: map[string]any{
-			"name":              req.Name,
-			"description":       req.Description,
-			"trigger_topic":     req.TriggerTopic,
-			"payload_condition": req.PayloadCondition,
-			"instructions":      req.Instructions,
-			"agent_id":          req.AgentID,
-			"handler_service":   req.HandlerService,
-			"enabled":           req.Enabled,
-			"ordinality":        req.Ordinality,
+			"name":                req.Name,
+			"description":         req.Description,
+			"trigger_topic":       req.TriggerTopic,
+			"payload_condition":   req.PayloadCondition,
+			"instructions":        req.Instructions,
+			"agent_id":            req.AgentID,
+			"handler_service":     req.HandlerService,
+			"enabled":             req.Enabled,
+			"ordinality":          req.Ordinality,
+			"success_event":       req.SuccessEvent,
+			"failure_event":       req.FailureEvent,
+			"on_failure_pipeline": req.OnFailurePipeline,
 		},
 	})
 	if err != nil {
@@ -140,6 +143,15 @@ func (m *agencyManager) UpdateWorkPlan(ctx context.Context, workPlanID string, r
 	}
 	if req.Ordinality != nil {
 		props["ordinality"] = *req.Ordinality
+	}
+	if req.SuccessEvent != nil {
+		props["success_event"] = *req.SuccessEvent
+	}
+	if req.FailureEvent != nil {
+		props["failure_event"] = *req.FailureEvent
+	}
+	if req.OnFailurePipeline != nil {
+		props["on_failure_pipeline"] = *req.OnFailurePipeline
 	}
 
 	updated, err := m.dm.UpdateEntity(ctx, m.agencyID, workPlanID, entitygraph.UpdateEntityRequest{
@@ -368,17 +380,20 @@ func isContextSourceTypeID(typeID string) bool {
 func entityToWorkPlan(e entitygraph.Entity, agencyID string) WorkPlan {
 	p := e.Properties
 	return WorkPlan{
-		ID:               e.ID,
-		AgencyID:         agencyID,
-		Name:             strProp(p, "name"),
-		Description:      strProp(p, "description"),
-		TriggerTopic:     strProp(p, "trigger_topic"),
-		PayloadCondition: strProp(p, "payload_condition"),
-		Instructions:     strProp(p, "instructions"),
-		AgentID:          strProp(p, "agent_id"),
-		HandlerService:   strProp(p, "handler_service"),
-		Enabled:          boolProp(p, "enabled"),
-		Ordinality:       intProp(p, "ordinality"),
+		ID:                e.ID,
+		AgencyID:          agencyID,
+		Name:              strProp(p, "name"),
+		Description:       strProp(p, "description"),
+		TriggerTopic:      strProp(p, "trigger_topic"),
+		PayloadCondition:  strProp(p, "payload_condition"),
+		Instructions:      strProp(p, "instructions"),
+		AgentID:           strProp(p, "agent_id"),
+		HandlerService:    strProp(p, "handler_service"),
+		Enabled:           boolProp(p, "enabled"),
+		Ordinality:        intProp(p, "ordinality"),
+		SuccessEvent:      strProp(p, "success_event"),
+		FailureEvent:      strProp(p, "failure_event"),
+		OnFailurePipeline: strProp(p, "on_failure_pipeline"),
 	}
 }
 

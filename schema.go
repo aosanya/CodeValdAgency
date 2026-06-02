@@ -125,6 +125,12 @@ func DefaultAgencySchema() types.Schema {
 					// enabled is false until the first PromoteDraft call succeeds,
 					// at which point it is set to true. Set to false to disable the agency.
 					{Name: "enabled", Type: types.PropertyTypeBoolean, Required: false},
+					// default_failure_pipeline_budget is the per-WorkflowRun cap on
+					// recovery-pipeline activations for runs created under this agency.
+					// Overridden by the work.pipeline.requested payload; falls back to
+					// the WORKFLOW_RUN_FAILURE_BUDGET env default when zero/unset.
+					// See FEAT-20260602-007.
+					{Name: "default_failure_pipeline_budget", Type: types.PropertyTypeInteger, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
 					{Name: "has_goal", Label: "Goals", PathSegment: "goals", ToType: "Goal", ToMany: true, Inverse: "belongs_to_agency"},
@@ -639,6 +645,23 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "function_params", Type: types.PropertyTypeString, Required: false},
 					{Name: "enabled", Type: types.PropertyTypeBoolean, Required: true},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
+					// success_event is the Cross topic the plan's handler publishes when
+					// the step completes successfully (e.g. "functions.job.completed").
+					// Recovery pipelines for this plan synthesize this event on terminal
+					// success — restoring the downstream event sequence. Optional; defaults
+					// to a handler-service-specific topic. See FEAT-20260602-005.
+					{Name: "success_event", Type: types.PropertyTypeString, Required: false},
+					// failure_event is the Cross topic the plan's handler publishes when
+					// the step fails. Cross's failure-dispatch matches inbound events
+					// against this field via FindByFailureEvent and routes to
+					// on_failure_pipeline when set. Optional; defaults handler-specific.
+					{Name: "failure_event", Type: types.PropertyTypeString, Required: false},
+					// on_failure_pipeline is the `code` of another work plan in the same
+					// agency that recovers from this plan's failure. When empty the
+					// failure is terminal and Cross publishes work.run.failed. The
+					// recovery's terminal success must publish this plan's success_event
+					// (synthesized-success contract). See FEAT-20260602-005.
+					{Name: "on_failure_pipeline", Type: types.PropertyTypeString, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
 					// ToMany=false, Required=true: a WorkPlan must belong to exactly one Agency.

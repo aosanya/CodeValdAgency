@@ -583,3 +583,86 @@ func TestMatchRoles_ReturnsContextSources(t *testing.T) {
 		t.Errorf("SourceType: want %q, got %q", codevaldagency.ContextSourceWork, matches[0].ContextSources[0].SourceType)
 	}
 }
+
+// ── FEAT-20260602-005: failure-pipeline schema fields ─────────────────────────
+
+func TestCreateWorkPlan_FailurePipelineFields_RoundTrip(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "a1", "Alpha")
+
+	wp, err := mgr.CreateWorkPlan(context.Background(), codevaldagency.CreateWorkPlanRequest{
+		Name:              "compile-on-todo-completed",
+		TriggerTopic:      `work\.todo\.completed`,
+		HandlerService:    "codevaldfunction",
+		Enabled:           true,
+		Ordinality:        1,
+		SuccessEvent:      "functions.job.completed",
+		FailureEvent:      "functions.job.failed",
+		OnFailurePipeline: "compile-solving-problem",
+	})
+	if err != nil {
+		t.Fatalf("CreateWorkPlan: %v", err)
+	}
+	if wp.SuccessEvent != "functions.job.completed" {
+		t.Errorf("SuccessEvent on create: got %q", wp.SuccessEvent)
+	}
+	if wp.FailureEvent != "functions.job.failed" {
+		t.Errorf("FailureEvent on create: got %q", wp.FailureEvent)
+	}
+	if wp.OnFailurePipeline != "compile-solving-problem" {
+		t.Errorf("OnFailurePipeline on create: got %q", wp.OnFailurePipeline)
+	}
+
+	got, err := mgr.GetWorkPlan(context.Background(), wp.ID)
+	if err != nil {
+		t.Fatalf("GetWorkPlan: %v", err)
+	}
+	if got.SuccessEvent != "functions.job.completed" || got.FailureEvent != "functions.job.failed" || got.OnFailurePipeline != "compile-solving-problem" {
+		t.Errorf("round-trip lost fields: %+v", got)
+	}
+}
+
+func TestUpdateWorkPlan_FailurePipelineFields_Patch(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+	mustSetupAgency(t, mgr, "a1", "Alpha")
+
+	wp := mustSetupWorkPlan(t, mgr, `work\.todo\.completed`, true, 1)
+
+	updated, err := mgr.UpdateWorkPlan(context.Background(), wp.ID, codevaldagency.UpdateWorkPlanRequest{
+		SuccessEvent:      ptrStr("functions.job.completed"),
+		FailureEvent:      ptrStr("functions.job.failed"),
+		OnFailurePipeline: ptrStr("compile-solving-problem"),
+	})
+	if err != nil {
+		t.Fatalf("UpdateWorkPlan: %v", err)
+	}
+	if updated.SuccessEvent != "functions.job.completed" || updated.OnFailurePipeline != "compile-solving-problem" {
+		t.Errorf("update did not persist FEAT-005 fields: %+v", updated)
+	}
+}
+
+// ── FEAT-20260602-007: default_failure_pipeline_budget on Agency ──────────────
+
+func TestSetAgencyDetails_DefaultFailurePipelineBudget_RoundTrip(t *testing.T) {
+	t.Parallel()
+	mgr, _ := mustNewManager(t)
+
+	agency, err := mgr.SetAgencyDetails(context.Background(),
+		`{"id":"a1","name":"Alpha","default_failure_pipeline_budget":7}`)
+	if err != nil {
+		t.Fatalf("SetAgencyDetails: %v", err)
+	}
+	if agency.DefaultFailurePipelineBudget != 7 {
+		t.Errorf("DefaultFailurePipelineBudget on create: got %d, want 7", agency.DefaultFailurePipelineBudget)
+	}
+
+	got, err := mgr.GetAgency(context.Background())
+	if err != nil {
+		t.Fatalf("GetAgency: %v", err)
+	}
+	if got.DefaultFailurePipelineBudget != 7 {
+		t.Errorf("DefaultFailurePipelineBudget round-trip: got %d, want 7", got.DefaultFailurePipelineBudget)
+	}
+}

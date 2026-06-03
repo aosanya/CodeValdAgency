@@ -213,6 +213,7 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 		Mission                      string `json:"mission"`
 		Vision                       string `json:"vision"`
 		DefaultFailurePipelineBudget int    `json:"default_failure_pipeline_budget"`
+		InactivityTimeoutSeconds     int    `json:"inactivity_timeout_seconds"`
 	}
 	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
 		return Agency{}, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
@@ -226,12 +227,17 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 		"mission":                         raw.Mission,
 		"vision":                          raw.Vision,
 		"default_failure_pipeline_budget": raw.DefaultFailurePipelineBudget,
+		"inactivity_timeout_seconds":      raw.InactivityTimeoutSeconds,
 	}
 
 	// Check whether an Agency entity already exists.
 	existing, err := m.listAgencyEntities(ctx)
 	if err != nil {
 		return Agency{}, fmt.Errorf("SetAgencyDetails: list: %w", err)
+	}
+
+	if len(existing) > 0 && boolProp(existing[0].Properties, "enabled") {
+		return Agency{}, ErrAgencyReadOnly
 	}
 
 	var entity entitygraph.Entity
@@ -794,6 +800,7 @@ func entityToAgency(e entitygraph.Entity) Agency {
 		Vision:                       strProp(p, "vision"),
 		Enabled:                      boolProp(p, "enabled"),
 		DefaultFailurePipelineBudget: intProp(p, "default_failure_pipeline_budget"),
+		InactivityTimeoutSeconds:     intProp(p, "inactivity_timeout_seconds"),
 		CreatedAt:                    e.CreatedAt,
 		UpdatedAt:                    e.UpdatedAt,
 	}

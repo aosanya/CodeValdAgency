@@ -407,6 +407,15 @@ func TestPublishAgency_SameDraftContent_ReturnsErrNoChangesDetected(t *testing.T
 	mgr, fdm := mustNewManager(t)
 	mustSetupAgency(t, mgr, "agency-001", "Alpha")
 
+	// Seed the draft entity (required so PublishAgency can mark it promoted).
+	fdm.addEntity(entitygraph.Entity{
+		ID:       "draft-001",
+		AgencyID: testAgencyID,
+		TypeID:   "AgencyDraft",
+		Properties: map[string]any{
+			"status": "open",
+		},
+	})
 	// Seed a DraftGoal so the hash is non-trivial.
 	fdm.addEntity(entitygraph.Entity{
 		ID:       "dg-001",

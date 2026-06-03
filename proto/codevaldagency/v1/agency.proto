@@ -93,6 +93,13 @@ message Agency {
   repeated ConfiguredRole   configured_roles = 8;
   google.protobuf.Timestamp created_at       = 9;
   google.protobuf.Timestamp updated_at       = 10;
+  // default_failure_pipeline_budget is the per-run cap on recovery activations.
+  // Zero means "unset". See FEAT-20260602-007.
+  int32                     default_failure_pipeline_budget = 11;
+  // inactivity_timeout_seconds is the per-agency override for the run-level
+  // inactivity timeout. Zero means "unset"; watchdog falls back to env default.
+  // See FEAT-20260602-006.
+  int32                     inactivity_timeout_seconds = 12;
 }
 
 // ── Filter ───────────────────────────────────────────────────────────────────
@@ -264,6 +271,20 @@ message WorkPlan {
   // (e.g. "codevaldai", "codevaldcomm"). Each service subscribes only to topics
   // from plans where handler_service matches its own service name.
   string handler_service   = 11;
+  // code is the stable slug used to reference this plan in on_failure_pipeline.
+  string code              = 12;
+  // function_code identifies the function binary (handler_service="codevaldfunction").
+  string function_code     = 13;
+  // function_params is a JSON-encoded parameter map for the function binary.
+  string function_params   = 14;
+  // success_event is the Cross topic published on terminal success. See FEAT-20260602-005.
+  string success_event     = 15;
+  // failure_event is the Cross topic published on failure. See FEAT-20260602-005.
+  string failure_event     = 16;
+  // on_failure_pipeline is the code of the recovery work plan. See FEAT-20260602-005.
+  string on_failure_pipeline = 17;
+  // step_timeout is the per-step inactivity duration (e.g. "10m"). See FEAT-20260602-006.
+  string step_timeout      = 18;
 }
 
 // GitContextSource configures what to fetch from CodeValdGit when a work plan matches.
@@ -317,6 +338,12 @@ message CreateWorkPlanRequest {
   bool   enabled           = 7;
   int32  ordinality        = 8;
   string handler_service   = 9;
+  string function_code     = 10;
+  string function_params   = 11;
+  string success_event     = 12;
+  string failure_event     = 13;
+  string on_failure_pipeline = 14;
+  string step_timeout      = 15;
 }
 
 // GetWorkPlanRequest selects a WorkPlan by its entity ID.
@@ -344,6 +371,12 @@ message UpdateWorkPlanRequest {
   bool   enabled           = 8;
   int32  ordinality        = 9;
   string handler_service   = 10;
+  string function_code     = 11;
+  string function_params   = 12;
+  string success_event     = 13;
+  string failure_event     = 14;
+  string on_failure_pipeline = 15;
+  string step_timeout      = 16;
 }
 
 // DeleteWorkPlanRequest selects a WorkPlan by its entity ID.

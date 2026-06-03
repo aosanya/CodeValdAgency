@@ -76,6 +76,13 @@ type Agency struct {
 	// failure_pipeline_budget. See FEAT-20260602-007.
 	DefaultFailurePipelineBudget int
 
+	// InactivityTimeoutSeconds is the per-agency override for the run-level
+	// inactivity timeout. Zero means "unset" — the watchdog falls back to the
+	// WORKFLOW_RUN_STALE_TIMEOUT env default. Resolution order:
+	// WorkPlan.step_timeout > InactivityTimeoutSeconds > env default.
+	// See FEAT-20260602-006.
+	InactivityTimeoutSeconds int
+
 	// CreatedAt is the time at which the agency was first persisted.
 	CreatedAt time.Time
 
@@ -296,6 +303,9 @@ type WorkPlan struct {
 	// AgencyID is the identifier of the owning agency.
 	AgencyID string
 
+	// Code is the stable slug used to reference this plan in OnFailurePipeline.
+	Code string
+
 	// Name is a human-readable label for the work plan.
 	Name string
 
@@ -314,6 +324,12 @@ type WorkPlan struct {
 
 	// AgentID is a cross-service reference to a CodeValdAI Agent entity ID.
 	AgentID string
+
+	// FunctionCode identifies the function binary when HandlerService="codevaldfunction".
+	FunctionCode string
+
+	// FunctionParams is a JSON-encoded parameter map forwarded to the function binary.
+	FunctionParams string
 
 	// Enabled controls whether this work plan is included in MatchWorkPlans results.
 	Enabled bool
@@ -341,6 +357,11 @@ type WorkPlan struct {
 	// that recovers from this plan's failure. Empty means the failure is
 	// terminal (Cross publishes work.run.failed).
 	OnFailurePipeline string
+
+	// StepTimeout is the per-step inactivity duration (e.g. "10m") after which
+	// the watchdog publishes work.task.timeout for the current step. Empty means
+	// fall back to WORKFLOW_RUN_STEP_STALE_TIMEOUT env var. See FEAT-20260602-006.
+	StepTimeout string
 }
 
 // GitContextSourceConfig holds the configuration for a GitContextSource entity.
@@ -432,6 +453,12 @@ type CreateWorkPlanRequest struct {
 	// AgentID is a cross-service reference to a CodeValdAI Agent entity ID.
 	AgentID string
 
+	// FunctionCode identifies the function binary (HandlerService="codevaldfunction").
+	FunctionCode string
+
+	// FunctionParams is a JSON-encoded parameter map for the function binary.
+	FunctionParams string
+
 	// HandlerService is the CodeVald service responsible for executing this plan.
 	HandlerService string
 
@@ -450,6 +477,10 @@ type CreateWorkPlanRequest struct {
 
 	// OnFailurePipeline is the code of the recovery work plan, empty for none.
 	OnFailurePipeline string
+
+	// StepTimeout is the per-step inactivity duration (e.g. "10m"). Empty means
+	// fall back to WORKFLOW_RUN_STEP_STALE_TIMEOUT. See FEAT-20260602-006.
+	StepTimeout string
 }
 
 // UpdateWorkPlanRequest carries the fields that may be changed on an existing [WorkPlan].
@@ -461,12 +492,15 @@ type UpdateWorkPlanRequest struct {
 	PayloadCondition  *string
 	Instructions      *string
 	AgentID           *string
+	FunctionCode      *string
+	FunctionParams    *string
 	HandlerService    *string
 	Enabled           *bool
 	Ordinality        *int
 	SuccessEvent      *string
 	FailureEvent      *string
 	OnFailurePipeline *string
+	StepTimeout       *string
 }
 
 // AddContextSourceRequest carries the typed configuration for a new [ContextSource].

@@ -173,13 +173,15 @@ func (s *Server) GetWorkItems(ctx context.Context, _ *pb.GetWorkItemsRequest) (*
 
 func agencyToProto(a codevaldagency.Agency) *pb.Agency {
 	return &pb.Agency{
-		Id:        a.ID,
-		Name:      a.Name,
-		Mission:   a.Mission,
-		Vision:    a.Vision,
-		Enabled:   a.Enabled,
-		CreatedAt: timeToProto(a.CreatedAt),
-		UpdatedAt: timeToProto(a.UpdatedAt),
+		Id:                           a.ID,
+		Name:                         a.Name,
+		Mission:                      a.Mission,
+		Vision:                       a.Vision,
+		Enabled:                      a.Enabled,
+		DefaultFailurePipelineBudget: int32(a.DefaultFailurePipelineBudget),
+		InactivityTimeoutSeconds:     int32(a.InactivityTimeoutSeconds),
+		CreatedAt:                    timeToProto(a.CreatedAt),
+		UpdatedAt:                    timeToProto(a.UpdatedAt),
 	}
 }
 
@@ -315,15 +317,21 @@ func draftToProto(d codevaldagency.AgencyDraft) *pb.AgencyDraft {
 // CreateWorkPlan implements pb.AgencyServiceServer.
 func (s *Server) CreateWorkPlan(ctx context.Context, req *pb.CreateWorkPlanRequest) (*pb.WorkPlan, error) {
 	wp, err := s.mgr.CreateWorkPlan(ctx, codevaldagency.CreateWorkPlanRequest{
-		Name:             req.GetName(),
-		Description:      req.GetDescription(),
-		TriggerTopic:     req.GetTriggerTopic(),
-		PayloadCondition: req.GetPayloadCondition(),
-		Instructions:     req.GetInstructions(),
-		AgentID:          req.GetAgentId(),
-		HandlerService:   req.GetHandlerService(),
-		Enabled:          req.GetEnabled(),
-		Ordinality:       int(req.GetOrdinality()),
+		Name:              req.GetName(),
+		Description:       req.GetDescription(),
+		TriggerTopic:      req.GetTriggerTopic(),
+		PayloadCondition:  req.GetPayloadCondition(),
+		Instructions:      req.GetInstructions(),
+		AgentID:           req.GetAgentId(),
+		FunctionCode:      req.GetFunctionCode(),
+		FunctionParams:    req.GetFunctionParams(),
+		HandlerService:    req.GetHandlerService(),
+		Enabled:           req.GetEnabled(),
+		Ordinality:        int(req.GetOrdinality()),
+		SuccessEvent:      req.GetSuccessEvent(),
+		FailureEvent:      req.GetFailureEvent(),
+		OnFailurePipeline: req.GetOnFailurePipeline(),
+		StepTimeout:       req.GetStepTimeout(),
 	})
 	if err != nil {
 		return nil, toGRPCError(err)
@@ -356,15 +364,21 @@ func (s *Server) ListWorkPlans(ctx context.Context, _ *pb.ListWorkPlansRequest) 
 // UpdateWorkPlan implements pb.AgencyServiceServer.
 func (s *Server) UpdateWorkPlan(ctx context.Context, req *pb.UpdateWorkPlanRequest) (*pb.WorkPlan, error) {
 	wp, err := s.mgr.UpdateWorkPlan(ctx, req.GetWorkPlanId(), codevaldagency.UpdateWorkPlanRequest{
-		Name:             optStr(req.GetName()),
-		Description:      optStr(req.GetDescription()),
-		TriggerTopic:     optStr(req.GetTriggerTopic()),
-		PayloadCondition: optStr(req.GetPayloadCondition()),
-		Instructions:     optStr(req.GetInstructions()),
-		AgentID:          optStr(req.GetAgentId()),
-		HandlerService:   optStr(req.GetHandlerService()),
-		Enabled:          optBool(req.GetEnabled()),
-		Ordinality:       optInt(int(req.GetOrdinality())),
+		Name:              optStr(req.GetName()),
+		Description:       optStr(req.GetDescription()),
+		TriggerTopic:      optStr(req.GetTriggerTopic()),
+		PayloadCondition:  optStr(req.GetPayloadCondition()),
+		Instructions:      optStr(req.GetInstructions()),
+		AgentID:           optStr(req.GetAgentId()),
+		FunctionCode:      optStr(req.GetFunctionCode()),
+		FunctionParams:    optStr(req.GetFunctionParams()),
+		HandlerService:    optStr(req.GetHandlerService()),
+		Enabled:           optBool(req.GetEnabled()),
+		Ordinality:        optInt(int(req.GetOrdinality())),
+		SuccessEvent:      optStr(req.GetSuccessEvent()),
+		FailureEvent:      optStr(req.GetFailureEvent()),
+		OnFailurePipeline: optStr(req.GetOnFailurePipeline()),
+		StepTimeout:       optStr(req.GetStepTimeout()),
 	})
 	if err != nil {
 		return nil, toGRPCError(err)
@@ -458,17 +472,24 @@ func (s *Server) MatchWorkPlans(ctx context.Context, req *pb.MatchWorkPlansReque
 
 func workPlanToProto(r codevaldagency.WorkPlan) *pb.WorkPlan {
 	return &pb.WorkPlan{
-		Id:               r.ID,
-		AgencyId:         r.AgencyID,
-		Name:             r.Name,
-		Description:      r.Description,
-		TriggerTopic:     r.TriggerTopic,
-		PayloadCondition: r.PayloadCondition,
-		Instructions:     r.Instructions,
-		AgentId:          r.AgentID,
-		HandlerService:   r.HandlerService,
-		Enabled:          r.Enabled,
-		Ordinality:       int32(r.Ordinality),
+		Id:                r.ID,
+		AgencyId:          r.AgencyID,
+		Name:              r.Name,
+		Description:       r.Description,
+		TriggerTopic:      r.TriggerTopic,
+		PayloadCondition:  r.PayloadCondition,
+		Instructions:      r.Instructions,
+		AgentId:           r.AgentID,
+		HandlerService:    r.HandlerService,
+		Enabled:           r.Enabled,
+		Ordinality:        int32(r.Ordinality),
+		Code:              r.Code,
+		FunctionCode:      r.FunctionCode,
+		FunctionParams:    r.FunctionParams,
+		SuccessEvent:      r.SuccessEvent,
+		FailureEvent:      r.FailureEvent,
+		OnFailurePipeline: r.OnFailurePipeline,
+		StepTimeout:       r.StepTimeout,
 	}
 }
 

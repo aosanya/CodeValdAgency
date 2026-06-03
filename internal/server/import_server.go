@@ -151,6 +151,8 @@ type importWorkPlanSpec struct {
 	SuccessEvent      string `yaml:"success_event"`
 	FailureEvent      string `yaml:"failure_event"`
 	OnFailurePipeline string `yaml:"on_failure_pipeline"`
+	// StepTimeout is the per-step inactivity duration (e.g. "10m"). See FEAT-20260602-006.
+	StepTimeout string `yaml:"step_timeout"`
 }
 
 // ── RPC handler ───────────────────────────────────────────────────────────────
@@ -345,9 +347,10 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			"function_params":    clean(wp.FunctionParams),
 			"enabled":            wp.Enabled,
 			"ordinality":         wp.Ordinality,
-			"success_event":      clean(wp.SuccessEvent),
-			"failure_event":      clean(wp.FailureEvent),
+			"success_event":       clean(wp.SuccessEvent),
+			"failure_event":       clean(wp.FailureEvent),
 			"on_failure_pipeline": clean(wp.OnFailurePipeline),
+			"step_timeout":        clean(wp.StepTimeout),
 		}
 		if err := s.importUpsert(ctx, agencyID, "WorkPlan", props); err != nil {
 			log.Printf("[ImportDraft] %s: work plan %s upsert failed: %v", agencyID, wp.Code, err)

@@ -131,6 +131,12 @@ func DefaultAgencySchema() types.Schema {
 					// the WORKFLOW_RUN_FAILURE_BUDGET env default when zero/unset.
 					// See FEAT-20260602-007.
 					{Name: "default_failure_pipeline_budget", Type: types.PropertyTypeInteger, Required: false},
+					// inactivity_timeout_seconds is the per-agency override for the run-level
+					// inactivity timeout. When set, overrides the global WORKFLOW_RUN_STALE_TIMEOUT
+					// env var for all WorkflowRuns created under this agency.
+					// Resolution order: step_timeout > inactivity_timeout_seconds > env default.
+					// See FEAT-20260602-006.
+					{Name: "inactivity_timeout_seconds", Type: types.PropertyTypeInteger, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
 					{Name: "has_goal", Label: "Goals", PathSegment: "goals", ToType: "Goal", ToMany: true, Inverse: "belongs_to_agency"},
@@ -662,6 +668,11 @@ func DefaultAgencySchema() types.Schema {
 					// recovery's terminal success must publish this plan's success_event
 					// (synthesized-success contract). See FEAT-20260602-005.
 					{Name: "on_failure_pipeline", Type: types.PropertyTypeString, Required: false},
+					// step_timeout is the per-step inactivity duration (e.g. "10m")
+					// after which the watchdog publishes work.task.timeout for the
+					// current step. Falls back to WORKFLOW_RUN_STEP_STALE_TIMEOUT env
+					// var (default 10m) when empty. See FEAT-20260602-006.
+					{Name: "step_timeout", Type: types.PropertyTypeString, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
 					// ToMany=false, Required=true: a WorkPlan must belong to exactly one Agency.

@@ -33,12 +33,15 @@ func (m *agencyManager) CreateWorkPlan(ctx context.Context, req CreateWorkPlanRe
 			"payload_condition":   req.PayloadCondition,
 			"instructions":        req.Instructions,
 			"agent_id":            req.AgentID,
+			"function_code":       req.FunctionCode,
+			"function_params":     req.FunctionParams,
 			"handler_service":     req.HandlerService,
 			"enabled":             req.Enabled,
 			"ordinality":          req.Ordinality,
 			"success_event":       req.SuccessEvent,
 			"failure_event":       req.FailureEvent,
 			"on_failure_pipeline": req.OnFailurePipeline,
+			"step_timeout":        req.StepTimeout,
 		},
 	})
 	if err != nil {
@@ -135,6 +138,12 @@ func (m *agencyManager) UpdateWorkPlan(ctx context.Context, workPlanID string, r
 	if req.AgentID != nil {
 		props["agent_id"] = *req.AgentID
 	}
+	if req.FunctionCode != nil {
+		props["function_code"] = *req.FunctionCode
+	}
+	if req.FunctionParams != nil {
+		props["function_params"] = *req.FunctionParams
+	}
 	if req.HandlerService != nil {
 		props["handler_service"] = *req.HandlerService
 	}
@@ -152,6 +161,9 @@ func (m *agencyManager) UpdateWorkPlan(ctx context.Context, workPlanID string, r
 	}
 	if req.OnFailurePipeline != nil {
 		props["on_failure_pipeline"] = *req.OnFailurePipeline
+	}
+	if req.StepTimeout != nil {
+		props["step_timeout"] = *req.StepTimeout
 	}
 
 	updated, err := m.dm.UpdateEntity(ctx, m.agencyID, workPlanID, entitygraph.UpdateEntityRequest{
@@ -382,18 +394,22 @@ func entityToWorkPlan(e entitygraph.Entity, agencyID string) WorkPlan {
 	return WorkPlan{
 		ID:                e.ID,
 		AgencyID:          agencyID,
+		Code:              strProp(p, "code"),
 		Name:              strProp(p, "name"),
 		Description:       strProp(p, "description"),
 		TriggerTopic:      strProp(p, "trigger_topic"),
 		PayloadCondition:  strProp(p, "payload_condition"),
 		Instructions:      strProp(p, "instructions"),
 		AgentID:           strProp(p, "agent_id"),
+		FunctionCode:      strProp(p, "function_code"),
+		FunctionParams:    strProp(p, "function_params"),
 		HandlerService:    strProp(p, "handler_service"),
 		Enabled:           boolProp(p, "enabled"),
 		Ordinality:        intProp(p, "ordinality"),
 		SuccessEvent:      strProp(p, "success_event"),
 		FailureEvent:      strProp(p, "failure_event"),
 		OnFailurePipeline: strProp(p, "on_failure_pipeline"),
+		StepTimeout:       strProp(p, "step_timeout"),
 	}
 }
 

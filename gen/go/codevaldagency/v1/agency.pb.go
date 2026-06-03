@@ -532,8 +532,15 @@ type Agency struct {
 	ConfiguredRoles []*ConfiguredRole      `protobuf:"bytes,8,rep,name=configured_roles,json=configuredRoles,proto3" json:"configured_roles,omitempty"`
 	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// default_failure_pipeline_budget is the per-run cap on recovery activations.
+	// Zero means "unset". See FEAT-20260602-007.
+	DefaultFailurePipelineBudget int32 `protobuf:"varint,11,opt,name=default_failure_pipeline_budget,json=defaultFailurePipelineBudget,proto3" json:"default_failure_pipeline_budget,omitempty"`
+	// inactivity_timeout_seconds is the per-agency override for the run-level
+	// inactivity timeout. Zero means "unset"; watchdog falls back to env default.
+	// See FEAT-20260602-006.
+	InactivityTimeoutSeconds int32 `protobuf:"varint,12,opt,name=inactivity_timeout_seconds,json=inactivityTimeoutSeconds,proto3" json:"inactivity_timeout_seconds,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *Agency) Reset() {
@@ -634,6 +641,20 @@ func (x *Agency) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Agency) GetDefaultFailurePipelineBudget() int32 {
+	if x != nil {
+		return x.DefaultFailurePipelineBudget
+	}
+	return 0
+}
+
+func (x *Agency) GetInactivityTimeoutSeconds() int32 {
+	if x != nil {
+		return x.InactivityTimeoutSeconds
+	}
+	return 0
 }
 
 // GetAgencyRequest is intentionally empty — there is exactly one agency per database.
@@ -1841,8 +1862,22 @@ type WorkPlan struct {
 	// (e.g. "codevaldai", "codevaldcomm"). Each service subscribes only to topics
 	// from plans where handler_service matches its own service name.
 	HandlerService string `protobuf:"bytes,11,opt,name=handler_service,json=handlerService,proto3" json:"handler_service,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// code is the stable slug used to reference this plan in on_failure_pipeline.
+	Code string `protobuf:"bytes,12,opt,name=code,proto3" json:"code,omitempty"`
+	// function_code identifies the function binary (handler_service="codevaldfunction").
+	FunctionCode string `protobuf:"bytes,13,opt,name=function_code,json=functionCode,proto3" json:"function_code,omitempty"`
+	// function_params is a JSON-encoded parameter map for the function binary.
+	FunctionParams string `protobuf:"bytes,14,opt,name=function_params,json=functionParams,proto3" json:"function_params,omitempty"`
+	// success_event is the Cross topic published on terminal success. See FEAT-20260602-005.
+	SuccessEvent string `protobuf:"bytes,15,opt,name=success_event,json=successEvent,proto3" json:"success_event,omitempty"`
+	// failure_event is the Cross topic published on failure. See FEAT-20260602-005.
+	FailureEvent string `protobuf:"bytes,16,opt,name=failure_event,json=failureEvent,proto3" json:"failure_event,omitempty"`
+	// on_failure_pipeline is the code of the recovery work plan. See FEAT-20260602-005.
+	OnFailurePipeline string `protobuf:"bytes,17,opt,name=on_failure_pipeline,json=onFailurePipeline,proto3" json:"on_failure_pipeline,omitempty"`
+	// step_timeout is the per-step inactivity duration (e.g. "10m"). See FEAT-20260602-006.
+	StepTimeout   string `protobuf:"bytes,18,opt,name=step_timeout,json=stepTimeout,proto3" json:"step_timeout,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WorkPlan) Reset() {
@@ -1948,6 +1983,55 @@ func (x *WorkPlan) GetOrdinality() int32 {
 func (x *WorkPlan) GetHandlerService() string {
 	if x != nil {
 		return x.HandlerService
+	}
+	return ""
+}
+
+func (x *WorkPlan) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *WorkPlan) GetFunctionCode() string {
+	if x != nil {
+		return x.FunctionCode
+	}
+	return ""
+}
+
+func (x *WorkPlan) GetFunctionParams() string {
+	if x != nil {
+		return x.FunctionParams
+	}
+	return ""
+}
+
+func (x *WorkPlan) GetSuccessEvent() string {
+	if x != nil {
+		return x.SuccessEvent
+	}
+	return ""
+}
+
+func (x *WorkPlan) GetFailureEvent() string {
+	if x != nil {
+		return x.FailureEvent
+	}
+	return ""
+}
+
+func (x *WorkPlan) GetOnFailurePipeline() string {
+	if x != nil {
+		return x.OnFailurePipeline
+	}
+	return ""
+}
+
+func (x *WorkPlan) GetStepTimeout() string {
+	if x != nil {
+		return x.StepTimeout
 	}
 	return ""
 }
@@ -2278,18 +2362,24 @@ func (x *WorkPlanMatch) GetContextSources() []*ContextSource {
 
 // CreateWorkPlanRequest carries the fields for creating a new WorkPlan.
 type CreateWorkPlanRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Name             string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Description      string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	TriggerTopic     string                 `protobuf:"bytes,3,opt,name=trigger_topic,json=triggerTopic,proto3" json:"trigger_topic,omitempty"`
-	PayloadCondition string                 `protobuf:"bytes,4,opt,name=payload_condition,json=payloadCondition,proto3" json:"payload_condition,omitempty"`
-	Instructions     string                 `protobuf:"bytes,5,opt,name=instructions,proto3" json:"instructions,omitempty"`
-	AgentId          string                 `protobuf:"bytes,6,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Enabled          bool                   `protobuf:"varint,7,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Ordinality       int32                  `protobuf:"varint,8,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
-	HandlerService   string                 `protobuf:"bytes,9,opt,name=handler_service,json=handlerService,proto3" json:"handler_service,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Name              string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description       string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	TriggerTopic      string                 `protobuf:"bytes,3,opt,name=trigger_topic,json=triggerTopic,proto3" json:"trigger_topic,omitempty"`
+	PayloadCondition  string                 `protobuf:"bytes,4,opt,name=payload_condition,json=payloadCondition,proto3" json:"payload_condition,omitempty"`
+	Instructions      string                 `protobuf:"bytes,5,opt,name=instructions,proto3" json:"instructions,omitempty"`
+	AgentId           string                 `protobuf:"bytes,6,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Enabled           bool                   `protobuf:"varint,7,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Ordinality        int32                  `protobuf:"varint,8,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
+	HandlerService    string                 `protobuf:"bytes,9,opt,name=handler_service,json=handlerService,proto3" json:"handler_service,omitempty"`
+	FunctionCode      string                 `protobuf:"bytes,10,opt,name=function_code,json=functionCode,proto3" json:"function_code,omitempty"`
+	FunctionParams    string                 `protobuf:"bytes,11,opt,name=function_params,json=functionParams,proto3" json:"function_params,omitempty"`
+	SuccessEvent      string                 `protobuf:"bytes,12,opt,name=success_event,json=successEvent,proto3" json:"success_event,omitempty"`
+	FailureEvent      string                 `protobuf:"bytes,13,opt,name=failure_event,json=failureEvent,proto3" json:"failure_event,omitempty"`
+	OnFailurePipeline string                 `protobuf:"bytes,14,opt,name=on_failure_pipeline,json=onFailurePipeline,proto3" json:"on_failure_pipeline,omitempty"`
+	StepTimeout       string                 `protobuf:"bytes,15,opt,name=step_timeout,json=stepTimeout,proto3" json:"step_timeout,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CreateWorkPlanRequest) Reset() {
@@ -2381,6 +2471,48 @@ func (x *CreateWorkPlanRequest) GetOrdinality() int32 {
 func (x *CreateWorkPlanRequest) GetHandlerService() string {
 	if x != nil {
 		return x.HandlerService
+	}
+	return ""
+}
+
+func (x *CreateWorkPlanRequest) GetFunctionCode() string {
+	if x != nil {
+		return x.FunctionCode
+	}
+	return ""
+}
+
+func (x *CreateWorkPlanRequest) GetFunctionParams() string {
+	if x != nil {
+		return x.FunctionParams
+	}
+	return ""
+}
+
+func (x *CreateWorkPlanRequest) GetSuccessEvent() string {
+	if x != nil {
+		return x.SuccessEvent
+	}
+	return ""
+}
+
+func (x *CreateWorkPlanRequest) GetFailureEvent() string {
+	if x != nil {
+		return x.FailureEvent
+	}
+	return ""
+}
+
+func (x *CreateWorkPlanRequest) GetOnFailurePipeline() string {
+	if x != nil {
+		return x.OnFailurePipeline
+	}
+	return ""
+}
+
+func (x *CreateWorkPlanRequest) GetStepTimeout() string {
+	if x != nil {
+		return x.StepTimeout
 	}
 	return ""
 }
@@ -2514,19 +2646,25 @@ func (x *ListWorkPlansResponse) GetWorkPlans() []*WorkPlan {
 
 // UpdateWorkPlanRequest carries the fields that may be changed on an existing WorkPlan.
 type UpdateWorkPlanRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	WorkPlanId       string                 `protobuf:"bytes,1,opt,name=work_plan_id,json=workPlanId,proto3" json:"work_plan_id,omitempty"`
-	Name             string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description      string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	TriggerTopic     string                 `protobuf:"bytes,4,opt,name=trigger_topic,json=triggerTopic,proto3" json:"trigger_topic,omitempty"`
-	PayloadCondition string                 `protobuf:"bytes,5,opt,name=payload_condition,json=payloadCondition,proto3" json:"payload_condition,omitempty"`
-	Instructions     string                 `protobuf:"bytes,6,opt,name=instructions,proto3" json:"instructions,omitempty"`
-	AgentId          string                 `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Enabled          bool                   `protobuf:"varint,8,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Ordinality       int32                  `protobuf:"varint,9,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
-	HandlerService   string                 `protobuf:"bytes,10,opt,name=handler_service,json=handlerService,proto3" json:"handler_service,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	WorkPlanId        string                 `protobuf:"bytes,1,opt,name=work_plan_id,json=workPlanId,proto3" json:"work_plan_id,omitempty"`
+	Name              string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description       string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	TriggerTopic      string                 `protobuf:"bytes,4,opt,name=trigger_topic,json=triggerTopic,proto3" json:"trigger_topic,omitempty"`
+	PayloadCondition  string                 `protobuf:"bytes,5,opt,name=payload_condition,json=payloadCondition,proto3" json:"payload_condition,omitempty"`
+	Instructions      string                 `protobuf:"bytes,6,opt,name=instructions,proto3" json:"instructions,omitempty"`
+	AgentId           string                 `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Enabled           bool                   `protobuf:"varint,8,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Ordinality        int32                  `protobuf:"varint,9,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
+	HandlerService    string                 `protobuf:"bytes,10,opt,name=handler_service,json=handlerService,proto3" json:"handler_service,omitempty"`
+	FunctionCode      string                 `protobuf:"bytes,11,opt,name=function_code,json=functionCode,proto3" json:"function_code,omitempty"`
+	FunctionParams    string                 `protobuf:"bytes,12,opt,name=function_params,json=functionParams,proto3" json:"function_params,omitempty"`
+	SuccessEvent      string                 `protobuf:"bytes,13,opt,name=success_event,json=successEvent,proto3" json:"success_event,omitempty"`
+	FailureEvent      string                 `protobuf:"bytes,14,opt,name=failure_event,json=failureEvent,proto3" json:"failure_event,omitempty"`
+	OnFailurePipeline string                 `protobuf:"bytes,15,opt,name=on_failure_pipeline,json=onFailurePipeline,proto3" json:"on_failure_pipeline,omitempty"`
+	StepTimeout       string                 `protobuf:"bytes,16,opt,name=step_timeout,json=stepTimeout,proto3" json:"step_timeout,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UpdateWorkPlanRequest) Reset() {
@@ -2625,6 +2763,48 @@ func (x *UpdateWorkPlanRequest) GetOrdinality() int32 {
 func (x *UpdateWorkPlanRequest) GetHandlerService() string {
 	if x != nil {
 		return x.HandlerService
+	}
+	return ""
+}
+
+func (x *UpdateWorkPlanRequest) GetFunctionCode() string {
+	if x != nil {
+		return x.FunctionCode
+	}
+	return ""
+}
+
+func (x *UpdateWorkPlanRequest) GetFunctionParams() string {
+	if x != nil {
+		return x.FunctionParams
+	}
+	return ""
+}
+
+func (x *UpdateWorkPlanRequest) GetSuccessEvent() string {
+	if x != nil {
+		return x.SuccessEvent
+	}
+	return ""
+}
+
+func (x *UpdateWorkPlanRequest) GetFailureEvent() string {
+	if x != nil {
+		return x.FailureEvent
+	}
+	return ""
+}
+
+func (x *UpdateWorkPlanRequest) GetOnFailurePipeline() string {
+	if x != nil {
+		return x.OnFailurePipeline
+	}
+	return ""
+}
+
+func (x *UpdateWorkPlanRequest) GetStepTimeout() string {
+	if x != nil {
+		return x.StepTimeout
 	}
 	return ""
 }
@@ -3128,7 +3308,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1e\n" +
 	"\n" +
 	"ordinality\x18\x04 \x01(\x05R\n" +
-	"ordinality\"\xa6\x03\n" +
+	"ordinality\"\xab\x04\n" +
 	"\x06Agency\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -3142,7 +3322,9 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x12\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12E\n" +
+	"\x1fdefault_failure_pipeline_budget\x18\v \x01(\x05R\x1cdefaultFailurePipelineBudget\x12<\n" +
+	"\x1ainactivity_timeout_seconds\x18\f \x01(\x05R\x18inactivityTimeoutSeconds\"\x12\n" +
 	"\x10GetAgencyRequest\"-\n" +
 	"\x17SetAgencyDetailsRequest\x12\x12\n" +
 	"\x04json\x18\x01 \x01(\tR\x04json\"\x97\x02\n" +
@@ -3204,7 +3386,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x13PromoteDraftRequest\x12\x19\n" +
 	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"0\n" +
 	"\x13ArchiveDraftRequest\x12\x19\n" +
-	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"\xe1\x02\n" +
+	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"\xe0\x04\n" +
 	"\bWorkPlan\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tagency_id\x18\x02 \x01(\tR\bagencyId\x12\x12\n" +
@@ -3219,7 +3401,14 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"ordinality\x18\n" +
 	" \x01(\x05R\n" +
 	"ordinality\x12'\n" +
-	"\x0fhandler_service\x18\v \x01(\tR\x0ehandlerService\"\xa5\x01\n" +
+	"\x0fhandler_service\x18\v \x01(\tR\x0ehandlerService\x12\x12\n" +
+	"\x04code\x18\f \x01(\tR\x04code\x12#\n" +
+	"\rfunction_code\x18\r \x01(\tR\ffunctionCode\x12'\n" +
+	"\x0ffunction_params\x18\x0e \x01(\tR\x0efunctionParams\x12#\n" +
+	"\rsuccess_event\x18\x0f \x01(\tR\fsuccessEvent\x12#\n" +
+	"\rfailure_event\x18\x10 \x01(\tR\ffailureEvent\x12.\n" +
+	"\x13on_failure_pipeline\x18\x11 \x01(\tR\x11onFailurePipeline\x12!\n" +
+	"\fstep_timeout\x18\x12 \x01(\tR\vstepTimeout\"\xa5\x01\n" +
 	"\x10GitContextSource\x12\x18\n" +
 	"\asignals\x18\x01 \x01(\tR\asignals\x12\x1f\n" +
 	"\vmax_results\x18\x02 \x01(\x05R\n" +
@@ -3247,7 +3436,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x04work\x18\x06 \x01(\v2$.codevaldagency.v1.WorkContextSourceR\x04work\"\x94\x01\n" +
 	"\rWorkPlanMatch\x128\n" +
 	"\twork_plan\x18\x01 \x01(\v2\x1b.codevaldagency.v1.WorkPlanR\bworkPlan\x12I\n" +
-	"\x0fcontext_sources\x18\x02 \x03(\v2 .codevaldagency.v1.ContextSourceR\x0econtextSources\"\xc1\x02\n" +
+	"\x0fcontext_sources\x18\x02 \x03(\v2 .codevaldagency.v1.ContextSourceR\x0econtextSources\"\xac\x04\n" +
 	"\x15CreateWorkPlanRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12#\n" +
@@ -3259,14 +3448,21 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\n" +
 	"ordinality\x18\b \x01(\x05R\n" +
 	"ordinality\x12'\n" +
-	"\x0fhandler_service\x18\t \x01(\tR\x0ehandlerService\"6\n" +
+	"\x0fhandler_service\x18\t \x01(\tR\x0ehandlerService\x12#\n" +
+	"\rfunction_code\x18\n" +
+	" \x01(\tR\ffunctionCode\x12'\n" +
+	"\x0ffunction_params\x18\v \x01(\tR\x0efunctionParams\x12#\n" +
+	"\rsuccess_event\x18\f \x01(\tR\fsuccessEvent\x12#\n" +
+	"\rfailure_event\x18\r \x01(\tR\ffailureEvent\x12.\n" +
+	"\x13on_failure_pipeline\x18\x0e \x01(\tR\x11onFailurePipeline\x12!\n" +
+	"\fstep_timeout\x18\x0f \x01(\tR\vstepTimeout\"6\n" +
 	"\x12GetWorkPlanRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\"\x16\n" +
 	"\x14ListWorkPlansRequest\"S\n" +
 	"\x15ListWorkPlansResponse\x12:\n" +
 	"\n" +
-	"work_plans\x18\x01 \x03(\v2\x1b.codevaldagency.v1.WorkPlanR\tworkPlans\"\xe3\x02\n" +
+	"work_plans\x18\x01 \x03(\v2\x1b.codevaldagency.v1.WorkPlanR\tworkPlans\"\xce\x04\n" +
 	"\x15UpdateWorkPlanRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\x12\x12\n" +
@@ -3281,7 +3477,13 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"ordinality\x18\t \x01(\x05R\n" +
 	"ordinality\x12'\n" +
 	"\x0fhandler_service\x18\n" +
-	" \x01(\tR\x0ehandlerService\"9\n" +
+	" \x01(\tR\x0ehandlerService\x12#\n" +
+	"\rfunction_code\x18\v \x01(\tR\ffunctionCode\x12'\n" +
+	"\x0ffunction_params\x18\f \x01(\tR\x0efunctionParams\x12#\n" +
+	"\rsuccess_event\x18\r \x01(\tR\fsuccessEvent\x12#\n" +
+	"\rfailure_event\x18\x0e \x01(\tR\ffailureEvent\x12.\n" +
+	"\x13on_failure_pipeline\x18\x0f \x01(\tR\x11onFailurePipeline\x12!\n" +
+	"\fstep_timeout\x18\x10 \x01(\tR\vstepTimeout\"9\n" +
 	"\x15DeleteWorkPlanRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\"\x87\x02\n" +

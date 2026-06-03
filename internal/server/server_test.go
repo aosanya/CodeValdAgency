@@ -562,8 +562,8 @@ func TestServer_GetConfiguredRoles_OK(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{
 		rolesResult: []codevaldagency.ConfiguredRole{
-			{Name: "analyst", ActorType: codevaldagency.ActorTypeHuman},
-			{Name: "reviewer", ActorType: codevaldagency.ActorTypeAIAgent},
+			{Code: "analyst", Name: "Analyst", ActorType: codevaldagency.ActorTypeHuman},
+			{Code: "reviewer", Name: "Reviewer", ActorType: codevaldagency.ActorTypeAIAgent},
 		},
 	}
 	srv := server.New(mgr, nil, nil)

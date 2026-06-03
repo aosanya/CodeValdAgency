@@ -236,6 +236,10 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 		return Agency{}, fmt.Errorf("SetAgencyDetails: list: %w", err)
 	}
 
+	if len(existing) > 0 && boolProp(existing[0].Properties, "enabled") {
+		return Agency{}, ErrAgencyReadOnly
+	}
+
 	var entity entitygraph.Entity
 	if len(existing) == 0 {
 		entity, err = m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{

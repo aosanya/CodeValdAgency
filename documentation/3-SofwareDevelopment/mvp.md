@@ -53,6 +53,7 @@ The MVP delivers:
 | MVP-AGENCY-012 | RACI gRPC RPCs | ✅ Done | MVP-AGENCY-011 |
 | MVP-AGENCY-013 | RACI Cross Registration & Route Declarations | ✅ Done | MVP-AGENCY-012 |
 | MVP-AGENCY-014 | RACI Unit & Integration Tests | ✅ Done | MVP-AGENCY-011, MVP-AGENCY-012 |
+| FEAT-20260605-002 | WorkPlan review step type — `review_step_type`, `review_trigger_topic`, `review_success_topic`, `review_failure_topic` fields on WorkPlan; gates task progression on AcceptanceCriteria results | 📋 Not Started | FEAT-20260605-001 (Work) |
 
 ---
 

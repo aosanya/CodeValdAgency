@@ -58,6 +58,9 @@ type mockManager struct {
 func (m *mockManager) SetAgencyDetails(_ context.Context, _ string) (codevaldagency.Agency, error) {
 	return m.setDetailsResult, m.setDetailsErr
 }
+func (m *mockManager) SetAgencyEventFlows(_ context.Context, _ string) (codevaldagency.Agency, error) {
+	return codevaldagency.Agency{}, nil
+}
 func (m *mockManager) GetAgency(_ context.Context) (codevaldagency.Agency, error) {
 	return m.getResult, m.getErr
 }

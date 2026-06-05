@@ -137,6 +137,7 @@ func DefaultAgencySchema() types.Schema {
 					// Resolution order: step_timeout > inactivity_timeout_seconds > env default.
 					// See FEAT-20260602-006.
 					{Name: "inactivity_timeout_seconds", Type: types.PropertyTypeInteger, Required: false},
+					{Name: "event_flows", Type: types.PropertyTypeString, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
 					{Name: "has_goal", Label: "Goals", PathSegment: "goals", ToType: "Goal", ToMany: true, Inverse: "belongs_to_agency"},

@@ -539,8 +539,11 @@ type Agency struct {
 	// inactivity timeout. Zero means "unset"; watchdog falls back to env default.
 	// See FEAT-20260602-006.
 	InactivityTimeoutSeconds int32 `protobuf:"varint,12,opt,name=inactivity_timeout_seconds,json=inactivityTimeoutSeconds,proto3" json:"inactivity_timeout_seconds,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// event_flows is the raw JSON blob of the event_flows section from agency.json.
+	// Holds the cross-service event routing rules for the execution flow chart.
+	EventFlows    string `protobuf:"bytes,13,opt,name=event_flows,json=eventFlows,proto3" json:"event_flows,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Agency) Reset() {
@@ -655,6 +658,13 @@ func (x *Agency) GetInactivityTimeoutSeconds() int32 {
 		return x.InactivityTimeoutSeconds
 	}
 	return 0
+}
+
+func (x *Agency) GetEventFlows() string {
+	if x != nil {
+		return x.EventFlows
+	}
+	return ""
 }
 
 // GetAgencyRequest is intentionally empty — there is exactly one agency per database.
@@ -3308,7 +3318,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1e\n" +
 	"\n" +
 	"ordinality\x18\x04 \x01(\x05R\n" +
-	"ordinality\"\xab\x04\n" +
+	"ordinality\"\xcc\x04\n" +
 	"\x06Agency\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -3324,7 +3334,9 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12E\n" +
 	"\x1fdefault_failure_pipeline_budget\x18\v \x01(\x05R\x1cdefaultFailurePipelineBudget\x12<\n" +
-	"\x1ainactivity_timeout_seconds\x18\f \x01(\x05R\x18inactivityTimeoutSeconds\"\x12\n" +
+	"\x1ainactivity_timeout_seconds\x18\f \x01(\x05R\x18inactivityTimeoutSeconds\x12\x1f\n" +
+	"\vevent_flows\x18\r \x01(\tR\n" +
+	"eventFlows\"\x12\n" +
 	"\x10GetAgencyRequest\"-\n" +
 	"\x17SetAgencyDetailsRequest\x12\x12\n" +
 	"\x04json\x18\x01 \x01(\tR\x04json\"\x97\x02\n" +

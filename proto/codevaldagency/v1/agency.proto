@@ -100,6 +100,9 @@ message Agency {
   // inactivity timeout. Zero means "unset"; watchdog falls back to env default.
   // See FEAT-20260602-006.
   int32                     inactivity_timeout_seconds = 12;
+  // event_flows is the raw JSON blob of the event_flows section from agency.json.
+  // Holds the cross-service event routing rules for the execution flow chart.
+  string                    event_flows = 13;
 }
 
 // ── Filter ───────────────────────────────────────────────────────────────────

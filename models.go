@@ -83,6 +83,10 @@ type Agency struct {
 	// See FEAT-20260602-006.
 	InactivityTimeoutSeconds int
 
+	// EventFlows is the raw JSON blob of the event_flows section from agency.json.
+	// It holds the cross-service event routing rules for display in the execution flow chart.
+	EventFlows string
+
 	// CreatedAt is the time at which the agency was first persisted.
 	CreatedAt time.Time
 

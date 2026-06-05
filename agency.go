@@ -38,6 +38,11 @@ type AgencyManager interface {
 	// [CreateDraft] + [PromoteDraft] may mutate the agency state.
 	SetAgencyDetails(ctx context.Context, jsonStr string) (Agency, error)
 
+	// SetAgencyEventFlows stores the raw event_flows JSON blob on the agency entity.
+	// Unlike SetAgencyDetails, this succeeds even for published agencies — event
+	// flows are display-only metadata, not structural content subject to the publish lock.
+	SetAgencyEventFlows(ctx context.Context, eventFlowsJSON string) (Agency, error)
+
 	// GetAgency retrieves the single agency for this database.
 	// Returns [ErrAgencyNotFound] if no agency entity exists yet.
 	GetAgency(ctx context.Context) (Agency, error)
@@ -214,6 +219,7 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 		Vision                       string `json:"vision"`
 		DefaultFailurePipelineBudget int    `json:"default_failure_pipeline_budget"`
 		InactivityTimeoutSeconds     int    `json:"inactivity_timeout_seconds"`
+		EventFlows                   string `json:"event_flows"`
 	}
 	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
 		return Agency{}, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
@@ -228,6 +234,7 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 		"vision":                          raw.Vision,
 		"default_failure_pipeline_budget": raw.DefaultFailurePipelineBudget,
 		"inactivity_timeout_seconds":      raw.InactivityTimeoutSeconds,
+		"event_flows":                     raw.EventFlows,
 	}
 
 	// Check whether an Agency entity already exists.
@@ -256,6 +263,25 @@ func (m *agencyManager) SetAgencyDetails(ctx context.Context, jsonStr string) (A
 		return Agency{}, fmt.Errorf("SetAgencyDetails: %w", err)
 	}
 
+	return entityToAgency(entity), nil
+}
+
+// SetAgencyEventFlows stores the raw event_flows JSON blob on the agency entity.
+// It bypasses the ErrAgencyReadOnly guard because event_flows is display-only metadata.
+func (m *agencyManager) SetAgencyEventFlows(ctx context.Context, eventFlowsJSON string) (Agency, error) {
+	existing, err := m.listAgencyEntities(ctx)
+	if err != nil {
+		return Agency{}, fmt.Errorf("SetAgencyEventFlows: list: %w", err)
+	}
+	if len(existing) == 0 {
+		return Agency{}, ErrAgencyNotFound
+	}
+	entity, err := m.dm.UpdateEntity(ctx, m.agencyID, existing[0].ID, entitygraph.UpdateEntityRequest{
+		Properties: map[string]any{"event_flows": eventFlowsJSON},
+	})
+	if err != nil {
+		return Agency{}, fmt.Errorf("SetAgencyEventFlows: %w", err)
+	}
 	return entityToAgency(entity), nil
 }
 
@@ -801,6 +827,7 @@ func entityToAgency(e entitygraph.Entity) Agency {
 		Enabled:                      boolProp(p, "enabled"),
 		DefaultFailurePipelineBudget: intProp(p, "default_failure_pipeline_budget"),
 		InactivityTimeoutSeconds:     intProp(p, "inactivity_timeout_seconds"),
+		EventFlows:                   strProp(p, "event_flows"),
 		CreatedAt:                    e.CreatedAt,
 		UpdatedAt:                    e.UpdatedAt,
 	}

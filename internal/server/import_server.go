@@ -20,10 +20,12 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
 
+	codevaldagency "github.com/aosanya/CodeValdAgency"
 	pb "github.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1"
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
 	"google.golang.org/grpc/codes"
@@ -40,6 +42,7 @@ type importAgencyYAML struct {
 	Workflows       []importWorkflowSpec  `yaml:"workflows"`
 	WorkPlans       []importWorkPlanSpec  `yaml:"work_plans"`
 	AIConfig        importAIConfigSpec    `yaml:"ai_config"`
+	EventFlows      interface{}            `yaml:"event_flows"`
 }
 
 type importAIConfigSpec struct {
@@ -192,7 +195,7 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 
 	// 1. Set agency details.
 	log.Printf("[ImportDraft] %s: setting agency details", agencyID)
-	if err := s.importSetDetails(ctx, agencyID, spec.Agency); err != nil {
+	if err := s.importSetDetails(ctx, agencyID, spec.Agency, spec.EventFlows); err != nil {
 		log.Printf("[ImportDraft] %s: set details failed: %v", agencyID, err)
 		return nil, status.Errorf(codes.Internal, "ImportDraft %s: set details: %v", agencyID, err)
 	}
@@ -404,7 +407,19 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 // importSetDetails updates the root agency document.
-func (s *Server) importSetDetails(ctx context.Context, agencyID string, a importAgencySpec) error {
+// For published agencies (ErrAgencyReadOnly), structural fields are skipped but
+// event_flows metadata is refreshed via SetAgencyEventFlows.
+func (s *Server) importSetDetails(ctx context.Context, agencyID string, a importAgencySpec, eventFlows interface{}) error {
+	// Marshal event_flows back to a JSON string for storage (yaml.v3 decodes it
+	// as interface{}, so we re-encode to get the raw JSON blob).
+	var eventFlowsJSON string
+	if eventFlows != nil {
+		b, merr := json.Marshal(eventFlows)
+		if merr == nil {
+			eventFlowsJSON = string(b)
+		}
+	}
+
 	body, err := json.Marshal(map[string]any{
 		"id":                              agencyID,
 		"name":                            a.Name,
@@ -412,11 +427,21 @@ func (s *Server) importSetDetails(ctx context.Context, agencyID string, a import
 		"vision":                          clean(a.Vision),
 		"code":                            a.Code,
 		"default_failure_pipeline_budget": a.DefaultFailurePipelineBudget,
+		"event_flows":                     eventFlowsJSON,
 	})
 	if err != nil {
 		return fmt.Errorf("importSetDetails: marshal: %w", err)
 	}
 	_, err = s.mgr.SetAgencyDetails(ctx, string(body))
+	if err == nil {
+		return nil
+	}
+	// Published agencies block structural field updates. event_flows is display-only
+	// metadata and can always be refreshed even after publish.
+	if errors.Is(err, codevaldagency.ErrAgencyReadOnly) && eventFlowsJSON != "" {
+		_, efErr := s.mgr.SetAgencyEventFlows(ctx, eventFlowsJSON)
+		return efErr
+	}
 	return err
 }
 

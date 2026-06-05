@@ -180,6 +180,7 @@ func agencyToProto(a codevaldagency.Agency) *pb.Agency {
 		Enabled:                      a.Enabled,
 		DefaultFailurePipelineBudget: int32(a.DefaultFailurePipelineBudget),
 		InactivityTimeoutSeconds:     int32(a.InactivityTimeoutSeconds),
+		EventFlows:                   a.EventFlows,
 		CreatedAt:                    timeToProto(a.CreatedAt),
 		UpdatedAt:                    timeToProto(a.UpdatedAt),
 	}

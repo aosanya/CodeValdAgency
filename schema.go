@@ -137,6 +137,16 @@ func DefaultAgencySchema() types.Schema {
 					// Resolution order: step_timeout > inactivity_timeout_seconds > env default.
 					// See FEAT-20260602-006.
 					{Name: "inactivity_timeout_seconds", Type: types.PropertyTypeInteger, Required: false},
+					// event_flows stores a JSON-encoded object { flows: []EventFlow }.
+					// Each EventFlow entry has the following fields:
+					//   trigger       string  — PubSub topic that causes this step.
+					//   publisher     string  — service that publishes the trigger.
+					//   consumer      string  — service that handles the trigger; "*" means all.
+					//   description   string  — human-readable explanation.
+					//   name          string  — short display name (optional).
+					//   emits_topic   string  — topic the consumer publishes as a direct
+					//                           result of handling this trigger (empty when
+					//                           no downstream event is emitted).
 					{Name: "event_flows", Type: types.PropertyTypeString, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{

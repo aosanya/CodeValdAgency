@@ -139,25 +139,28 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "inactivity_timeout_seconds", Type: types.PropertyTypeInteger, Required: false},
 					// event_flows stores a JSON-encoded object { flows: []EventFlow }.
 					// Each EventFlow entry has the following fields:
-					//   trigger       string             — PubSub topic that causes this step.
-					//   publisher     string             — service that publishes the trigger.
-					//   consumer      string             — service that handles the trigger; "*" means all.
-					//   description   string             — human-readable explanation.
-					//   name          string             — short display name (optional).
-					//   emits_topic   string             — downstream topic when the step has exactly one
-					//                                      outcome. Empty string when the step branches
-					//                                      (use branches[] instead) or emits nothing.
-					//   branches      []EventFlowBranch  — conditional outcomes when the step can emit
-					//                                      different downstream topics depending on the
-					//                                      handler's internal result. When non-empty,
-					//                                      emits_topic must be "".
+					//   trigger          string             — PubSub topic that causes this step.
+					//   publisher        string             — service that publishes the trigger.
+					//   consumer         string             — service that handles the trigger; "*" means all.
+					//   description      string             — human-readable explanation.
+					//   name             string             — short display name (optional).
+					//   emits_topic      string             — downstream topic when the step has exactly one
+					//                                         outcome. Empty string when the step branches
+					//                                         (use branches[] instead) or emits nothing.
+					//   emits_publisher  string             — service that publishes emits_topic. Required
+					//                                         when emits_topic is non-empty; omit otherwise.
+					//   branches         []EventFlowBranch  — conditional outcomes when the step can emit
+					//                                         different downstream topics depending on the
+					//                                         handler's internal result. When non-empty,
+					//                                         emits_topic must be "".
 					//
 					// EventFlowBranch sub-object:
-					//   condition     string — human-readable expression for when this branch fires;
-					//                          documentation only, not machine-evaluated.
-					//   emits_topic   string — the downstream topic emitted on this branch.
-					//   description   string — plain-language explanation of the outcome.
-					//   handler       string — work plan code responsible for this branch (optional).
+					//   condition        string — human-readable expression for when this branch fires;
+					//                             documentation only, not machine-evaluated.
+					//   emits_topic      string — the downstream topic emitted on this branch.
+					//   emits_publisher  string — service that publishes this branch's emits_topic.
+					//   description      string — plain-language explanation of the outcome.
+					//   handler          string — work plan code responsible for this branch (optional).
 					{Name: "event_flows", Type: types.PropertyTypeString, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{

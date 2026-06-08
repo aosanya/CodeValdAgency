@@ -329,10 +329,14 @@ func (s *Server) CreateWorkPlan(ctx context.Context, req *pb.CreateWorkPlanReque
 		HandlerService:    req.GetHandlerService(),
 		Enabled:           req.GetEnabled(),
 		Ordinality:        int(req.GetOrdinality()),
-		SuccessEvent:      req.GetSuccessEvent(),
-		FailureEvent:      req.GetFailureEvent(),
-		OnFailurePipeline: req.GetOnFailurePipeline(),
-		StepTimeout:       req.GetStepTimeout(),
+		SuccessEvent:       req.GetSuccessEvent(),
+		FailureEvent:       req.GetFailureEvent(),
+		OnFailurePipeline:  req.GetOnFailurePipeline(),
+		StepTimeout:        req.GetStepTimeout(),
+		ReviewStepType:     req.GetReviewStepType(),
+		ReviewTriggerTopic: req.GetReviewTriggerTopic(),
+		ReviewSuccessTopic: req.GetReviewSuccessTopic(),
+		ReviewFailureTopic: req.GetReviewFailureTopic(),
 	})
 	if err != nil {
 		return nil, toGRPCError(err)
@@ -376,10 +380,14 @@ func (s *Server) UpdateWorkPlan(ctx context.Context, req *pb.UpdateWorkPlanReque
 		HandlerService:    optStr(req.GetHandlerService()),
 		Enabled:           optBool(req.GetEnabled()),
 		Ordinality:        optInt(int(req.GetOrdinality())),
-		SuccessEvent:      optStr(req.GetSuccessEvent()),
-		FailureEvent:      optStr(req.GetFailureEvent()),
-		OnFailurePipeline: optStr(req.GetOnFailurePipeline()),
-		StepTimeout:       optStr(req.GetStepTimeout()),
+		SuccessEvent:       optStr(req.GetSuccessEvent()),
+		FailureEvent:       optStr(req.GetFailureEvent()),
+		OnFailurePipeline:  optStr(req.GetOnFailurePipeline()),
+		StepTimeout:        optStr(req.GetStepTimeout()),
+		ReviewStepType:     optStr(req.GetReviewStepType()),
+		ReviewTriggerTopic: optStr(req.GetReviewTriggerTopic()),
+		ReviewSuccessTopic: optStr(req.GetReviewSuccessTopic()),
+		ReviewFailureTopic: optStr(req.GetReviewFailureTopic()),
 	})
 	if err != nil {
 		return nil, toGRPCError(err)
@@ -487,10 +495,14 @@ func workPlanToProto(r codevaldagency.WorkPlan) *pb.WorkPlan {
 		Code:              r.Code,
 		FunctionCode:      r.FunctionCode,
 		FunctionParams:    r.FunctionParams,
-		SuccessEvent:      r.SuccessEvent,
-		FailureEvent:      r.FailureEvent,
-		OnFailurePipeline: r.OnFailurePipeline,
-		StepTimeout:       r.StepTimeout,
+		SuccessEvent:       r.SuccessEvent,
+		FailureEvent:       r.FailureEvent,
+		OnFailurePipeline:  r.OnFailurePipeline,
+		StepTimeout:        r.StepTimeout,
+		ReviewStepType:     r.ReviewStepType,
+		ReviewTriggerTopic: r.ReviewTriggerTopic,
+		ReviewSuccessTopic: r.ReviewSuccessTopic,
+		ReviewFailureTopic: r.ReviewFailureTopic,
 	}
 }
 

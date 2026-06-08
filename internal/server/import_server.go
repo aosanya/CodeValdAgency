@@ -156,6 +156,13 @@ type importWorkPlanSpec struct {
 	OnFailurePipeline string `yaml:"on_failure_pipeline"`
 	// StepTimeout is the per-step inactivity duration (e.g. "10m"). See FEAT-20260602-006.
 	StepTimeout string `yaml:"step_timeout"`
+	// ReviewStepType / ReviewTriggerTopic / ReviewSuccessTopic / ReviewFailureTopic
+	// implement FEAT-20260605-002 — the review gate that checks AcceptanceCriteria
+	// results before advancing to the next WorkPlan step.
+	ReviewStepType     string `yaml:"review_step_type"`
+	ReviewTriggerTopic string `yaml:"review_trigger_topic"`
+	ReviewSuccessTopic string `yaml:"review_success_topic"`
+	ReviewFailureTopic string `yaml:"review_failure_topic"`
 }
 
 // ── RPC handler ───────────────────────────────────────────────────────────────
@@ -350,10 +357,14 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			"function_params":    clean(wp.FunctionParams),
 			"enabled":            wp.Enabled,
 			"ordinality":         wp.Ordinality,
-			"success_event":       clean(wp.SuccessEvent),
-			"failure_event":       clean(wp.FailureEvent),
-			"on_failure_pipeline": clean(wp.OnFailurePipeline),
-			"step_timeout":        clean(wp.StepTimeout),
+			"success_event":        clean(wp.SuccessEvent),
+			"failure_event":        clean(wp.FailureEvent),
+			"on_failure_pipeline":  clean(wp.OnFailurePipeline),
+			"step_timeout":         clean(wp.StepTimeout),
+			"review_step_type":     clean(wp.ReviewStepType),
+			"review_trigger_topic": clean(wp.ReviewTriggerTopic),
+			"review_success_topic": clean(wp.ReviewSuccessTopic),
+			"review_failure_topic": clean(wp.ReviewFailureTopic),
 		}
 		if err := s.importUpsert(ctx, agencyID, "WorkPlan", props); err != nil {
 			log.Printf("[ImportDraft] %s: work plan %s upsert failed: %v", agencyID, wp.Code, err)

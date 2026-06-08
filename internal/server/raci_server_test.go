@@ -126,6 +126,60 @@ func TestServer_MatchWorkPlans_ReturnsMatchesWithSources(t *testing.T) {
 	}
 }
 
+// ── ReviewStep fields round-trip ──────────────────────────────────────────────
+
+func TestServer_CreateWorkPlan_ReviewStepFields_RoundTrip(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		createWorkPlanResult: codevaldagency.WorkPlan{
+			ID:                 "wp-review",
+			Name:               "implement-task",
+			ReviewStepType:     "ai_review",
+			ReviewTriggerTopic: "work.task.completed",
+			ReviewSuccessTopic: "work.review.passed",
+			ReviewFailureTopic: "work.review.failed",
+		},
+	}
+	srv := server.New(mgr, nil, nil)
+	got, err := srv.CreateWorkPlan(context.Background(), &pb.CreateWorkPlanRequest{
+		Name:               "implement-task",
+		ReviewStepType:     "ai_review",
+		ReviewTriggerTopic: "work.task.completed",
+		ReviewSuccessTopic: "work.review.passed",
+		ReviewFailureTopic: "work.review.failed",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.GetReviewStepType() != "ai_review" {
+		t.Errorf("ReviewStepType: want %q, got %q", "ai_review", got.GetReviewStepType())
+	}
+	if got.GetReviewTriggerTopic() != "work.task.completed" {
+		t.Errorf("ReviewTriggerTopic: want %q, got %q", "work.task.completed", got.GetReviewTriggerTopic())
+	}
+	if got.GetReviewSuccessTopic() != "work.review.passed" {
+		t.Errorf("ReviewSuccessTopic: want %q, got %q", "work.review.passed", got.GetReviewSuccessTopic())
+	}
+	if got.GetReviewFailureTopic() != "work.review.failed" {
+		t.Errorf("ReviewFailureTopic: want %q, got %q", "work.review.failed", got.GetReviewFailureTopic())
+	}
+}
+
+func TestServer_CreateWorkPlan_NoReviewStep_FieldsEmpty(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{
+		createWorkPlanResult: codevaldagency.WorkPlan{ID: "wp-plain", Name: "plain"},
+	}
+	srv := server.New(mgr, nil, nil)
+	got, err := srv.CreateWorkPlan(context.Background(), &pb.CreateWorkPlanRequest{Name: "plain"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.GetReviewStepType() != "" {
+		t.Errorf("expected empty ReviewStepType, got %q", got.GetReviewStepType())
+	}
+}
+
 func TestServer_MatchWorkPlans_Empty_ReturnsEmptyList(t *testing.T) {
 	t.Parallel()
 	mgr := &mockManager{matchWorkPlansResult: nil}

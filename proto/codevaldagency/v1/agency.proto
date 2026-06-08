@@ -288,6 +288,15 @@ message WorkPlan {
   string on_failure_pipeline = 17;
   // step_timeout is the per-step inactivity duration (e.g. "10m"). See FEAT-20260602-006.
   string step_timeout      = 18;
+  // review_step_type declares the reviewer kind: "ai_review", "human_review",
+  // "functional_review". Empty = no review step. See FEAT-20260605-002.
+  string review_step_type      = 19;
+  // review_trigger_topic is the Cross topic that fires the review agent.
+  string review_trigger_topic  = 20;
+  // review_success_topic is the Cross topic the reviewer emits on pass.
+  string review_success_topic  = 21;
+  // review_failure_topic is the Cross topic the reviewer emits on fail.
+  string review_failure_topic  = 22;
 }
 
 // GitContextSource configures what to fetch from CodeValdGit when a work plan matches.
@@ -346,7 +355,11 @@ message CreateWorkPlanRequest {
   string success_event     = 12;
   string failure_event     = 13;
   string on_failure_pipeline = 14;
-  string step_timeout      = 15;
+  string step_timeout          = 15;
+  string review_step_type      = 16;
+  string review_trigger_topic  = 17;
+  string review_success_topic  = 18;
+  string review_failure_topic  = 19;
 }
 
 // GetWorkPlanRequest selects a WorkPlan by its entity ID.
@@ -378,8 +391,12 @@ message UpdateWorkPlanRequest {
   string function_params   = 12;
   string success_event     = 13;
   string failure_event     = 14;
-  string on_failure_pipeline = 15;
-  string step_timeout      = 16;
+  string on_failure_pipeline   = 15;
+  string step_timeout          = 16;
+  string review_step_type      = 17;
+  string review_trigger_topic  = 18;
+  string review_success_topic  = 19;
+  string review_failure_topic  = 20;
 }
 
 // DeleteWorkPlanRequest selects a WorkPlan by its entity ID.

@@ -138,29 +138,35 @@ func DefaultAgencySchema() types.Schema {
 					// See FEAT-20260602-006.
 					{Name: "inactivity_timeout_seconds", Type: types.PropertyTypeInteger, Required: false},
 					// event_flows stores a JSON-encoded object { flows: []EventFlow }.
-					// Each EventFlow entry has the following fields:
+					// Each EventFlow entry is one of two types, distinguished by the "type" field:
+					//
+					// START NODE  (type: "start")
+					//   type         string — "start": marks a workflow entry point.
+					//   emits_topic  string — the topic this entry point produces. Nothing triggers
+					//                         a start node — it is the origin of the flow chain.
+					//   description  string — what external event or condition causes this topic to fire.
+					//
+					// STEP NODE  (type omitted or "step")
 					//   trigger            string             — PubSub topic that causes this step.
 					//   trigger_publisher  string             — service that publishes the trigger.
-					//   consumer           string             — service that handles the trigger; "*" means all.
-					//   description        string             — human-readable explanation.
+					//   consumer           string             — service that handles the trigger. The consumer
+					//                                           is always the publisher of any emits_topic in
+					//                                           its branches — no separate emits_publisher field.
+					//   description        string             — human-readable explanation of the step.
 					//   name               string             — short display name (optional).
-					//   emits_topic        string             — downstream topic when the step has exactly one
-					//                                           outcome. Empty string when the step branches
-					//                                           (use branches[] instead) or emits nothing.
-					//   emits_publisher    string             — service that publishes emits_topic. Required
-					//                                           when emits_topic is non-empty; omit otherwise.
-					//   branches           []EventFlowBranch  — conditional outcomes when the step can emit
-					//                                           different downstream topics depending on the
-					//                                           handler's internal result. When non-empty,
-					//                                           emits_topic must be "".
+					//   branches           []EventFlowBranch  — always present; one entry minimum. Each entry
+					//                                           documents one possible downstream outcome.
+					//                                           Single-outcome steps have one branch with
+					//                                           condition: "".
 					//
 					// EventFlowBranch sub-object:
-					//   condition          string — human-readable expression for when this branch fires;
-					//                               documentation only, not machine-evaluated.
-					//   emits_topic        string — the downstream topic emitted on this branch.
-					//   emits_publisher    string — service that publishes this branch's emits_topic.
+					//   condition          string — when this branch fires. Empty string for single-outcome
+					//                               steps. Documentation only — not machine-evaluated.
+					//   emits_topic        string — downstream topic produced by this branch. Empty string
+					//                               when the step is terminal (no further event emitted).
 					//   description        string — plain-language explanation of the outcome.
-					//   handler            string — work plan code responsible for this branch (optional).
+					//   handler            string — work_plan.code that executes this branch. Omit for
+					//                               pure service-internal reactions with no work plan.
 					{Name: "event_flows", Type: types.PropertyTypeString, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
@@ -698,6 +704,22 @@ func DefaultAgencySchema() types.Schema {
 					// current step. Falls back to WORKFLOW_RUN_STEP_STALE_TIMEOUT env
 					// var (default 10m) when empty. See FEAT-20260602-006.
 					{Name: "step_timeout", Type: types.PropertyTypeString, Required: false},
+					// review_step_type declares the kind of reviewer that gates task
+					// progression. Valid values: "ai_review", "human_review",
+					// "functional_review". Empty means no review step is configured.
+					// See FEAT-20260605-002.
+					{Name: "review_step_type", Type: types.PropertyTypeString, Required: false},
+					// review_trigger_topic is the Cross topic that fires the review agent
+					// (e.g. "work.task.completed"). Must be non-empty when review_step_type
+					// is set.
+					{Name: "review_trigger_topic", Type: types.PropertyTypeString, Required: false},
+					// review_success_topic is the Cross topic the reviewer emits on pass
+					// (e.g. "work.review.passed"). The next WorkPlan step's
+					// trigger_conditions should reference this topic.
+					{Name: "review_success_topic", Type: types.PropertyTypeString, Required: false},
+					// review_failure_topic is the Cross topic the reviewer emits on fail
+					// (e.g. "work.review.failed"). Routes to on_failure_pipeline when set.
+					{Name: "review_failure_topic", Type: types.PropertyTypeString, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
 					// ToMany=false, Required=true: a WorkPlan must belong to exactly one Agency.

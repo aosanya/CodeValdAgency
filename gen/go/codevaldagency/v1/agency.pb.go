@@ -1885,9 +1885,18 @@ type WorkPlan struct {
 	// on_failure_pipeline is the code of the recovery work plan. See FEAT-20260602-005.
 	OnFailurePipeline string `protobuf:"bytes,17,opt,name=on_failure_pipeline,json=onFailurePipeline,proto3" json:"on_failure_pipeline,omitempty"`
 	// step_timeout is the per-step inactivity duration (e.g. "10m"). See FEAT-20260602-006.
-	StepTimeout   string `protobuf:"bytes,18,opt,name=step_timeout,json=stepTimeout,proto3" json:"step_timeout,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	StepTimeout string `protobuf:"bytes,18,opt,name=step_timeout,json=stepTimeout,proto3" json:"step_timeout,omitempty"`
+	// review_step_type declares the reviewer kind: "ai_review", "human_review",
+	// "functional_review". Empty = no review step. See FEAT-20260605-002.
+	ReviewStepType string `protobuf:"bytes,19,opt,name=review_step_type,json=reviewStepType,proto3" json:"review_step_type,omitempty"`
+	// review_trigger_topic is the Cross topic that fires the review agent.
+	ReviewTriggerTopic string `protobuf:"bytes,20,opt,name=review_trigger_topic,json=reviewTriggerTopic,proto3" json:"review_trigger_topic,omitempty"`
+	// review_success_topic is the Cross topic the reviewer emits on pass.
+	ReviewSuccessTopic string `protobuf:"bytes,21,opt,name=review_success_topic,json=reviewSuccessTopic,proto3" json:"review_success_topic,omitempty"`
+	// review_failure_topic is the Cross topic the reviewer emits on fail.
+	ReviewFailureTopic string `protobuf:"bytes,22,opt,name=review_failure_topic,json=reviewFailureTopic,proto3" json:"review_failure_topic,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *WorkPlan) Reset() {
@@ -2042,6 +2051,34 @@ func (x *WorkPlan) GetOnFailurePipeline() string {
 func (x *WorkPlan) GetStepTimeout() string {
 	if x != nil {
 		return x.StepTimeout
+	}
+	return ""
+}
+
+func (x *WorkPlan) GetReviewStepType() string {
+	if x != nil {
+		return x.ReviewStepType
+	}
+	return ""
+}
+
+func (x *WorkPlan) GetReviewTriggerTopic() string {
+	if x != nil {
+		return x.ReviewTriggerTopic
+	}
+	return ""
+}
+
+func (x *WorkPlan) GetReviewSuccessTopic() string {
+	if x != nil {
+		return x.ReviewSuccessTopic
+	}
+	return ""
+}
+
+func (x *WorkPlan) GetReviewFailureTopic() string {
+	if x != nil {
+		return x.ReviewFailureTopic
 	}
 	return ""
 }
@@ -2372,24 +2409,28 @@ func (x *WorkPlanMatch) GetContextSources() []*ContextSource {
 
 // CreateWorkPlanRequest carries the fields for creating a new WorkPlan.
 type CreateWorkPlanRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Name              string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Description       string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	TriggerTopic      string                 `protobuf:"bytes,3,opt,name=trigger_topic,json=triggerTopic,proto3" json:"trigger_topic,omitempty"`
-	PayloadCondition  string                 `protobuf:"bytes,4,opt,name=payload_condition,json=payloadCondition,proto3" json:"payload_condition,omitempty"`
-	Instructions      string                 `protobuf:"bytes,5,opt,name=instructions,proto3" json:"instructions,omitempty"`
-	AgentId           string                 `protobuf:"bytes,6,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Enabled           bool                   `protobuf:"varint,7,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Ordinality        int32                  `protobuf:"varint,8,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
-	HandlerService    string                 `protobuf:"bytes,9,opt,name=handler_service,json=handlerService,proto3" json:"handler_service,omitempty"`
-	FunctionCode      string                 `protobuf:"bytes,10,opt,name=function_code,json=functionCode,proto3" json:"function_code,omitempty"`
-	FunctionParams    string                 `protobuf:"bytes,11,opt,name=function_params,json=functionParams,proto3" json:"function_params,omitempty"`
-	SuccessEvent      string                 `protobuf:"bytes,12,opt,name=success_event,json=successEvent,proto3" json:"success_event,omitempty"`
-	FailureEvent      string                 `protobuf:"bytes,13,opt,name=failure_event,json=failureEvent,proto3" json:"failure_event,omitempty"`
-	OnFailurePipeline string                 `protobuf:"bytes,14,opt,name=on_failure_pipeline,json=onFailurePipeline,proto3" json:"on_failure_pipeline,omitempty"`
-	StepTimeout       string                 `protobuf:"bytes,15,opt,name=step_timeout,json=stepTimeout,proto3" json:"step_timeout,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Name               string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description        string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	TriggerTopic       string                 `protobuf:"bytes,3,opt,name=trigger_topic,json=triggerTopic,proto3" json:"trigger_topic,omitempty"`
+	PayloadCondition   string                 `protobuf:"bytes,4,opt,name=payload_condition,json=payloadCondition,proto3" json:"payload_condition,omitempty"`
+	Instructions       string                 `protobuf:"bytes,5,opt,name=instructions,proto3" json:"instructions,omitempty"`
+	AgentId            string                 `protobuf:"bytes,6,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Enabled            bool                   `protobuf:"varint,7,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Ordinality         int32                  `protobuf:"varint,8,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
+	HandlerService     string                 `protobuf:"bytes,9,opt,name=handler_service,json=handlerService,proto3" json:"handler_service,omitempty"`
+	FunctionCode       string                 `protobuf:"bytes,10,opt,name=function_code,json=functionCode,proto3" json:"function_code,omitempty"`
+	FunctionParams     string                 `protobuf:"bytes,11,opt,name=function_params,json=functionParams,proto3" json:"function_params,omitempty"`
+	SuccessEvent       string                 `protobuf:"bytes,12,opt,name=success_event,json=successEvent,proto3" json:"success_event,omitempty"`
+	FailureEvent       string                 `protobuf:"bytes,13,opt,name=failure_event,json=failureEvent,proto3" json:"failure_event,omitempty"`
+	OnFailurePipeline  string                 `protobuf:"bytes,14,opt,name=on_failure_pipeline,json=onFailurePipeline,proto3" json:"on_failure_pipeline,omitempty"`
+	StepTimeout        string                 `protobuf:"bytes,15,opt,name=step_timeout,json=stepTimeout,proto3" json:"step_timeout,omitempty"`
+	ReviewStepType     string                 `protobuf:"bytes,16,opt,name=review_step_type,json=reviewStepType,proto3" json:"review_step_type,omitempty"`
+	ReviewTriggerTopic string                 `protobuf:"bytes,17,opt,name=review_trigger_topic,json=reviewTriggerTopic,proto3" json:"review_trigger_topic,omitempty"`
+	ReviewSuccessTopic string                 `protobuf:"bytes,18,opt,name=review_success_topic,json=reviewSuccessTopic,proto3" json:"review_success_topic,omitempty"`
+	ReviewFailureTopic string                 `protobuf:"bytes,19,opt,name=review_failure_topic,json=reviewFailureTopic,proto3" json:"review_failure_topic,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CreateWorkPlanRequest) Reset() {
@@ -2527,6 +2568,34 @@ func (x *CreateWorkPlanRequest) GetStepTimeout() string {
 	return ""
 }
 
+func (x *CreateWorkPlanRequest) GetReviewStepType() string {
+	if x != nil {
+		return x.ReviewStepType
+	}
+	return ""
+}
+
+func (x *CreateWorkPlanRequest) GetReviewTriggerTopic() string {
+	if x != nil {
+		return x.ReviewTriggerTopic
+	}
+	return ""
+}
+
+func (x *CreateWorkPlanRequest) GetReviewSuccessTopic() string {
+	if x != nil {
+		return x.ReviewSuccessTopic
+	}
+	return ""
+}
+
+func (x *CreateWorkPlanRequest) GetReviewFailureTopic() string {
+	if x != nil {
+		return x.ReviewFailureTopic
+	}
+	return ""
+}
+
 // GetWorkPlanRequest selects a WorkPlan by its entity ID.
 type GetWorkPlanRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2656,25 +2725,29 @@ func (x *ListWorkPlansResponse) GetWorkPlans() []*WorkPlan {
 
 // UpdateWorkPlanRequest carries the fields that may be changed on an existing WorkPlan.
 type UpdateWorkPlanRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	WorkPlanId        string                 `protobuf:"bytes,1,opt,name=work_plan_id,json=workPlanId,proto3" json:"work_plan_id,omitempty"`
-	Name              string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description       string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	TriggerTopic      string                 `protobuf:"bytes,4,opt,name=trigger_topic,json=triggerTopic,proto3" json:"trigger_topic,omitempty"`
-	PayloadCondition  string                 `protobuf:"bytes,5,opt,name=payload_condition,json=payloadCondition,proto3" json:"payload_condition,omitempty"`
-	Instructions      string                 `protobuf:"bytes,6,opt,name=instructions,proto3" json:"instructions,omitempty"`
-	AgentId           string                 `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Enabled           bool                   `protobuf:"varint,8,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Ordinality        int32                  `protobuf:"varint,9,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
-	HandlerService    string                 `protobuf:"bytes,10,opt,name=handler_service,json=handlerService,proto3" json:"handler_service,omitempty"`
-	FunctionCode      string                 `protobuf:"bytes,11,opt,name=function_code,json=functionCode,proto3" json:"function_code,omitempty"`
-	FunctionParams    string                 `protobuf:"bytes,12,opt,name=function_params,json=functionParams,proto3" json:"function_params,omitempty"`
-	SuccessEvent      string                 `protobuf:"bytes,13,opt,name=success_event,json=successEvent,proto3" json:"success_event,omitempty"`
-	FailureEvent      string                 `protobuf:"bytes,14,opt,name=failure_event,json=failureEvent,proto3" json:"failure_event,omitempty"`
-	OnFailurePipeline string                 `protobuf:"bytes,15,opt,name=on_failure_pipeline,json=onFailurePipeline,proto3" json:"on_failure_pipeline,omitempty"`
-	StepTimeout       string                 `protobuf:"bytes,16,opt,name=step_timeout,json=stepTimeout,proto3" json:"step_timeout,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	WorkPlanId         string                 `protobuf:"bytes,1,opt,name=work_plan_id,json=workPlanId,proto3" json:"work_plan_id,omitempty"`
+	Name               string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description        string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	TriggerTopic       string                 `protobuf:"bytes,4,opt,name=trigger_topic,json=triggerTopic,proto3" json:"trigger_topic,omitempty"`
+	PayloadCondition   string                 `protobuf:"bytes,5,opt,name=payload_condition,json=payloadCondition,proto3" json:"payload_condition,omitempty"`
+	Instructions       string                 `protobuf:"bytes,6,opt,name=instructions,proto3" json:"instructions,omitempty"`
+	AgentId            string                 `protobuf:"bytes,7,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Enabled            bool                   `protobuf:"varint,8,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Ordinality         int32                  `protobuf:"varint,9,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
+	HandlerService     string                 `protobuf:"bytes,10,opt,name=handler_service,json=handlerService,proto3" json:"handler_service,omitempty"`
+	FunctionCode       string                 `protobuf:"bytes,11,opt,name=function_code,json=functionCode,proto3" json:"function_code,omitempty"`
+	FunctionParams     string                 `protobuf:"bytes,12,opt,name=function_params,json=functionParams,proto3" json:"function_params,omitempty"`
+	SuccessEvent       string                 `protobuf:"bytes,13,opt,name=success_event,json=successEvent,proto3" json:"success_event,omitempty"`
+	FailureEvent       string                 `protobuf:"bytes,14,opt,name=failure_event,json=failureEvent,proto3" json:"failure_event,omitempty"`
+	OnFailurePipeline  string                 `protobuf:"bytes,15,opt,name=on_failure_pipeline,json=onFailurePipeline,proto3" json:"on_failure_pipeline,omitempty"`
+	StepTimeout        string                 `protobuf:"bytes,16,opt,name=step_timeout,json=stepTimeout,proto3" json:"step_timeout,omitempty"`
+	ReviewStepType     string                 `protobuf:"bytes,17,opt,name=review_step_type,json=reviewStepType,proto3" json:"review_step_type,omitempty"`
+	ReviewTriggerTopic string                 `protobuf:"bytes,18,opt,name=review_trigger_topic,json=reviewTriggerTopic,proto3" json:"review_trigger_topic,omitempty"`
+	ReviewSuccessTopic string                 `protobuf:"bytes,19,opt,name=review_success_topic,json=reviewSuccessTopic,proto3" json:"review_success_topic,omitempty"`
+	ReviewFailureTopic string                 `protobuf:"bytes,20,opt,name=review_failure_topic,json=reviewFailureTopic,proto3" json:"review_failure_topic,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *UpdateWorkPlanRequest) Reset() {
@@ -2815,6 +2888,34 @@ func (x *UpdateWorkPlanRequest) GetOnFailurePipeline() string {
 func (x *UpdateWorkPlanRequest) GetStepTimeout() string {
 	if x != nil {
 		return x.StepTimeout
+	}
+	return ""
+}
+
+func (x *UpdateWorkPlanRequest) GetReviewStepType() string {
+	if x != nil {
+		return x.ReviewStepType
+	}
+	return ""
+}
+
+func (x *UpdateWorkPlanRequest) GetReviewTriggerTopic() string {
+	if x != nil {
+		return x.ReviewTriggerTopic
+	}
+	return ""
+}
+
+func (x *UpdateWorkPlanRequest) GetReviewSuccessTopic() string {
+	if x != nil {
+		return x.ReviewSuccessTopic
+	}
+	return ""
+}
+
+func (x *UpdateWorkPlanRequest) GetReviewFailureTopic() string {
+	if x != nil {
+		return x.ReviewFailureTopic
 	}
 	return ""
 }
@@ -3398,7 +3499,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x13PromoteDraftRequest\x12\x19\n" +
 	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"0\n" +
 	"\x13ArchiveDraftRequest\x12\x19\n" +
-	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"\xe0\x04\n" +
+	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"\xa0\x06\n" +
 	"\bWorkPlan\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tagency_id\x18\x02 \x01(\tR\bagencyId\x12\x12\n" +
@@ -3420,7 +3521,11 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\rsuccess_event\x18\x0f \x01(\tR\fsuccessEvent\x12#\n" +
 	"\rfailure_event\x18\x10 \x01(\tR\ffailureEvent\x12.\n" +
 	"\x13on_failure_pipeline\x18\x11 \x01(\tR\x11onFailurePipeline\x12!\n" +
-	"\fstep_timeout\x18\x12 \x01(\tR\vstepTimeout\"\xa5\x01\n" +
+	"\fstep_timeout\x18\x12 \x01(\tR\vstepTimeout\x12(\n" +
+	"\x10review_step_type\x18\x13 \x01(\tR\x0ereviewStepType\x120\n" +
+	"\x14review_trigger_topic\x18\x14 \x01(\tR\x12reviewTriggerTopic\x120\n" +
+	"\x14review_success_topic\x18\x15 \x01(\tR\x12reviewSuccessTopic\x120\n" +
+	"\x14review_failure_topic\x18\x16 \x01(\tR\x12reviewFailureTopic\"\xa5\x01\n" +
 	"\x10GitContextSource\x12\x18\n" +
 	"\asignals\x18\x01 \x01(\tR\asignals\x12\x1f\n" +
 	"\vmax_results\x18\x02 \x01(\x05R\n" +
@@ -3448,7 +3553,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x04work\x18\x06 \x01(\v2$.codevaldagency.v1.WorkContextSourceR\x04work\"\x94\x01\n" +
 	"\rWorkPlanMatch\x128\n" +
 	"\twork_plan\x18\x01 \x01(\v2\x1b.codevaldagency.v1.WorkPlanR\bworkPlan\x12I\n" +
-	"\x0fcontext_sources\x18\x02 \x03(\v2 .codevaldagency.v1.ContextSourceR\x0econtextSources\"\xac\x04\n" +
+	"\x0fcontext_sources\x18\x02 \x03(\v2 .codevaldagency.v1.ContextSourceR\x0econtextSources\"\xec\x05\n" +
 	"\x15CreateWorkPlanRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12#\n" +
@@ -3467,14 +3572,18 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\rsuccess_event\x18\f \x01(\tR\fsuccessEvent\x12#\n" +
 	"\rfailure_event\x18\r \x01(\tR\ffailureEvent\x12.\n" +
 	"\x13on_failure_pipeline\x18\x0e \x01(\tR\x11onFailurePipeline\x12!\n" +
-	"\fstep_timeout\x18\x0f \x01(\tR\vstepTimeout\"6\n" +
+	"\fstep_timeout\x18\x0f \x01(\tR\vstepTimeout\x12(\n" +
+	"\x10review_step_type\x18\x10 \x01(\tR\x0ereviewStepType\x120\n" +
+	"\x14review_trigger_topic\x18\x11 \x01(\tR\x12reviewTriggerTopic\x120\n" +
+	"\x14review_success_topic\x18\x12 \x01(\tR\x12reviewSuccessTopic\x120\n" +
+	"\x14review_failure_topic\x18\x13 \x01(\tR\x12reviewFailureTopic\"6\n" +
 	"\x12GetWorkPlanRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\"\x16\n" +
 	"\x14ListWorkPlansRequest\"S\n" +
 	"\x15ListWorkPlansResponse\x12:\n" +
 	"\n" +
-	"work_plans\x18\x01 \x03(\v2\x1b.codevaldagency.v1.WorkPlanR\tworkPlans\"\xce\x04\n" +
+	"work_plans\x18\x01 \x03(\v2\x1b.codevaldagency.v1.WorkPlanR\tworkPlans\"\x8e\x06\n" +
 	"\x15UpdateWorkPlanRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\x12\x12\n" +
@@ -3495,7 +3604,11 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\rsuccess_event\x18\r \x01(\tR\fsuccessEvent\x12#\n" +
 	"\rfailure_event\x18\x0e \x01(\tR\ffailureEvent\x12.\n" +
 	"\x13on_failure_pipeline\x18\x0f \x01(\tR\x11onFailurePipeline\x12!\n" +
-	"\fstep_timeout\x18\x10 \x01(\tR\vstepTimeout\"9\n" +
+	"\fstep_timeout\x18\x10 \x01(\tR\vstepTimeout\x12(\n" +
+	"\x10review_step_type\x18\x11 \x01(\tR\x0ereviewStepType\x120\n" +
+	"\x14review_trigger_topic\x18\x12 \x01(\tR\x12reviewTriggerTopic\x120\n" +
+	"\x14review_success_topic\x18\x13 \x01(\tR\x12reviewSuccessTopic\x120\n" +
+	"\x14review_failure_topic\x18\x14 \x01(\tR\x12reviewFailureTopic\"9\n" +
 	"\x15DeleteWorkPlanRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\"\x87\x02\n" +

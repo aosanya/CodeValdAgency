@@ -38,10 +38,14 @@ func (m *agencyManager) CreateWorkPlan(ctx context.Context, req CreateWorkPlanRe
 			"handler_service":     req.HandlerService,
 			"enabled":             req.Enabled,
 			"ordinality":          req.Ordinality,
-			"success_event":       req.SuccessEvent,
-			"failure_event":       req.FailureEvent,
-			"on_failure_pipeline": req.OnFailurePipeline,
-			"step_timeout":        req.StepTimeout,
+			"success_event":        req.SuccessEvent,
+			"failure_event":        req.FailureEvent,
+			"on_failure_pipeline":  req.OnFailurePipeline,
+			"step_timeout":         req.StepTimeout,
+			"review_step_type":     req.ReviewStepType,
+			"review_trigger_topic": req.ReviewTriggerTopic,
+			"review_success_topic": req.ReviewSuccessTopic,
+			"review_failure_topic": req.ReviewFailureTopic,
 		},
 	})
 	if err != nil {
@@ -164,6 +168,18 @@ func (m *agencyManager) UpdateWorkPlan(ctx context.Context, workPlanID string, r
 	}
 	if req.StepTimeout != nil {
 		props["step_timeout"] = *req.StepTimeout
+	}
+	if req.ReviewStepType != nil {
+		props["review_step_type"] = *req.ReviewStepType
+	}
+	if req.ReviewTriggerTopic != nil {
+		props["review_trigger_topic"] = *req.ReviewTriggerTopic
+	}
+	if req.ReviewSuccessTopic != nil {
+		props["review_success_topic"] = *req.ReviewSuccessTopic
+	}
+	if req.ReviewFailureTopic != nil {
+		props["review_failure_topic"] = *req.ReviewFailureTopic
 	}
 
 	updated, err := m.dm.UpdateEntity(ctx, m.agencyID, workPlanID, entitygraph.UpdateEntityRequest{
@@ -406,10 +422,14 @@ func entityToWorkPlan(e entitygraph.Entity, agencyID string) WorkPlan {
 		HandlerService:    strProp(p, "handler_service"),
 		Enabled:           boolProp(p, "enabled"),
 		Ordinality:        intProp(p, "ordinality"),
-		SuccessEvent:      strProp(p, "success_event"),
-		FailureEvent:      strProp(p, "failure_event"),
-		OnFailurePipeline: strProp(p, "on_failure_pipeline"),
-		StepTimeout:       strProp(p, "step_timeout"),
+		SuccessEvent:       strProp(p, "success_event"),
+		FailureEvent:       strProp(p, "failure_event"),
+		OnFailurePipeline:  strProp(p, "on_failure_pipeline"),
+		StepTimeout:        strProp(p, "step_timeout"),
+		ReviewStepType:     strProp(p, "review_step_type"),
+		ReviewTriggerTopic: strProp(p, "review_trigger_topic"),
+		ReviewSuccessTopic: strProp(p, "review_success_topic"),
+		ReviewFailureTopic: strProp(p, "review_failure_topic"),
 	}
 }
 

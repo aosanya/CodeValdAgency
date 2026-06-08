@@ -366,6 +366,24 @@ type WorkPlan struct {
 	// the watchdog publishes work.task.timeout for the current step. Empty means
 	// fall back to WORKFLOW_RUN_STEP_STALE_TIMEOUT env var. See FEAT-20260602-006.
 	StepTimeout string
+
+	// ReviewStepType declares the kind of reviewer that gates task progression.
+	// Valid values: "ai_review", "human_review", "functional_review".
+	// Empty means no review step is configured (FEAT-20260605-002).
+	ReviewStepType string
+
+	// ReviewTriggerTopic is the Cross topic that fires the review agent
+	// (e.g. "work.task.completed"). Non-empty only when ReviewStepType is set.
+	ReviewTriggerTopic string
+
+	// ReviewSuccessTopic is the Cross topic the reviewer emits on pass
+	// (e.g. "work.review.passed"). The next WorkPlan step references this as
+	// its trigger_conditions topic.
+	ReviewSuccessTopic string
+
+	// ReviewFailureTopic is the Cross topic the reviewer emits on fail
+	// (e.g. "work.review.failed"). Routes to OnFailurePipeline when set.
+	ReviewFailureTopic string
 }
 
 // GitContextSourceConfig holds the configuration for a GitContextSource entity.
@@ -485,6 +503,18 @@ type CreateWorkPlanRequest struct {
 	// StepTimeout is the per-step inactivity duration (e.g. "10m"). Empty means
 	// fall back to WORKFLOW_RUN_STEP_STALE_TIMEOUT. See FEAT-20260602-006.
 	StepTimeout string
+
+	// ReviewStepType declares the reviewer kind for this plan. See WorkPlan.ReviewStepType.
+	ReviewStepType string
+
+	// ReviewTriggerTopic is the topic that fires the review agent. See WorkPlan.ReviewTriggerTopic.
+	ReviewTriggerTopic string
+
+	// ReviewSuccessTopic is the topic the reviewer emits on pass. See WorkPlan.ReviewSuccessTopic.
+	ReviewSuccessTopic string
+
+	// ReviewFailureTopic is the topic the reviewer emits on fail. See WorkPlan.ReviewFailureTopic.
+	ReviewFailureTopic string
 }
 
 // UpdateWorkPlanRequest carries the fields that may be changed on an existing [WorkPlan].
@@ -505,6 +535,10 @@ type UpdateWorkPlanRequest struct {
 	FailureEvent      *string
 	OnFailurePipeline *string
 	StepTimeout       *string
+	ReviewStepType      *string
+	ReviewTriggerTopic  *string
+	ReviewSuccessTopic  *string
+	ReviewFailureTopic  *string
 }
 
 // AddContextSourceRequest carries the typed configuration for a new [ContextSource].

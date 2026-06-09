@@ -550,6 +550,10 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
 					{Name: "blocking", Type: types.PropertyTypeBoolean, Required: true},
+					// reviewer_role_code stores the ConfiguredRole code (e.g. "domain-expert")
+					// from agency.json. Resolved to a reviewer_role edge on the live Deliverable
+					// during PromoteDraft. Optional.
+					{Name: "reviewer_role_code", Type: types.PropertyTypeString, Required: false},
 				},
 			},
 			{
@@ -674,6 +678,11 @@ func DefaultAgencySchema() types.Schema {
 					// agent_id is a cross-service reference to a CodeValdAI Agent entity ID.
 					// Only used when handler_service == "codevaldai".
 					{Name: "agent_id", Type: types.PropertyTypeString, Required: false},
+					// agent_code is the symbolic code of the AIAgent (e.g. "deepseek-v4-developer")
+					// declared in the agency's ai_config section. CodeValdAI resolves this to
+					// agent_id at startup via bootstrap. Stored here so the mapping survives
+					// reimport without requiring a fresh agent_id wire step.
+					{Name: "agent_code", Type: types.PropertyTypeString, Required: false},
 					// handler_service is the CodeVald service responsible for executing this plan.
 					// Valid values: "codevaldai", "codevaldfunction", "codevaldcomm".
 					{Name: "handler_service", Type: types.PropertyTypeString, Required: false},

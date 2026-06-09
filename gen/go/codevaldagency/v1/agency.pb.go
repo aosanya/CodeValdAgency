@@ -1895,8 +1895,11 @@ type WorkPlan struct {
 	ReviewSuccessTopic string `protobuf:"bytes,21,opt,name=review_success_topic,json=reviewSuccessTopic,proto3" json:"review_success_topic,omitempty"`
 	// review_failure_topic is the Cross topic the reviewer emits on fail.
 	ReviewFailureTopic string `protobuf:"bytes,22,opt,name=review_failure_topic,json=reviewFailureTopic,proto3" json:"review_failure_topic,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// agent_code is the symbolic AIAgent code declared in ai_config (e.g. "deepseek-v4-developer").
+	// CodeValdAI resolves this to agent_id at startup via bootstrap.
+	AgentCode     string `protobuf:"bytes,23,opt,name=agent_code,json=agentCode,proto3" json:"agent_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WorkPlan) Reset() {
@@ -2079,6 +2082,13 @@ func (x *WorkPlan) GetReviewSuccessTopic() string {
 func (x *WorkPlan) GetReviewFailureTopic() string {
 	if x != nil {
 		return x.ReviewFailureTopic
+	}
+	return ""
+}
+
+func (x *WorkPlan) GetAgentCode() string {
+	if x != nil {
+		return x.AgentCode
 	}
 	return ""
 }
@@ -2429,8 +2439,10 @@ type CreateWorkPlanRequest struct {
 	ReviewTriggerTopic string                 `protobuf:"bytes,17,opt,name=review_trigger_topic,json=reviewTriggerTopic,proto3" json:"review_trigger_topic,omitempty"`
 	ReviewSuccessTopic string                 `protobuf:"bytes,18,opt,name=review_success_topic,json=reviewSuccessTopic,proto3" json:"review_success_topic,omitempty"`
 	ReviewFailureTopic string                 `protobuf:"bytes,19,opt,name=review_failure_topic,json=reviewFailureTopic,proto3" json:"review_failure_topic,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// agent_code is the symbolic AIAgent code from ai_config (e.g. "deepseek-v4-developer").
+	AgentCode     string `protobuf:"bytes,20,opt,name=agent_code,json=agentCode,proto3" json:"agent_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateWorkPlanRequest) Reset() {
@@ -2596,6 +2608,13 @@ func (x *CreateWorkPlanRequest) GetReviewFailureTopic() string {
 	return ""
 }
 
+func (x *CreateWorkPlanRequest) GetAgentCode() string {
+	if x != nil {
+		return x.AgentCode
+	}
+	return ""
+}
+
 // GetWorkPlanRequest selects a WorkPlan by its entity ID.
 type GetWorkPlanRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2746,8 +2765,10 @@ type UpdateWorkPlanRequest struct {
 	ReviewTriggerTopic string                 `protobuf:"bytes,18,opt,name=review_trigger_topic,json=reviewTriggerTopic,proto3" json:"review_trigger_topic,omitempty"`
 	ReviewSuccessTopic string                 `protobuf:"bytes,19,opt,name=review_success_topic,json=reviewSuccessTopic,proto3" json:"review_success_topic,omitempty"`
 	ReviewFailureTopic string                 `protobuf:"bytes,20,opt,name=review_failure_topic,json=reviewFailureTopic,proto3" json:"review_failure_topic,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// agent_code is the symbolic AIAgent code from ai_config (e.g. "deepseek-v4-developer").
+	AgentCode     string `protobuf:"bytes,21,opt,name=agent_code,json=agentCode,proto3" json:"agent_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateWorkPlanRequest) Reset() {
@@ -2916,6 +2937,13 @@ func (x *UpdateWorkPlanRequest) GetReviewSuccessTopic() string {
 func (x *UpdateWorkPlanRequest) GetReviewFailureTopic() string {
 	if x != nil {
 		return x.ReviewFailureTopic
+	}
+	return ""
+}
+
+func (x *UpdateWorkPlanRequest) GetAgentCode() string {
+	if x != nil {
+		return x.AgentCode
 	}
 	return ""
 }
@@ -3499,7 +3527,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x13PromoteDraftRequest\x12\x19\n" +
 	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"0\n" +
 	"\x13ArchiveDraftRequest\x12\x19\n" +
-	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"\xa0\x06\n" +
+	"\bdraft_id\x18\x01 \x01(\tR\adraftId\"\xbf\x06\n" +
 	"\bWorkPlan\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tagency_id\x18\x02 \x01(\tR\bagencyId\x12\x12\n" +
@@ -3525,7 +3553,9 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x10review_step_type\x18\x13 \x01(\tR\x0ereviewStepType\x120\n" +
 	"\x14review_trigger_topic\x18\x14 \x01(\tR\x12reviewTriggerTopic\x120\n" +
 	"\x14review_success_topic\x18\x15 \x01(\tR\x12reviewSuccessTopic\x120\n" +
-	"\x14review_failure_topic\x18\x16 \x01(\tR\x12reviewFailureTopic\"\xa5\x01\n" +
+	"\x14review_failure_topic\x18\x16 \x01(\tR\x12reviewFailureTopic\x12\x1d\n" +
+	"\n" +
+	"agent_code\x18\x17 \x01(\tR\tagentCode\"\xa5\x01\n" +
 	"\x10GitContextSource\x12\x18\n" +
 	"\asignals\x18\x01 \x01(\tR\asignals\x12\x1f\n" +
 	"\vmax_results\x18\x02 \x01(\x05R\n" +
@@ -3553,7 +3583,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x04work\x18\x06 \x01(\v2$.codevaldagency.v1.WorkContextSourceR\x04work\"\x94\x01\n" +
 	"\rWorkPlanMatch\x128\n" +
 	"\twork_plan\x18\x01 \x01(\v2\x1b.codevaldagency.v1.WorkPlanR\bworkPlan\x12I\n" +
-	"\x0fcontext_sources\x18\x02 \x03(\v2 .codevaldagency.v1.ContextSourceR\x0econtextSources\"\xec\x05\n" +
+	"\x0fcontext_sources\x18\x02 \x03(\v2 .codevaldagency.v1.ContextSourceR\x0econtextSources\"\x8b\x06\n" +
 	"\x15CreateWorkPlanRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12#\n" +
@@ -3576,14 +3606,16 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x10review_step_type\x18\x10 \x01(\tR\x0ereviewStepType\x120\n" +
 	"\x14review_trigger_topic\x18\x11 \x01(\tR\x12reviewTriggerTopic\x120\n" +
 	"\x14review_success_topic\x18\x12 \x01(\tR\x12reviewSuccessTopic\x120\n" +
-	"\x14review_failure_topic\x18\x13 \x01(\tR\x12reviewFailureTopic\"6\n" +
+	"\x14review_failure_topic\x18\x13 \x01(\tR\x12reviewFailureTopic\x12\x1d\n" +
+	"\n" +
+	"agent_code\x18\x14 \x01(\tR\tagentCode\"6\n" +
 	"\x12GetWorkPlanRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\"\x16\n" +
 	"\x14ListWorkPlansRequest\"S\n" +
 	"\x15ListWorkPlansResponse\x12:\n" +
 	"\n" +
-	"work_plans\x18\x01 \x03(\v2\x1b.codevaldagency.v1.WorkPlanR\tworkPlans\"\x8e\x06\n" +
+	"work_plans\x18\x01 \x03(\v2\x1b.codevaldagency.v1.WorkPlanR\tworkPlans\"\xad\x06\n" +
 	"\x15UpdateWorkPlanRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\x12\x12\n" +
@@ -3608,7 +3640,9 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x10review_step_type\x18\x11 \x01(\tR\x0ereviewStepType\x120\n" +
 	"\x14review_trigger_topic\x18\x12 \x01(\tR\x12reviewTriggerTopic\x120\n" +
 	"\x14review_success_topic\x18\x13 \x01(\tR\x12reviewSuccessTopic\x120\n" +
-	"\x14review_failure_topic\x18\x14 \x01(\tR\x12reviewFailureTopic\"9\n" +
+	"\x14review_failure_topic\x18\x14 \x01(\tR\x12reviewFailureTopic\x12\x1d\n" +
+	"\n" +
+	"agent_code\x18\x15 \x01(\tR\tagentCode\"9\n" +
 	"\x15DeleteWorkPlanRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\"\x87\x02\n" +

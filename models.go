@@ -329,6 +329,10 @@ type WorkPlan struct {
 	// AgentID is a cross-service reference to a CodeValdAI Agent entity ID.
 	AgentID string
 
+	// AgentCode is the symbolic AIAgent code from ai_config (e.g. "deepseek-v4-developer").
+	// Resolved to AgentID by CodeValdAI bootstrap at startup.
+	AgentCode string
+
 	// FunctionCode identifies the function binary when HandlerService="codevaldfunction".
 	FunctionCode string
 
@@ -475,6 +479,9 @@ type CreateWorkPlanRequest struct {
 	// AgentID is a cross-service reference to a CodeValdAI Agent entity ID.
 	AgentID string
 
+	// AgentCode is the symbolic AIAgent code from ai_config (e.g. "deepseek-v4-developer").
+	AgentCode string
+
 	// FunctionCode identifies the function binary (HandlerService="codevaldfunction").
 	FunctionCode string
 
@@ -526,6 +533,7 @@ type UpdateWorkPlanRequest struct {
 	PayloadCondition  *string
 	Instructions      *string
 	AgentID           *string
+	AgentCode         *string
 	FunctionCode      *string
 	FunctionParams    *string
 	HandlerService    *string

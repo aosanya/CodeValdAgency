@@ -297,6 +297,9 @@ message WorkPlan {
   string review_success_topic  = 21;
   // review_failure_topic is the Cross topic the reviewer emits on fail.
   string review_failure_topic  = 22;
+  // agent_code is the symbolic AIAgent code declared in ai_config (e.g. "deepseek-v4-developer").
+  // CodeValdAI resolves this to agent_id at startup via bootstrap.
+  string agent_code            = 23;
 }
 
 // GitContextSource configures what to fetch from CodeValdGit when a work plan matches.
@@ -360,6 +363,8 @@ message CreateWorkPlanRequest {
   string review_trigger_topic  = 17;
   string review_success_topic  = 18;
   string review_failure_topic  = 19;
+  // agent_code is the symbolic AIAgent code from ai_config (e.g. "deepseek-v4-developer").
+  string agent_code            = 20;
 }
 
 // GetWorkPlanRequest selects a WorkPlan by its entity ID.
@@ -397,6 +402,8 @@ message UpdateWorkPlanRequest {
   string review_trigger_topic  = 18;
   string review_success_topic  = 19;
   string review_failure_topic  = 20;
+  // agent_code is the symbolic AIAgent code from ai_config (e.g. "deepseek-v4-developer").
+  string agent_code            = 21;
 }
 
 // DeleteWorkPlanRequest selects a WorkPlan by its entity ID.

@@ -114,22 +114,27 @@ type importInstructionSpec struct {
 }
 
 type importWorkItemSpec struct {
-	Code         string                  `yaml:"code"`
-	Title        string                  `yaml:"title"`
-	Description  string                  `yaml:"description"`
-	Ordinality   int                     `yaml:"ordinality"`
-	AssignedRole string                  `yaml:"assigned_role"`
-	Prompt       string                  `yaml:"prompt"`
-	Instructions []importInstructionSpec `yaml:"instructions"`
-	Deliverables []importDeliverableSpec `yaml:"deliverables"`
+	Code          string                  `yaml:"code"`
+	Title         string                  `yaml:"title"`
+	Description   string                  `yaml:"description"`
+	Ordinality    int                     `yaml:"ordinality"`
+	// AssignedRoles is the plural form used in agency.json (e.g. ["developer"]).
+	// The first entry is stored as assigned_role on the DraftWorkItem entity.
+	AssignedRoles []string                `yaml:"assigned_roles" json:"assigned_roles"`
+	Prompt        string                  `yaml:"prompt"`
+	Instructions  []importInstructionSpec `yaml:"instructions"`
+	Deliverables  []importDeliverableSpec `yaml:"deliverables"`
 }
 
 type importDeliverableSpec struct {
-	Code        string `yaml:"code"`
-	Title       string `yaml:"title"`
-	Description string `yaml:"description"`
-	Ordinality  int    `yaml:"ordinality"`
-	Blocking    bool   `yaml:"blocking"`
+	Code         string `yaml:"code"`
+	Title        string `yaml:"title"`
+	Description  string `yaml:"description"`
+	Ordinality   int    `yaml:"ordinality"`
+	Blocking     bool   `yaml:"blocking"`
+	// ReviewerRole is the ConfiguredRole code that can waive a rejected result
+	// (e.g. "domain-expert"). Stored as reviewer_role_code on DraftDeliverable.
+	ReviewerRole string `yaml:"reviewer_role" json:"reviewer_role"`
 }
 
 type importWorkPlanSpec struct {
@@ -142,10 +147,13 @@ type importWorkPlanSpec struct {
 	AgentID          string `yaml:"agent_id"`
 	// AgentCode is a symbolic reference resolved by CodeValdAI on startup.
 	// It identifies which agent in ai_config should handle this work plan.
-	AgentCode      string `yaml:"agent_code"`
-	HandlerService string `yaml:"handler_service"`
-	FunctionCode   string `yaml:"function_code"`
-	FunctionParams string `yaml:"function_params"`
+	AgentCode      string      `yaml:"agent_code"`
+	HandlerService string      `yaml:"handler_service"`
+	FunctionCode   string      `yaml:"function_code"`
+	// FunctionParams accepts both a plain string and a JSON/YAML object.
+	// When it is an object (as in agency.json), it is serialised back to a
+	// JSON string before being stored in the WorkPlan entity.
+	FunctionParams interface{} `yaml:"function_params" json:"function_params"`
 	Enabled        bool   `yaml:"enabled"`
 	Ordinality     int    `yaml:"ordinality"`
 	// SuccessEvent/FailureEvent/OnFailurePipeline implement FEAT-20260602-005
@@ -295,8 +303,8 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 				"ordinality":              wi.Ordinality,
 				"prompt":                  clean(wi.Prompt),
 			}
-			if wi.AssignedRole != "" {
-				wiProps["assigned_role"] = wi.AssignedRole
+			if len(wi.AssignedRoles) > 0 {
+				wiProps["assigned_role"] = wi.AssignedRoles[0]
 			}
 			wiID, err := s.importUpsertID(ctx, agencyID, "DraftWorkItem", wiProps)
 			if err != nil {
@@ -323,7 +331,7 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			// Deliverables.
 			for _, d := range wi.Deliverables {
 				log.Printf("[ImportDraft] %s: upsert deliverable code=%s", agencyID, d.Code)
-				if err := s.importUpsert(ctx, agencyID, "DraftDeliverable", map[string]any{
+				deliverableProps := map[string]any{
 					"draft_ref_code":           draftID,
 					"code":                     d.Code,
 					"draft_work_item_ref_code": wiID,
@@ -331,7 +339,11 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 					"description":              clean(d.Description),
 					"ordinality":               d.Ordinality,
 					"blocking":                 d.Blocking,
-				}); err != nil {
+				}
+				if d.ReviewerRole != "" {
+					deliverableProps["reviewer_role_code"] = d.ReviewerRole
+				}
+				if err := s.importUpsert(ctx, agencyID, "DraftDeliverable", deliverableProps); err != nil {
 					log.Printf("[ImportDraft] %s: work item %s deliverable %s upsert failed: %v", agencyID, wi.Code, d.Code, err)
 					return nil, status.Errorf(codes.Internal, "ImportDraft %s: work item %s deliverable %s: %v", agencyID, wi.Code, d.Code, err)
 				}
@@ -343,6 +355,18 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 	log.Printf("[ImportDraft] %s: upserting %d work plans", agencyID, len(spec.WorkPlans))
 	for _, wp := range spec.WorkPlans {
 		log.Printf("[ImportDraft] %s: upsert work plan code=%s", agencyID, wp.Code)
+		// Serialise FunctionParams: agency.json sends a JSON object; store as string.
+		var fpStr string
+		switch v := wp.FunctionParams.(type) {
+		case string:
+			fpStr = v
+		case nil:
+			// nothing
+		default:
+			if b, err := json.Marshal(v); err == nil {
+				fpStr = string(b)
+			}
+		}
 		props := map[string]any{
 			"code":                wp.Code,
 			"name":                wp.Name,
@@ -352,11 +376,11 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			"instructions":        clean(wp.Instructions),
 			"agent_id":            clean(wp.AgentID),
 			"agent_code":          clean(wp.AgentCode),
-			"handler_service":    clean(wp.HandlerService),
-			"function_code":      clean(wp.FunctionCode),
-			"function_params":    clean(wp.FunctionParams),
-			"enabled":            wp.Enabled,
-			"ordinality":         wp.Ordinality,
+			"handler_service":     clean(wp.HandlerService),
+			"function_code":       clean(wp.FunctionCode),
+			"function_params":     fpStr,
+			"enabled":             wp.Enabled,
+			"ordinality":          wp.Ordinality,
 			"success_event":        clean(wp.SuccessEvent),
 			"failure_event":        clean(wp.FailureEvent),
 			"on_failure_pipeline":  clean(wp.OnFailurePipeline),

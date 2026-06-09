@@ -1,6 +1,6 @@
 # BUG-20260609-001 — `architecture-graph.md` missing WorkPlan, AI*, and ContextSource entity types
 
-**Status:** 📋 Open
+**Status:** 🚀 In Progress
 **Severity:** Medium — design docs diverge from shipped schema; new contributors and architecture reviewers cannot understand the full graph from the doc alone
 **Owner:** CodeValdAgency (documentation)
 **Estimated effort:** ~0.5 day (topology diagram extension + entity table rows + relationship rows + TypeDefinitions rows)

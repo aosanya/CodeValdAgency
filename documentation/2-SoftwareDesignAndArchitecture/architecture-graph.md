@@ -6,6 +6,8 @@
 
 ## 1. Graph Topology
 
+### Authoring sub-graph
+
 ```
 Agency ──has_goal──────────────► Goal
        ──has_workflow──────────► Workflow ──has_work_item──────► WorkItem
@@ -24,10 +26,30 @@ Deliverable ──has_result──────► DeliverableResult ──has_co
             ──reviewer_role───► ConfiguredRole  (waiver authority)
 ```
 
-All nodes and edges live in two ArangoDB collections:
-- **`agency_entities`** — document collection (all mutable entity types)
+### Dispatch + AI configuration sub-graph
+
+```
+Agency ──has_work_plan─────────► WorkPlan ──has_context_source──► GitContextSource
+                                          ──has_context_source──► CommContextSource
+                                          ──has_context_source──► WorkContextSource
+                                          ──assigned_role───────► ConfiguredRole
+                                          ──has_work_item───────► WorkItem
+       ──has_ai_provider───────► AIProvider
+       ──has_ai_agent──────────► AIAgent
+```
+
+`MatchWorkPlans` (called by CodeValdAI when a dispatched topic arrives) returns
+every `WorkPlan` whose `trigger_topic` regex matches the incoming Cross topic
+and whose `payload_condition` regex matches the raw JSON payload. The matched
+plan's `has_context_source` edges drive how Git/Comm/Work context is assembled
+before the plan's handler (`codevaldai`, `codevaldfunction`, or `codevaldcomm`)
+is invoked.
+
+All authoring nodes live in two ArangoDB collections:
+- **`agency_entities`** — document collection (most mutable entity types)
 - **`agency_relationships`** — **edge** collection (all relationship types)
-- Immutable types use dedicated collections (see §4).
+- Dispatch/AI types (`WorkPlan`, `*ContextSource`, `AIProvider`, `AIAgent`) and
+  immutable types use dedicated collections (see §4).
 
 ---
 
@@ -48,6 +70,12 @@ All nodes and edges live in two ArangoDB collections:
 | `AgencySnapshot` | ❌ immutable | `snapshot_at`(req) | Written on `PromoteDraft`; promotion audit record |
 | `AgencyPublication` | ❌ immutable | `version`(req), `tag`(req), `published_at`(req) | Content record; status is stored in the linked `AgencyPublicationStatus` entity |
 | `AgencyPublicationStatus` | ✅ | `status`(req) | Mutable status node (`"draft"` / `"active"` / `"archived"`) linked via `has_status` |
+| `WorkPlan` | ✅ | `ref_code`(req), `code`, `name`(req), `description`, `trigger_topic`(req), `payload_condition`, `instructions`, `agent_id`, `agent_code`, `handler_service`, `function_code`, `function_params`, `enabled`(req), `ordinality`(req), `success_event`, `failure_event`, `on_failure_pipeline`, `step_timeout`, `review_step_type`, `review_trigger_topic`, `review_success_topic`, `review_failure_topic` | Dispatch rule: binds a Cross trigger topic to a handler service + ConfiguredRole + WorkItem. `handler_service` ∈ {`codevaldai`, `codevaldfunction`, `codevaldcomm`}; `function_params` is a JSON-encoded options object |
+| `GitContextSource` | ✅ | `ref_code`(req), `code`, `signals`, `max_results`, `match_mode`, `cascade`, `file_types` | Configures what CodeValdGit files to fetch for the AgentRun bundle; `signals` is a comma list (e.g. `"authority,contributor"`); `match_mode` ∈ {`"AND"`, `"OR"`} |
+| `CommContextSource` | ✅ | `ref_code`(req), `code`, `lookback_days`, `max_results` | Configures what CodeValdComm threads to fetch for the AgentRun bundle |
+| `WorkContextSource` | ✅ | `ref_code`(req), `code`, `include_description`, `include_history` | Configures what CodeValdWork task fields to fetch for the AgentRun bundle |
+| `AIProvider` | ✅ | `ref_code`(req), `code`(req), `name`(req), `provider_type`, `api_key_env`, `base_url`, `provider_route` | LLM provider config declared in `ai_config`; `code` is unique within the agency |
+| `AIAgent` | ✅ | `ref_code`(req), `code`(req), `name`(req), `provider_code`, `model`, `system_prompt`, `temperature`, `max_tokens`, `session_max_seconds`, `session_max_tokens`, `session_max_sessions` | LLM agent config declared in `ai_config`; `provider_code` resolves to an `AIProvider`; `code` is unique within the agency |
 
 ---
 
@@ -81,6 +109,17 @@ Edges are stored in `agency_relationships`. Each edge has `_from`, `_to`, `name`
 | `reviewer_role` | `Deliverable` | `ConfiguredRole` | ❌ | `reviews_deliverable` |
 | `has_content_ref` | `DeliverableResult` | `ContentRef` | ✅ | `belongs_to_result` |
 | `has_status` | `AgencyPublication` | `AgencyPublicationStatus` | ❌ | `belongs_to_publication` |
+| `has_work_plan` | `Agency` | `WorkPlan` | ✅ | `belongs_to_agency` |
+| `has_ai_provider` | `Agency` | `AIProvider` | ✅ | `belongs_to_agency` |
+| `has_ai_agent` | `Agency` | `AIAgent` | ✅ | `belongs_to_agency` |
+| `has_context_source` | `WorkPlan` | `GitContextSource` \| `CommContextSource` \| `WorkContextSource` † | ✅ | `belongs_to_work_plan` |
+| `assigned_role` | `WorkPlan` | `ConfiguredRole` | ❌ | `assigned_work_plan` |
+| `has_work_item` | `WorkPlan` | `WorkItem` | ❌ | — |
+
+† The `has_context_source` `RelationshipDefinition` in `schema.go` declares
+`ToType: "GitContextSource"`. In practice each `*ContextSource` type carries
+its own `belongs_to_work_plan` inverse, so a single `WorkPlan` may link any
+mix of the three variants via the same `has_context_source` label.
 
 ### Inverse relationships (auto-written by `CreateRelationship`)
 
@@ -98,6 +137,11 @@ Edges are stored in `agency_relationships`. Each edge has `_from`, `_to`, `name`
 | `reviews_deliverable` | `ConfiguredRole` | `Deliverable` | — |
 | `belongs_to_result` | `ContentRef` | `DeliverableResult` | — |
 | `belongs_to_publication` | `AgencyPublicationStatus` | `AgencyPublication` | — |
+| `belongs_to_agency` | `WorkPlan`, `AIProvider`, `AIAgent` | `Agency` | ✅ |
+| `belongs_to_work_plan` | `GitContextSource`, `CommContextSource`, `WorkContextSource` | `WorkPlan` | ✅ |
+| `assigned_work_plan` | `ConfiguredRole` | `WorkPlan` | — |
+| `belongs_to_draft` | `Goal`, `Workflow`, `ConfiguredRole` | `AgencyDraft` | — |
+| `belongs_to_goal` | `WorkItem` | `Goal` | — |
 
 ---
 
@@ -129,6 +173,12 @@ Edges are stored in `agency_relationships`. Each edge has `_from`, `_to`, `name`
 | `AgencySnapshot` | **true** | `agency_entities` (default) |
 | `AgencyPublication` | **true** | `agency_entities` (default) |
 | `AgencyPublicationStatus` | — | `agency_entities` (default) |
+| `WorkPlan` | — | `agency_work_plans` (explicit) |
+| `GitContextSource` | — | `agency_git_context_sources` (explicit) |
+| `CommContextSource` | — | `agency_comm_context_sources` (explicit) |
+| `WorkContextSource` | — | `agency_work_context_sources` (explicit) |
+| `AIProvider` | — | `agency_ai_providers` (explicit) |
+| `AIAgent` | — | `agency_ai_agents` (explicit) |
 
 > Drafts use **dedicated `Draft*` types**, not the live types scoped by
 > `draft_id`. Each draft sub-entity carries a `draft_ref_code` property that

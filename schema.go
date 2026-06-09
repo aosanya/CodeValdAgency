@@ -142,11 +142,16 @@ func DefaultAgencySchema() types.Schema {
 					//
 					// START NODE  (type: "start")
 					//   type         string — "start": marks a workflow entry point.
+					//   step         string — hierarchical step number, e.g. "1", "2". Groups start
+					//                         nodes and their descendant steps under one chain.
+					//   name         string — short display name for this entry point (optional).
 					//   emits_topic  string — the topic this entry point produces. Nothing triggers
 					//                         a start node — it is the origin of the flow chain.
 					//   description  string — what external event or condition causes this topic to fire.
 					//
 					// STEP NODE  (type omitted or "step")
+					//   step               string             — hierarchical step number, e.g. "1.1", "1.2".
+					//                                           Sorts steps within their start-node chain.
 					//   trigger            string             — PubSub topic that causes this step.
 					//   trigger_publisher  string             — service that publishes the trigger.
 					//   consumer           string             — service that handles the trigger. The consumer

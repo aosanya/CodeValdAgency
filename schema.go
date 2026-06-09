@@ -225,6 +225,13 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
+					// event_flows holds the JSON-encoded { name, steps: [...] } block scoped
+					// to THIS workflow only. Imported from flows_<workflow.code>.json files
+					// via the per-workflow-file convention (see project_agency_flows_folder_structure
+					// memory). Same node shape as Agency.event_flows above (start/step nodes
+					// with branches). Optional: workflows authored before FEAT-20260609-002
+					// have no per-workflow flows; readers fall back to the agency-level blob.
+					{Name: "event_flows", Type: types.PropertyTypeString, Required: false},
 				},
 				Relationships: []types.RelationshipDefinition{
 					{Name: "has_work_item", Label: "Work Items", PathSegment: "work-items", ToType: "WorkItem", ToMany: true, Inverse: "belongs_to_workflow"},
@@ -477,6 +484,9 @@ func DefaultAgencySchema() types.Schema {
 					{Name: "name", Type: types.PropertyTypeString, Required: true},
 					{Name: "description", Type: types.PropertyTypeString, Required: false},
 					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: true},
+					// event_flows mirrors the live Workflow property; carried through draft
+					// promotion so per-workflow flow blocks survive draft→promote.
+					{Name: "event_flows", Type: types.PropertyTypeString, Required: false},
 				},
 			},
 			{

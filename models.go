@@ -125,6 +125,12 @@ type Workflow struct {
 	// Ordinality controls the execution order among Workflows on this Agency.
 	// Lower values run first; equal values run in parallel.
 	Ordinality int
+
+	// EventFlows is the JSON-encoded { name, steps: [...] } block scoped to this
+	// workflow. Imported from flows_<workflow.code>.json files (see
+	// FEAT-20260609-002). Empty when the workflow was authored before the
+	// per-workflow-flows convention — readers fall back to Agency.EventFlows.
+	EventFlows string
 }
 
 // WorkItem is a single unit of work within a [Workflow], linked via a

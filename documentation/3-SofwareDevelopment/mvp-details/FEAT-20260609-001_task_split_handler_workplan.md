@@ -1,6 +1,6 @@
 # FEAT-20260609-001 — Add `task-split-handler` work plan to utility-app-builder agency
 
-**Status:** 🚀 In Progress
+**Status:** ✅ Done
 **Severity:** Medium — blocks the split path of `flows_planning.json` (step 1.1.1); QA Work-3 cannot run end-to-end without it
 **Owner:** CodeValdAgency (agency.json + handler agent definition)
 **Estimated effort:** ~0.5 day (agent_code + work_plan entry + payload contract; reuses existing dispatchActions plumbing)

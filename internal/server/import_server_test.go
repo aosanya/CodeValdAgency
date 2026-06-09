@@ -12,6 +12,8 @@ import (
 	pb "github.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1"
 	"github.com/aosanya/CodeValdAgency/internal/server"
 	"github.com/aosanya/CodeValdSharedLib/entitygraph"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // importFakeDM is a minimal entitygraph.DataManager that records every
@@ -173,5 +175,127 @@ func TestImportDraft_PerWorkflowEventFlows_OmittedNoProp(t *testing.T) {
 	}
 	if _, present := got.Properties["event_flows"]; present {
 		t.Errorf("event_flows should NOT be written when omitted; got: %v", got.Properties["event_flows"])
+	}
+}
+
+// promoteCountingMockManager wraps mockManager to count PromoteDraft invocations
+// so the FEAT-20260609-003 tests can assert auto-promote actually fired (or did
+// not) along the import path.
+type promoteCountingMockManager struct {
+	mockManager
+	promoteCalls   int
+	lastPromoteArg string
+}
+
+func (m *promoteCountingMockManager) PromoteDraft(_ context.Context, draftID string) (codevaldagency.Agency, error) {
+	m.promoteCalls++
+	m.lastPromoteArg = draftID
+	return m.promoteDraftResult, m.promoteDraftErr
+}
+
+// TestImportDraft_AutoPromote_FalseOnUnpublished verifies FEAT-20260609-003:
+// when auto_promote is false against an unpublished agency, the importer
+// returns promoted=false and does NOT call PromoteDraft (existing behavior
+// preserved).
+func TestImportDraft_AutoPromote_FalseOnUnpublished(t *testing.T) {
+	t.Parallel()
+	mgr := &promoteCountingMockManager{mockManager: mockManager{
+		setDetailsResult: codevaldagency.Agency{ID: "uab"},
+	}}
+	srv := server.New(mgr, &importFakeDM{}, nil)
+
+	body := `{"agency": {"code": "uab", "name": "Utility App Builder"}}`
+	resp, err := srv.ImportDraft(context.Background(), &pb.ImportDraftRequest{Body: body, AutoPromote: false})
+	if err != nil {
+		t.Fatalf("ImportDraft returned error: %v", err)
+	}
+	if resp.GetPromoted() {
+		t.Errorf("Promoted = true, want false when auto_promote=false")
+	}
+	if mgr.promoteCalls != 0 {
+		t.Errorf("PromoteDraft called %d times, want 0", mgr.promoteCalls)
+	}
+}
+
+// TestImportDraft_AutoPromote_TrueOnUnpublished verifies FEAT-20260609-003:
+// when auto_promote is true and the agency is unpublished, the importer runs
+// the existing flow plus PromoteDraft and returns promoted=true.
+func TestImportDraft_AutoPromote_TrueOnUnpublished(t *testing.T) {
+	t.Parallel()
+	mgr := &promoteCountingMockManager{mockManager: mockManager{
+		setDetailsResult:   codevaldagency.Agency{ID: "uab"},
+		promoteDraftResult: codevaldagency.Agency{ID: "uab", Enabled: true},
+	}}
+	srv := server.New(mgr, &importFakeDM{}, nil)
+
+	body := `{"agency": {"code": "uab", "name": "Utility App Builder"}}`
+	resp, err := srv.ImportDraft(context.Background(), &pb.ImportDraftRequest{Body: body, AutoPromote: true})
+	if err != nil {
+		t.Fatalf("ImportDraft returned error: %v", err)
+	}
+	if !resp.GetPromoted() {
+		t.Errorf("Promoted = false, want true when auto_promote=true succeeds")
+	}
+	if mgr.promoteCalls != 1 {
+		t.Errorf("PromoteDraft called %d times, want 1", mgr.promoteCalls)
+	}
+	if resp.GetDraftId() == "" {
+		t.Error("DraftId is empty; expected the auto-created draft ID")
+	}
+	if mgr.lastPromoteArg != resp.GetDraftId() {
+		t.Errorf("PromoteDraft called with %q, want the response DraftId %q", mgr.lastPromoteArg, resp.GetDraftId())
+	}
+}
+
+// TestImportDraft_AutoPromote_TrueOnPublishedSwallowsReadOnly verifies the
+// primary FEAT-20260609-003 use case: re-import against a published agency
+// with auto_promote=true succeeds end-to-end — SetAgencyDetails' ReadOnly
+// error is swallowed, draft entities are upserted, and PromoteDraft is called.
+func TestImportDraft_AutoPromote_TrueOnPublishedSwallowsReadOnly(t *testing.T) {
+	t.Parallel()
+	mgr := &promoteCountingMockManager{mockManager: mockManager{
+		setDetailsErr:      codevaldagency.ErrAgencyReadOnly,
+		promoteDraftResult: codevaldagency.Agency{ID: "uab", Enabled: true},
+	}}
+	srv := server.New(mgr, &importFakeDM{}, nil)
+
+	body := `{"agency": {"code": "uab", "name": "Utility App Builder"}}`
+	resp, err := srv.ImportDraft(context.Background(), &pb.ImportDraftRequest{Body: body, AutoPromote: true})
+	if err != nil {
+		t.Fatalf("ImportDraft returned error: %v (expected ReadOnly to be swallowed)", err)
+	}
+	if !resp.GetPromoted() {
+		t.Errorf("Promoted = false, want true when auto_promote=true against published agency")
+	}
+	if mgr.promoteCalls != 1 {
+		t.Errorf("PromoteDraft called %d times, want 1", mgr.promoteCalls)
+	}
+}
+
+// TestImportDraft_AutoPromote_FalseOnPublishedReturnsFailedPrecondition
+// verifies FEAT-20260609-003: re-import against a published agency without
+// auto_promote returns FAILED_PRECONDITION (not INTERNAL) and never calls
+// PromoteDraft.
+func TestImportDraft_AutoPromote_FalseOnPublishedReturnsFailedPrecondition(t *testing.T) {
+	t.Parallel()
+	mgr := &promoteCountingMockManager{mockManager: mockManager{
+		setDetailsErr: codevaldagency.ErrAgencyReadOnly,
+	}}
+	srv := server.New(mgr, &importFakeDM{}, nil)
+
+	body := `{"agency": {"code": "uab", "name": "Utility App Builder"}}`
+	resp, err := srv.ImportDraft(context.Background(), &pb.ImportDraftRequest{Body: body, AutoPromote: false})
+	if err == nil {
+		t.Fatalf("ImportDraft returned no error; want FAILED_PRECONDITION (resp=%+v)", resp)
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("returned error is not a gRPC status: %v", err)
+	}
+	if st.Code() != codes.FailedPrecondition {
+		t.Errorf("status code = %v, want %v", st.Code(), codes.FailedPrecondition)
+	}
+	if mgr.promoteCalls != 0 {
+		t.Errorf("PromoteDraft called %d times, want 0", mgr.promoteCalls)
 	}
 }

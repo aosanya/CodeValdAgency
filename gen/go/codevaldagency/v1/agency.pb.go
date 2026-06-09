@@ -390,11 +390,15 @@ func (x *WorkItem) GetAssignments() []*RoleAssignment {
 }
 
 // Workflow is a named container of ordered Work Items.
+//
+// event_flows holds the JSON-encoded { name, steps: [...] } block scoped to
+// this workflow (per-workflow-file convention, see FEAT-20260609-002).
 type Workflow struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	WorkItems     []*WorkItem            `protobuf:"bytes,3,rep,name=work_items,json=workItems,proto3" json:"work_items,omitempty"`
+	EventFlows    string                 `protobuf:"bytes,4,opt,name=event_flows,json=eventFlows,proto3" json:"event_flows,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -448,6 +452,13 @@ func (x *Workflow) GetWorkItems() []*WorkItem {
 		return x.WorkItems
 	}
 	return nil
+}
+
+func (x *Workflow) GetEventFlows() string {
+	if x != nil {
+		return x.EventFlows
+	}
+	return ""
 }
 
 // Goal is a strategic objective that one or more Work Items contribute to.
@@ -3435,12 +3446,14 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x05order\x18\x04 \x01(\x05R\x05order\x12\x1a\n" +
 	"\bparallel\x18\x05 \x01(\bR\bparallel\x12\x19\n" +
 	"\bgoal_ids\x18\x06 \x03(\tR\agoalIds\x12C\n" +
-	"\vassignments\x18\a \x03(\v2!.codevaldagency.v1.RoleAssignmentR\vassignments\"j\n" +
+	"\vassignments\x18\a \x03(\v2!.codevaldagency.v1.RoleAssignmentR\vassignments\"\x8b\x01\n" +
 	"\bWorkflow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12:\n" +
 	"\n" +
-	"work_items\x18\x03 \x03(\v2\x1b.codevaldagency.v1.WorkItemR\tworkItems\"n\n" +
+	"work_items\x18\x03 \x03(\v2\x1b.codevaldagency.v1.WorkItemR\tworkItems\x12\x1f\n" +
+	"\vevent_flows\x18\x04 \x01(\tR\n" +
+	"eventFlows\"n\n" +
 	"\x04Goal\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +

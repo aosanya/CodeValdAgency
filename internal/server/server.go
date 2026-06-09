@@ -209,8 +209,9 @@ func workflowsToProto(workflows []codevaldagency.Workflow) []*pb.Workflow {
 	pws := make([]*pb.Workflow, len(workflows))
 	for i, w := range workflows {
 		pws[i] = &pb.Workflow{
-			Id:   w.ID,
-			Name: w.Name,
+			Id:         w.ID,
+			Name:       w.Name,
+			EventFlows: w.EventFlows,
 		}
 	}
 	return pws

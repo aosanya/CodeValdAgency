@@ -868,6 +868,7 @@ func entityToWorkflow(e entitygraph.Entity) Workflow {
 		Name:        strProp(p, "name"),
 		Description: strProp(p, "description"),
 		Ordinality:  ord,
+		EventFlows:  strProp(p, "event_flows"),
 	}
 }
 

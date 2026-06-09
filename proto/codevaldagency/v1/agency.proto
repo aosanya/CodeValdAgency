@@ -65,10 +65,14 @@ message WorkItem {
 }
 
 // Workflow is a named container of ordered Work Items.
+//
+// event_flows holds the JSON-encoded { name, steps: [...] } block scoped to
+// this workflow (per-workflow-file convention, see FEAT-20260609-002).
 message Workflow {
-  string              id         = 1;
-  string              name       = 2;
-  repeated WorkItem   work_items = 3;
+  string              id          = 1;
+  string              name        = 2;
+  repeated WorkItem   work_items  = 3;
+  string              event_flows = 4;
 }
 
 // Goal is a strategic objective that one or more Work Items contribute to.

@@ -105,6 +105,11 @@ type importWorkflowSpec struct {
 	Ordinality   int                     `yaml:"ordinality"`
 	Instructions []importInstructionSpec `yaml:"instructions"`
 	WorkItems    []importWorkItemSpec    `yaml:"work_items"`
+	// EventFlows accepts the per-workflow { name, steps: [...] } block bundled
+	// into agency.json from flows_<workflow.code>.json by the caller. yaml.v3
+	// decodes it as interface{}; the importer re-marshals to a JSON string
+	// before storing on the DraftWorkflow entity. See FEAT-20260609-002.
+	EventFlows interface{} `yaml:"event_flows" json:"event_flows"`
 }
 
 type importInstructionSpec struct {
@@ -261,15 +266,30 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 
 	// 5. Workflows.
 	log.Printf("[ImportDraft] %s: upserting %d workflows", agencyID, len(spec.Workflows))
+	perWorkflowFlowsSeen := 0
 	for _, wf := range spec.Workflows {
 		log.Printf("[ImportDraft] %s: upsert workflow code=%s workItems=%d", agencyID, wf.Code, len(wf.WorkItems))
-		wfID, err := s.importUpsertID(ctx, agencyID, "DraftWorkflow", map[string]any{
+		wfProps := map[string]any{
 			"draft_ref_code": draftID,
 			"code":           wf.Code,
 			"name":           wf.Name,
 			"description":    clean(wf.Description),
 			"ordinality":     wf.Ordinality,
-		})
+		}
+		// Per-workflow event_flows (FEAT-20260609-002): caller bundles
+		// flows_<workflow.code>.json into wf.event_flows. Re-marshal to a JSON
+		// string for storage — same pattern as the agency-level event_flows in
+		// importSetDetails.
+		if wf.EventFlows != nil {
+			b, merr := json.Marshal(wf.EventFlows)
+			if merr == nil {
+				wfProps["event_flows"] = string(b)
+				perWorkflowFlowsSeen++
+			} else {
+				log.Printf("[ImportDraft] %s: workflow %s event_flows marshal failed: %v", agencyID, wf.Code, merr)
+			}
+		}
+		wfID, err := s.importUpsertID(ctx, agencyID, "DraftWorkflow", wfProps)
 		if err != nil {
 			log.Printf("[ImportDraft] %s: workflow %s upsert failed: %v", agencyID, wf.Code, err)
 			return nil, status.Errorf(codes.Internal, "ImportDraft %s: workflow %s: %v", agencyID, wf.Code, err)
@@ -349,6 +369,12 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 				}
 			}
 		}
+	}
+	// Deprecation warning (FEAT-20260609-002): top-level event_flows is the legacy
+	// monolithic form; per-workflow event_flows (one block per workflow) is the
+	// supported convention. Warn when callers are still on the legacy-only path.
+	if perWorkflowFlowsSeen == 0 && spec.EventFlows != nil {
+		log.Printf("[ImportDraft] %s: DEPRECATED top-level event_flows used without per-workflow blocks; bundle flows_<workflow.code>.json into each workflow's event_flows field (FEAT-20260609-002)", agencyID)
 	}
 
 	// 6. Work plans (live entities, not draft-scoped).

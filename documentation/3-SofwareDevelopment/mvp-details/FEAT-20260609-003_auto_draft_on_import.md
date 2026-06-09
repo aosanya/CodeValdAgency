@@ -1,6 +1,6 @@
 # FEAT-20260609-003 — Auto-draft-and-promote on import of a published agency
 
-**Status:** 📋 Not Started
+**Status:** 🚀 In Progress
 **Severity:** Medium — every `POST /agency/{id}/import` against a published agency fails with `agency is read-only`, breaking operator scripts (scenario-12 QA Step 1, CI re-import flows, the `dev-reimport-agency` skill); operators presently work around it by manually invoking the draft → promote endpoints
 **Owner:** CodeValdAgency
 **Estimated effort:** ~0.5 day (importer flow change + opt-in flag + error path)

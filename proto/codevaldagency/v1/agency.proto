@@ -461,6 +461,11 @@ message MatchWorkPlansResponse {
 message ImportDraftRequest {
   // body contains the raw agency.yaml (or agency.json) file content.
   string body = 1;
+  // auto_promote, when true, lets the importer auto-promote the draft after
+  // the import succeeds — required to re-import against a published agency
+  // (FEAT-20260609-003). When false (default) and the agency is published,
+  // ImportDraft returns FAILED_PRECONDITION.
+  bool auto_promote = 2;
 }
 
 // ImportDraftResponse is returned on a successful import.
@@ -468,7 +473,13 @@ message ImportDraftResponse {
   // agency_id is the code value from the YAML agency.code field.
   string agency_id = 1;
   // draft_id is the server-assigned UUID of the open AgencyDraft entity.
+  // When auto_promote=true this draft has already been promoted; when false
+  // the caller may inspect and promote it via PromoteDraft.
   string draft_id  = 2;
+  // promoted is true when the importer auto-promoted the draft as part of this
+  // import — only possible when auto_promote was set on the request
+  // (FEAT-20260609-003).
+  bool promoted    = 3;
 }
 
 // ── Service ───────────────────────────────────────────────────────────────────

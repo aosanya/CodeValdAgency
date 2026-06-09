@@ -3330,7 +3330,12 @@ func (x *MatchWorkPlansResponse) GetMatches() []*WorkPlanMatch {
 type ImportDraftRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// body contains the raw agency.yaml (or agency.json) file content.
-	Body          string `protobuf:"bytes,1,opt,name=body,proto3" json:"body,omitempty"`
+	Body string `protobuf:"bytes,1,opt,name=body,proto3" json:"body,omitempty"`
+	// auto_promote, when true, lets the importer auto-promote the draft after
+	// the import succeeds — required to re-import against a published agency
+	// (FEAT-20260609-003). When false (default) and the agency is published,
+	// ImportDraft returns FAILED_PRECONDITION.
+	AutoPromote   bool `protobuf:"varint,2,opt,name=auto_promote,json=autoPromote,proto3" json:"auto_promote,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3372,13 +3377,26 @@ func (x *ImportDraftRequest) GetBody() string {
 	return ""
 }
 
+func (x *ImportDraftRequest) GetAutoPromote() bool {
+	if x != nil {
+		return x.AutoPromote
+	}
+	return false
+}
+
 // ImportDraftResponse is returned on a successful import.
 type ImportDraftResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// agency_id is the code value from the YAML agency.code field.
 	AgencyId string `protobuf:"bytes,1,opt,name=agency_id,json=agencyId,proto3" json:"agency_id,omitempty"`
 	// draft_id is the server-assigned UUID of the open AgencyDraft entity.
-	DraftId       string `protobuf:"bytes,2,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
+	// When auto_promote=true this draft has already been promoted; when false
+	// the caller may inspect and promote it via PromoteDraft.
+	DraftId string `protobuf:"bytes,2,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
+	// promoted is true when the importer auto-promoted the draft as part of this
+	// import — only possible when auto_promote was set on the request
+	// (FEAT-20260609-003).
+	Promoted      bool `protobuf:"varint,3,opt,name=promoted,proto3" json:"promoted,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3425,6 +3443,13 @@ func (x *ImportDraftResponse) GetDraftId() string {
 		return x.DraftId
 	}
 	return ""
+}
+
+func (x *ImportDraftResponse) GetPromoted() bool {
+	if x != nil {
+		return x.Promoted
+	}
+	return false
 }
 
 var File_codevaldagency_v1_agency_proto protoreflect.FileDescriptor
@@ -3680,12 +3705,14 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x05topic\x18\x01 \x01(\tR\x05topic\x12\x18\n" +
 	"\apayload\x18\x02 \x01(\tR\apayload\"T\n" +
 	"\x16MatchWorkPlansResponse\x12:\n" +
-	"\amatches\x18\x01 \x03(\v2 .codevaldagency.v1.WorkPlanMatchR\amatches\"(\n" +
+	"\amatches\x18\x01 \x03(\v2 .codevaldagency.v1.WorkPlanMatchR\amatches\"K\n" +
 	"\x12ImportDraftRequest\x12\x12\n" +
-	"\x04body\x18\x01 \x01(\tR\x04body\"M\n" +
+	"\x04body\x18\x01 \x01(\tR\x04body\x12!\n" +
+	"\fauto_promote\x18\x02 \x01(\bR\vautoPromote\"i\n" +
 	"\x13ImportDraftResponse\x12\x1b\n" +
 	"\tagency_id\x18\x01 \x01(\tR\bagencyId\x12\x19\n" +
-	"\bdraft_id\x18\x02 \x01(\tR\adraftId*\x9a\x01\n" +
+	"\bdraft_id\x18\x02 \x01(\tR\adraftId\x12\x1a\n" +
+	"\bpromoted\x18\x03 \x01(\bR\bpromoted*\x9a\x01\n" +
 	"\x11AgencyDraftStatus\x12#\n" +
 	"\x1fAGENCY_DRAFT_STATUS_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18AGENCY_DRAFT_STATUS_OPEN\x10\x01\x12 \n" +

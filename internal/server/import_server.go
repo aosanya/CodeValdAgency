@@ -215,8 +215,12 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 
 	// 1. Set agency details.
 	log.Printf("[ImportDraft] %s: setting agency details", agencyID)
-	if err := s.importSetDetails(ctx, agencyID, spec.Agency, spec.EventFlows); err != nil {
+	if err := s.importSetDetails(ctx, agencyID, spec.Agency, spec.EventFlows, req.GetAutoPromote()); err != nil {
 		log.Printf("[ImportDraft] %s: set details failed: %v", agencyID, err)
+		if errors.Is(err, codevaldagency.ErrAgencyReadOnly) {
+			return nil, status.Errorf(codes.FailedPrecondition,
+				"ImportDraft %s: agency is published; pass auto_promote=true to auto-create and promote a draft", agencyID)
+		}
 		return nil, status.Errorf(codes.Internal, "ImportDraft %s: set details: %v", agencyID, err)
 	}
 
@@ -460,17 +464,35 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 		}
 	}
 
-	log.Printf("[ImportDraft] %s: done draftID=%s", agencyID, draftID)
+	// 9. Auto-promote the draft when requested (FEAT-20260609-003). Required for
+	// re-import against an already-published agency; an optional convenience for
+	// unpublished agencies (one-shot import + promote).
+	promoted := false
+	if req.GetAutoPromote() {
+		log.Printf("[ImportDraft] %s: auto-promoting draft %s", agencyID, draftID)
+		if _, perr := s.mgr.PromoteDraft(ctx, draftID); perr != nil {
+			log.Printf("[ImportDraft] %s: auto-promote draft %s failed: %v", agencyID, draftID, perr)
+			return nil, status.Errorf(codes.Internal, "ImportDraft %s: auto-promote draft %s: %v", agencyID, draftID, perr)
+		}
+		promoted = true
+		log.Printf("[ImportDraft] %s: auto-promoted draft %s", agencyID, draftID)
+	}
+
+	log.Printf("[ImportDraft] %s: done draftID=%s promoted=%v", agencyID, draftID, promoted)
 	go s.syncSubscriptions(context.Background())
-	return &pb.ImportDraftResponse{AgencyId: agencyID, DraftId: draftID}, nil
+	return &pb.ImportDraftResponse{AgencyId: agencyID, DraftId: draftID, Promoted: promoted}, nil
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 // importSetDetails updates the root agency document.
 // For published agencies (ErrAgencyReadOnly), structural fields are skipped but
-// event_flows metadata is refreshed via SetAgencyEventFlows.
-func (s *Server) importSetDetails(ctx context.Context, agencyID string, a importAgencySpec, eventFlows interface{}) error {
+// event_flows metadata is refreshed via SetAgencyEventFlows. When autoPromote
+// is true (FEAT-20260609-003), ErrAgencyReadOnly is swallowed after the
+// event_flows refresh so the caller can continue into the draft pipeline; when
+// autoPromote is false the ErrAgencyReadOnly is propagated so the caller can
+// surface a clean FailedPrecondition.
+func (s *Server) importSetDetails(ctx context.Context, agencyID string, a importAgencySpec, eventFlows interface{}, autoPromote bool) error {
 	// Marshal event_flows back to a JSON string for storage (yaml.v3 decodes it
 	// as interface{}, so we re-encode to get the raw JSON blob).
 	var eventFlowsJSON string
@@ -497,11 +519,23 @@ func (s *Server) importSetDetails(ctx context.Context, agencyID string, a import
 	if err == nil {
 		return nil
 	}
-	// Published agencies block structural field updates. event_flows is display-only
-	// metadata and can always be refreshed even after publish.
-	if errors.Is(err, codevaldagency.ErrAgencyReadOnly) && eventFlowsJSON != "" {
-		_, efErr := s.mgr.SetAgencyEventFlows(ctx, eventFlowsJSON)
-		return efErr
+	// Published agencies block structural field updates. event_flows is
+	// display-only metadata and can always be refreshed even after publish.
+	if errors.Is(err, codevaldagency.ErrAgencyReadOnly) {
+		if eventFlowsJSON != "" {
+			if _, efErr := s.mgr.SetAgencyEventFlows(ctx, eventFlowsJSON); efErr != nil {
+				return fmt.Errorf("importSetDetails: refresh event_flows on published agency: %w", efErr)
+			}
+		}
+		if autoPromote {
+			// Caller will continue into the draft pipeline and call PromoteDraft.
+			// Agency-level structural fields (mission, vision, etc.) are preserved
+			// as-is on the published agency; only sub-entities and event_flows
+			// participate in the re-import.
+			log.Printf("[importSetDetails] %s: published; auto_promote=true — structural fields preserved, draft pipeline will run", agencyID)
+			return nil
+		}
+		return err
 	}
 	return err
 }

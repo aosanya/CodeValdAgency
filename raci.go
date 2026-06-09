@@ -33,6 +33,7 @@ func (m *agencyManager) CreateWorkPlan(ctx context.Context, req CreateWorkPlanRe
 			"payload_condition":   req.PayloadCondition,
 			"instructions":        req.Instructions,
 			"agent_id":            req.AgentID,
+			"agent_code":          req.AgentCode,
 			"function_code":       req.FunctionCode,
 			"function_params":     req.FunctionParams,
 			"handler_service":     req.HandlerService,
@@ -141,6 +142,9 @@ func (m *agencyManager) UpdateWorkPlan(ctx context.Context, workPlanID string, r
 	}
 	if req.AgentID != nil {
 		props["agent_id"] = *req.AgentID
+	}
+	if req.AgentCode != nil {
+		props["agent_code"] = *req.AgentCode
 	}
 	if req.FunctionCode != nil {
 		props["function_code"] = *req.FunctionCode
@@ -417,6 +421,7 @@ func entityToWorkPlan(e entitygraph.Entity, agencyID string) WorkPlan {
 		PayloadCondition:  strProp(p, "payload_condition"),
 		Instructions:      strProp(p, "instructions"),
 		AgentID:           strProp(p, "agent_id"),
+		AgentCode:         strProp(p, "agent_code"),
 		FunctionCode:      strProp(p, "function_code"),
 		FunctionParams:    strProp(p, "function_params"),
 		HandlerService:    strProp(p, "handler_service"),

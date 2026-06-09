@@ -1,6 +1,6 @@
 # FEAT-20260609-003 — Auto-draft-and-promote on import of a published agency
 
-**Status:** 🚀 In Progress
+**Status:** ✅ Done (2026-06-09) — `auto_promote` flag added to `ImportDraftRequest` / `promoted` to `ImportDraftResponse`; `importSetDetails` swallows `ErrAgencyReadOnly` (after refreshing `event_flows`) when `auto_promote=true`; `ImportDraft` calls `PromoteDraft` on the auto-created/reused draft and maps the no-flag published case to `FAILED_PRECONDITION` (was `INTERNAL`). 4 new unit tests cover the matrix. Landed on main via `feature/Dev-AGENCY-FEAT20260609003_auto-draft-and-promote-on-import`.
 **Severity:** Medium — every `POST /agency/{id}/import` against a published agency fails with `agency is read-only`, breaking operator scripts (scenario-12 QA Step 1, CI re-import flows, the `dev-reimport-agency` skill); operators presently work around it by manually invoking the draft → promote endpoints
 **Owner:** CodeValdAgency
 **Estimated effort:** ~0.5 day (importer flow change + opt-in flag + error path)

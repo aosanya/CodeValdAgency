@@ -1,6 +1,6 @@
 # FEAT-20260609-002 — Per-Workflow `event_flows` field + multi-file flow import (`flows_<workflow.code>.json`)
 
-**Status:** 📋 Not Started
+**Status:** ✅ Done
 **Severity:** Medium — blocks the per-workflow-file convention already used in [CodeValdImplementations/Agencies/utility-app-builder/](../../../../CodeValdImplementations/Agencies/utility-app-builder/); a new [`flows_planning.json`](../../../../CodeValdImplementations/Agencies/utility-app-builder/flows_planning.json) sits on disk but is silently ignored by every consumer (live agency, flowchart renderer, scenario-12 QA)
 **Owner:** CodeValdAgency (schema + importer); coordinated touch in CodeValdImplementations (split agency.json), CodeValdAgencyFrontend (flowchart renderer)
 **Estimated effort:** ~1 day (schema + proto + importer; the file-bundling convention is a doc + the importer change to accept inline `event_flows` per workflow)

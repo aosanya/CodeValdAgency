@@ -56,6 +56,9 @@ The MVP delivers:
 | FEAT-20260605-002 | WorkPlan review step type — `review_step_type`, `review_trigger_topic`, `review_success_topic`, `review_failure_topic` fields on WorkPlan; gates task progression on AcceptanceCriteria results | ✅ Done | FEAT-20260605-001 (Work) |
 | FEAT-20260608-001 | `EventFlowBranch` model — branches[] field on EventFlow; schema.go comment; agency.json utility-app-builder updated | ✅ Done | — |
 | FEAT-20260608-002 | `dev-agency-flowchart` skill — render branches[] as multiple Mermaid edges with condition labels | ✅ Done | FEAT-20260608-001 |
+| [FEAT-20260609-001](mvp-details/FEAT-20260609-001_task_split_handler_workplan.md) | Add `task-split-handler` work plan to utility-app-builder agency.json (consumes `task.request-split`, emits `task.subtask-created`) | 🚀 In Progress | — |
+| [FEAT-20260609-002](mvp-details/FEAT-20260609-002_per_workflow_event_flows.md) | Per-Workflow `event_flows` field + multi-file flow import (`flows_<workflow.code>.json`) — schema + proto + importer | 📋 Not Started | — |
+| [FEAT-20260609-003](mvp-details/FEAT-20260609-003_auto_draft_on_import.md) | Auto-draft-and-promote on import of a published agency — adds `auto_promote` flag to `ImportDraftRequest` | 📋 Not Started | FEAT-20260609-002 |
 
 ---
 

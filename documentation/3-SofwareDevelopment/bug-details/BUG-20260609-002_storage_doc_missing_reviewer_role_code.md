@@ -1,6 +1,6 @@
 # BUG-20260609-002 — `architecture-storage.md` does not document `DraftDeliverable.reviewer_role_code`
 
-**Status:** 🚀 In Progress
+**Status:** ✅ Fixed (2026-06-10)
 **Severity:** Low — minor doc gap; field works correctly in shipped code
 **Owner:** CodeValdAgency (documentation)
 **Estimated effort:** < 0.25 day (one-line table edit + brief draft-entity note)

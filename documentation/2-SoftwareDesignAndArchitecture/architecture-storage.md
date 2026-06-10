@@ -96,8 +96,11 @@ so a single AQL filter on `draft_ref_code` returns the entire draft sub-graph.
 
 `DraftWorkItem` adds `draft_workflow_ref_code`; `DraftInstruction` adds
 `draft_workflow_ref_code` *or* `draft_work_item_ref_code` depending on its
-parent; `DraftDeliverable` adds `draft_work_item_ref_code`. All Draft* types
-enforce uniqueness on `(draft_ref_code, code)`.
+parent; `DraftDeliverable` adds `draft_work_item_ref_code` and an optional
+`reviewer_role_code` (string) — the `ConfiguredRole.code` of the reviewer
+declared in `agency.json`, resolved to a `reviewer_role` edge on the live
+`Deliverable` during `PromoteDraft`. All Draft* types enforce uniqueness on
+`(draft_ref_code, code)`.
 
 ### `agency_entities/{key}` (AgencySnapshot — immutable)
 

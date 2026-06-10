@@ -4,6 +4,7 @@ _Newest items first. Fixed bugs are moved to [`bugs_done.md`](bugs_done.md)._
 
 | Bug ID | Title | Severity | Status | Detail |
 |--------|-------|----------|--------|--------|
+| BUG-20260610-002 | Active CodeValdAgency publication not enforced at runtime — import must round-trip every declared transition; PromoteDraft must retire legacy work plans; new `LookupFlowStep` RPC needed for downstream services | High | 🚀 In Progress | [Work-side detail](../../../CodeValdWork/documentation/3-SofwareDevelopment/bug-details/BUG-20260610-002_applytaskstatus-hardcoded-transitions.md) |
 
 ---
 

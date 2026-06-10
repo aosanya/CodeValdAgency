@@ -59,7 +59,7 @@ All authoring nodes live in two ArangoDB collections:
 |---|---|---|---|
 | `Agency` | ✅ | `name`(req), `mission`, `vision`, `enabled`(req) | Root entity; one per database; read-only after first publish |
 | `Goal` | ✅ | `title`(req), `description`, `ordinality`(req) | Strategic objective |
-| `Workflow` | ✅ | `name`(req), `description`, `ordinality`(req) | Ordered container of WorkItems |
+| `Workflow` | ✅ | `name`(req), `description`, `ordinality`(req), `event_flows` | Ordered container of WorkItems. `event_flows` is the JSON-encoded `{ flows: [...] }` block scoped to this workflow (FEAT-20260609-002) |
 | `WorkItem` | ✅ | `title`(req), `description`, `ordinality`(req), `prompt` | Unit of work; same `ordinality` = parallel execution |
 | `Instruction` | ✅ | `content`(req), `ordinality`(req) | Rule or constraint; attaches to Workflow or WorkItem |
 | `Deliverable` | ✅ | `title`(req), `description`, `ordinality`(req), `blocking`(req) | Spec: expected output from a WorkItem |

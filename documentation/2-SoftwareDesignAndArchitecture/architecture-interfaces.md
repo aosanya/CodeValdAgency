@@ -1,6 +1,10 @@
-# CodeValdAgency — Interfaces & Models
+# CodeValdAgency — Interfaces & Service Surface
 
 > Part of the split architecture. Index: [architecture.md](architecture.md)
+>
+> Companion files:
+> - [architecture-models.md](architecture-models.md) — value-type definitions (Agency, Workflow, AgencyDraft, …)
+> - [architecture-flows.md](architecture-flows.md) — lifecycle flows and errors
 
 ---
 
@@ -24,6 +28,8 @@ type AgencyManager interface {
     GetGoals(ctx context.Context) ([]Goal, error)
 
     // GetWorkflows returns all Workflow entities linked to the live Agency.
+    // Each Workflow includes its per-workflow event_flows JSON blob
+    // (FEAT-20260609-002) when one was bundled at import time.
     GetWorkflows(ctx context.Context) ([]Workflow, error)
 
     // GetConfiguredRoles returns all ConfiguredRole entities linked to the live Agency.
@@ -135,6 +141,11 @@ type AgencyManager interface {
 }
 ```
 
+> ℹ️ NOTE — `ImportDraft` is **not** on `AgencyManager`. It is a gRPC handler that
+> bypasses the manager and writes draft entities directly through
+> `entitygraph.DataManager`. See §5 below and
+> [architecture-flows.md § ImportDraft Flow](architecture-flows.md).
+
 ---
 
 ## 2. agencyManager Struct
@@ -196,186 +207,136 @@ type CrossPublisher interface {
 
 ---
 
-## 5. Data Models
+## 5. gRPC Service Definitions
 
-Defined in `models.go` at the module root. All types are pure value structs.
-The only method is `AgencyDraftStatus.CanTransitionTo`.
+### AgencyService
 
-Sub-resources (WorkItems, Instructions, Deliverables, ContentRefs) are **never
-embedded** as slices on their parent struct — they are fetched via separate
-`AgencyManager` methods.
+Manages the live agency, drafts, publications, the bulk import path, and
+convenience accessors for Goals, Workflows, and ConfiguredRoles.
 
-### Core types
+```protobuf
+service AgencyService {
+  // Bootstrap
+  rpc SetAgencyDetails   (SetAgencyDetailsRequest)      returns (Agency);
 
-```go
-// ActorType constrains who may fill a ConfiguredRole.
-type ActorType string
+  // Live agency (read-only once published)
+  rpc GetAgency          (GetAgencyRequest)              returns (Agency);
 
-const (
-    ActorTypeHuman        ActorType = "human"
-    ActorTypeAIAgent      ActorType = "ai_agent"
-    ActorTypeComputeAgent ActorType = "compute_agent"
-)
+  // Drafts
+  rpc CreateDraft              (CreateDraftRequest)              returns (AgencyDraft);
+  rpc GetDraft                 (GetDraftRequest)                 returns (AgencyDraft);
+  rpc ListDrafts               (ListDraftsRequest)               returns (ListDraftsResponse);
+  rpc UpdateDraftDescription   (UpdateDraftDescriptionRequest)   returns (AgencyDraft);
+  rpc PromoteDraft             (PromoteDraftRequest)             returns (Agency);
+  rpc ArchiveDraft             (ArchiveDraftRequest)             returns (AgencyDraft);
 
-// AgencyDraftStatus is the lifecycle state of an AgencyDraft.
-type AgencyDraftStatus string
+  // Bulk import (declarative agency.json/yaml → DraftWorkflow et al.)
+  rpc ImportDraft              (ImportDraftRequest)              returns (ImportDraftResponse);
 
-const (
-    // DraftStatusOpen means the draft is being edited and can be promoted.
-    DraftStatusOpen AgencyDraftStatus = "open"
+  // Publications
+  rpc PublishAgency      (PublishAgencyRequest)          returns (AgencyPublication);
+  rpc GetPublication     (GetPublicationRequest)         returns (AgencyPublication);
+  rpc ListPublications   (ListPublicationsRequest)       returns (ListPublicationsResponse);
+  rpc UpdatePublicationStatus (UpdatePublicationStatusRequest) returns (AgencyPublication);
 
-    // DraftStatusPromoted is a terminal state: this draft became the live agency.
-    DraftStatusPromoted AgencyDraftStatus = "promoted"
-
-    // DraftStatusArchived is a terminal state: this draft was soft-discarded.
-    DraftStatusArchived AgencyDraftStatus = "archived"
-)
-
-// CanTransitionTo returns true if transitioning from the receiver status to
-// next is a permitted move.
-//
-//	open → promoted | archived
-//	promoted → (none — terminal)
-//	archived → (none — terminal)
-func (s AgencyDraftStatus) CanTransitionTo(next AgencyDraftStatus) bool
-```
-
-### Domain types (graph entity counterparts)
-
-```go
-// Agency is the live, published version of the agency.
-// It is read-only — all edits flow through an AgencyDraft.
-// GetAgency returns ErrAgencyNotPublished until the first draft is promoted.
-type Agency struct {
-    ID        string
-    Name      string
-    Mission   string
-    Vision    string
-    Enabled   bool      // true = agency is active; false = disabled
-    CreatedAt time.Time
-    UpdatedAt time.Time
-}
-
-// Goal is a strategic objective linked to the Agency via a has_goal edge.
-type Goal struct {
-    ID          string
-    Title       string
-    Description string
-    Ordinality  int // sort order among Goals; lower = higher priority
-}
-
-// Workflow is an ordered container of WorkItems, linked to the Agency
-// via a has_workflow edge. WorkItems are fetched separately.
-type Workflow struct {
-    ID          string
-    Name        string
-    Description string
-    Ordinality  int // execution order among Workflows on this Agency
-}
-
-// WorkItem is a single unit of work within a Workflow.
-// Instructions and Deliverables are fetched separately.
-type WorkItem struct {
-    ID          string
-    Title       string
-    Description string
-    Ordinality  int    // execution order within the Workflow
-    Prompt      string // optional agent prompt delivered to the actor at dispatch
-}
-
-// Instruction is an ordered rule or constraint attached to a Workflow or
-// WorkItem. Uses the multi-parent pattern — the parent is whichever
-// belongs_to_* relationship was set at creation.
-type Instruction struct {
-    ID         string
-    Content    string
-    Ordinality int // sort order among Instructions on the parent
-}
-
-// Deliverable is the spec of an expected output for a WorkItem.
-// DeliverableResult is the corresponding instance (one per submission).
-type Deliverable struct {
-    ID          string
-    Title       string
-    Description string
-    Ordinality  int  // sort order among Deliverables on the WorkItem
-    Blocking    bool // if true, a rejected result halts the Workflow until waived
-}
-
-// DeliverableResult is an immutable record of a single submission against
-// a Deliverable. Multiple results may exist per Deliverable (full audit trail).
-// ProducedAt is server-stamped at creation — callers do not set it.
-//
-// Status lifecycle: pending → completed | rejected → waived
-type DeliverableResult struct {
-    ID         string
-    Status     string    // "pending" | "completed" | "rejected" | "waived"
-    ProducedAt time.Time // server-stamped; zero value until persisted
-}
-
-// ContentRef is an immutable pointer to a single artifact path in CodeValdGit.
-// Uses the multi-parent pattern — attachable to a DeliverableResult,
-// an Instruction, or a WorkItem.
-type ContentRef struct {
-    ID   string
-    Path string // relative path within the CodeValdGit repo for this agency
-}
-
-// ConfiguredRole is a named role entity defined by the agency beyond the
-// built-in roles. Linked to the Agency and referenced via assigned_role
-// edges on WorkItems.
-type ConfiguredRole struct {
-    ID          string
-    Name        string
-    Description string
-    ActorType   ActorType // human | ai_agent | compute_agent
-    Ordinality  int       // sort order among ConfiguredRoles on this Agency
-}
-
-// AgencyDraft is a mutable, full deep-copy of the agency graph.
-// It holds Goals, Workflows, WorkItems, ConfiguredRoles, Instructions,
-// and Deliverables forked from the live agency or another open draft.
-// Sub-resources are fetched via the same AgencyManager convenience methods
-// scoped to the draft's own entity set.
-type AgencyDraft struct {
-    ID             string
-    Description    string            // required; human-readable label
-    ForkedFromID   string            // ID of the source Agency or AgencyDraft
-    ForkedFromType string            // "live" or "draft"
-    Status         AgencyDraftStatus
-    CreatedAt      time.Time
-    UpdatedAt      time.Time
-}
-
-// AgencySnapshot is an immutable point-in-time record written as a side-effect
-// of PromoteDraft. Written once per promotion, never modified.
-type AgencySnapshot struct {
-    ID         string
-    AgencyID   string
-    SnapshotAt time.Time
-}
-
-// AgencyPublication is an immutable versioned snapshot created by an explicit
-// publish action. Written once, never modified.
-type AgencyPublication struct {
-    ID          string
-    AgencyID    string
-    Version     int
-    Tag         string
-    PublishedAt time.Time
-    Status      string // "draft" | "active" | "archived"
+  // Convenience wrappers (live agency sub-resources)
+  rpc GetGoals           (GetGoalsRequest)               returns (GetGoalsResponse);
+  rpc GetWorkflows       (GetWorkflowsRequest)           returns (GetWorkflowsResponse);
+  rpc GetConfiguredRoles (GetConfiguredRolesRequest)     returns (GetConfiguredRolesResponse);
 }
 ```
 
-### Request types
+`ImportDraft` bypasses the `AgencyManager` interface and writes Draft\*
+entities directly through `entitygraph.DataManager`. The request body is the
+raw YAML or JSON of an `agency.yaml`/`agency.json` file; per-workflow
+`event_flows` are accepted inline on each workflow entry (see
+[architecture-flows.md § ImportDraft Flow](architecture-flows.md) for the
+full per-workflow `event_flows` contract and the caller-side
+`flows_<workflow.code>.json` bundling expectation).
 
-```go
-// UpdateAgencyRequest is used to edit the scalar fields of an open AgencyDraft.
-// Sub-resources (Goals, Workflows, etc.) are managed through EntityService CRUD.
-type UpdateDraftDetailsRequest struct {
-    Name    string
-    Mission string
-    Vision  string
-    Enabled bool
+### EntityService
+
+Provides generic CRUD for entities and relationships. HTTP routes for each
+entity type are generated by `schemaroutes.RoutesFromSchema` and wired here;
+CodeValdCross injects `type_id` (or `name` for relationships) via
+`ConstantBinding` at dispatch time, so a single RPC serves all entity types.
+
+Implemented in `internal/server/entity_server.go`.
+
+```protobuf
+service EntityService {
+  rpc ListEntities        (ListEntitiesRequest)        returns (ListEntitiesResponse);
+  rpc CreateEntity        (CreateEntityRequest)        returns (EntityItem);
+  rpc GetEntity           (GetEntityRequest)           returns (EntityItem);
+  rpc UpdateEntity        (UpdateEntityRequest)        returns (EntityItem);
+  rpc DeleteEntity        (DeleteEntityRequest)        returns (DeleteEntityResponse);
+  rpc ListRelationships   (ListRelationshipsRequest)   returns (ListRelationshipsResponse);
+  rpc CreateRelationship  (CreateRelationshipRequest)  returns (RelationshipItem);
+  rpc DeleteRelationship  (DeleteRelationshipRequest)  returns (DeleteRelationshipResponse);
 }
 ```
+
+Generated Go stubs live in `gen/go/`. **Do not hand-edit generated files.**
+
+---
+
+## 6. CodeValdCross Registration
+
+`cmd/main.go` starts a registration heartbeat on startup. The loop calls
+`OrchestratorService.Register` on CodeValdCross every **20 seconds**.
+
+Routes are assembled in `internal/registrar/registrar.go:agencyRoutes()` and
+fall into two groups:
+
+**Static routes** — fixed AgencyService methods:
+
+| Method | Pattern | gRPC method |
+|---|---|---|
+| `POST` | `/agency/{agencyId}` | `AgencyService/SetAgencyDetails` |
+| `GET`  | `/agency/{agencyId}` | `AgencyService/GetAgency` |
+| `GET`  | `/agency/{agencyId}/workflows` | `AgencyService/GetWorkflows` |
+| `POST` | `/agency/{agencyId}/import` | `AgencyService/ImportDraft` |
+| `POST` | `/agency/{agencyId}/drafts` | `AgencyService/CreateDraft` |
+| `GET`  | `/agency/{agencyId}/drafts` | `AgencyService/ListDrafts` |
+| `GET`  | `/agency/{agencyId}/drafts/{draftId}` | `AgencyService/GetDraft` |
+| `PUT`  | `/agency/{agencyId}/drafts/{draftId}` | `AgencyService/UpdateDraftDescription` |
+| `POST` | `/agency/{agencyId}/drafts/{draftId}/promote` | `AgencyService/PromoteDraft` |
+| `POST` | `/agency/{agencyId}/drafts/{draftId}/archive` | `AgencyService/ArchiveDraft` |
+| `POST` | `/agency/{agencyId}/publish` | `AgencyService/PublishAgency` |
+| `GET`  | `/agency/{agencyId}/publications` | `AgencyService/ListPublications` |
+| `GET`  | `/agency/{agencyId}/publications/{version}` | `AgencyService/GetPublication` |
+| `PUT`  | `/agency/{agencyId}/publications/{version}/status` | `AgencyService/UpdatePublicationStatus` |
+
+**Dynamic routes** — generated by `schemaroutes.RoutesFromSchema(DefaultAgencySchema(), "/agency/{agencyId}", "agencyId", "/codevaldagency.v1.EntityService")`. Each `TypeDefinition` with a `PathSegment` gets a full CRUD set pointing to the generic `EntityService` RPCs. CodeValdCross injects `type_id` via `ConstantBinding` so the HTTP caller never needs to set it:
+
+```json
+[
+  {
+    "method": "GET",
+    "pattern": "/agency/{agencyId}/goals",
+    "capability": "list_goal",
+    "grpc_method": "/codevaldagency.v1.EntityService/ListEntities",
+    "path_bindings": [{"url_param": "agencyId", "field": "agency_id"}],
+    "constant_bindings": [{"field": "type_id", "value": "Goal"}]
+  },
+  {
+    "method": "POST",
+    "pattern": "/agency/{agencyId}/goals",
+    "capability": "create_goal",
+    "grpc_method": "/codevaldagency.v1.EntityService/CreateEntity",
+    "path_bindings": [{"url_param": "agencyId", "field": "agency_id"}],
+    "constant_bindings": [{"field": "type_id", "value": "Goal"}]
+  },
+  {
+    "method": "GET",
+    "pattern": "/agency/{agencyId}/goals/{entityId}/agency",
+    "capability": "list_goal_agency",
+    "grpc_method": "/codevaldagency.v1.EntityService/ListRelationships",
+    "path_bindings": [{"url_param": "agencyId", "field": "agency_id"}, {"url_param": "entityId", "field": "entity_id"}],
+    "constant_bindings": [{"field": "name", "value": "agency"}]
+  }
+]
+```
+
+Repeat calls are the **liveness signal**. Cross expires registrations that
+stop heartbeating. If Cross is unavailable, the loop retries silently.

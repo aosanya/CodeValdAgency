@@ -102,6 +102,60 @@ declared in `agency.json`, resolved to a `reviewer_role` edge on the live
 `Deliverable` during `PromoteDraft`. All Draft* types enforce uniqueness on
 `(draft_ref_code, code)`.
 
+### `agency_draft_entities/{key}` (DraftWorkflow)
+
+`DraftWorkflow` carries the per-workflow `event_flows` JSON blob set by
+`ImportDraft` from each `flows_<workflow.code>.json` bundled into the request
+(FEAT-20260609-002). The property is omitted entirely when the workflow has
+no inline `event_flows`. `PromoteDraft` copies it onto the live `Workflow`
+verbatim.
+
+```json
+{
+  "_key":      "<uuid>",
+  "type_id":   "DraftWorkflow",
+  "agency_id": "<agencyID>",
+  "properties": {
+    "ref_code":       "<uuid>",
+    "code":           "planning",
+    "draft_ref_code": "<draftRefCode>",
+    "name":           "Planning",
+    "description":    "...",
+    "ordinality":     1,
+    "event_flows":    "{\"flows\":[{\"name\":\"planning\",\"steps\":[...]}]}"
+  },
+  "created_at": "...",
+  "updated_at": "..."
+}
+```
+
+### `agency_entities/{key}` (Workflow — live, post-promotion)
+
+The live `Workflow` mirrors the `DraftWorkflow` shape minus `draft_ref_code`.
+`event_flows` is carried through `PromoteDraft` via the
+`copyPropsExcluding("draft_ref_code")` helper. Consumers should read this
+field per workflow (e.g. `GET /agency/{id}/workflows`) — `Agency.event_flows`
+is only populated from the legacy top-level `event_flows` field of
+agency.json and is being phased out.
+
+```json
+{
+  "_key":      "<uuid>",
+  "type_id":   "Workflow",
+  "agency_id": "<agencyID>",
+  "properties": {
+    "ref_code":    "<uuid>",
+    "code":        "planning",
+    "name":        "Planning",
+    "description": "...",
+    "ordinality":  1,
+    "event_flows": "{\"flows\":[{\"name\":\"planning\",\"steps\":[...]}]}"
+  },
+  "created_at": "...",
+  "updated_at": "..."
+}
+```
+
 ### `agency_entities/{key}` (AgencySnapshot — immutable)
 
 ```json

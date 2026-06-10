@@ -1,10 +1,11 @@
 # CodeValdAgency — Architecture
 
 > **Split docs** — this file is the index. Details live in focused companion files:
-> - [architecture-interfaces.md](architecture-interfaces.md) — `AgencyManager`, `AgencySchemaManager`, data models
+> - [architecture-interfaces.md](architecture-interfaces.md) — `AgencyManager`, `AgencySchemaManager`, `CrossPublisher`, gRPC service definitions, Cross registration
+> - [architecture-models.md](architecture-models.md) — value-type definitions (Agency, Workflow, AgencyDraft, …)
 > - [architecture-graph.md](architecture-graph.md) — graph topology, entity types, pre-delivered schema
 > - [architecture-storage.md](architecture-storage.md) — ArangoDB collections, document shapes, indexes
-> - [architecture-flows.md](architecture-flows.md) — lifecycle rules, flows, error types, gRPC service
+> - [architecture-flows.md](architecture-flows.md) — lifecycle flows (Set/Create/Promote/Archive/Publish/Import), error types
 > - [architecture-configuration.md](architecture-configuration.md) — env vars, boot sequence, local dev
 
 ---
@@ -28,6 +29,9 @@
 | Entity gRPC route path | `egserver.GRPCServicePath` (`/entitygraph.v1.EntityService`) | Constant from SharedLib; registrar uses it when advertising entity HTTP routes to Cross |
 | Error types | `errors.go` at module root | All exported errors in one place; no scattered sentinels |
 | Value types | `models.go` at module root | Pure data structs; no methods except `AgencyDraftStatus.CanTransitionTo` |
+| Per-workflow `event_flows` | JSON-string property on `Workflow` and `DraftWorkflow` (not just `Agency`) | One flow chart per workflow; legacy monolithic `Agency.event_flows` retained as fallback (FEAT-20260609-002) |
+| Flow-file bundling location | Caller bundles `flows_<workflow.code>.json` siblings into agency.json before POST | Importer never touches the filesystem — `ImportDraft` consumes only the request body; the file-naming convention is enforced by the caller (e.g. `/dev-reimport-agency`) |
+| Bulk import path | `AgencyService.ImportDraft` writes Draft\* entities directly via `entitygraph.DataManager` | Bypasses `AgencyManager`; idempotent upsert on `(draft_ref_code, code)`; `auto_promote=true` performs CreateDraft+PromoteDraft in one round-trip |
 
 ---
 
@@ -68,7 +72,8 @@ CodeValdAgency/
 ---
 
 > Detailed specifications:
-> - **Interfaces & models** → [architecture-interfaces.md](architecture-interfaces.md)
+> - **Interfaces & gRPC surface** → [architecture-interfaces.md](architecture-interfaces.md)
+> - **Value types** → [architecture-models.md](architecture-models.md)
 > - **Graph topology & schema** → [architecture-graph.md](architecture-graph.md)
 > - **ArangoDB storage** → [architecture-storage.md](architecture-storage.md)
 > - **Lifecycle, flows & errors** → [architecture-flows.md](architecture-flows.md)

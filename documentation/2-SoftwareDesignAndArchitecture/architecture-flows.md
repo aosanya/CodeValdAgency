@@ -1,6 +1,9 @@
 # CodeValdAgency — Lifecycle, Flows & Errors
 
 > Part of the split architecture. Index: [architecture.md](architecture.md)
+>
+> gRPC service definitions and Cross registration live in
+> [architecture-interfaces.md § 5–6](architecture-interfaces.md).
 
 ---
 
@@ -181,7 +184,157 @@ record is never updated. Allowed transitions: `draft → active`,
 
 ---
 
-## 8. Error Types
+## 8. ImportDraft Flow
+
+`ImportDraft` is the bulk declarative path: a single agency.json/yaml body
+becomes (or refreshes) a complete open draft. Unlike the manager-driven flows
+above, the gRPC handler in `internal/server/import_server.go` writes
+`Draft*` entities directly via `entitygraph.DataManager` — it does **not**
+go through `AgencyManager`.
+
+```
+AgencyService.ImportDraft(ctx, body, auto_promote)
+    │
+    ├─ parse body as YAML (fallback JSON)
+    │     → InvalidArgument if both parses fail or agency.code is empty
+    │
+    ├─ 1. importSetDetails(ctx, agencyID, agencySpec, spec.EventFlows, auto_promote)
+    │       creates the live Agency entity on first import,
+    │       refreshes scalar fields (name, mission, vision, enabled),
+    │       writes the legacy top-level event_flows blob to Agency.event_flows
+    │       (deprecated — see § 8.2 below).
+    │       Returns ErrAgencyReadOnly if the agency is published AND
+    │       auto_promote=false. With auto_promote=true the handler creates
+    │       an open draft and promotes it after import.
+    │
+    ├─ 2. importEnsureDraft(ctx, agencyID, agencySpec) → draftID
+    │       finds the most recent open draft or creates a new one.
+    │
+    ├─ 3. for each role in spec.configured_roles:
+    │         upsert DraftConfiguredRole {draft_ref_code: draftID, code, ...}
+    │
+    ├─ 4. for each goal in spec.goals:
+    │         upsert DraftGoal {draft_ref_code: draftID, code, ...}
+    │
+    ├─ 5. for each workflow in spec.workflows:
+    │         marshal wf.event_flows (if non-nil) → JSON string
+    │             ─ this is FEAT-20260609-002: per-workflow event_flows
+    │             ─ deprecation warning emitted only when zero per-workflow
+    │               blocks were seen AND spec.EventFlows (top-level) was used
+    │         upsert DraftWorkflow {draft_ref_code: draftID, code, ...,
+    │                                event_flows: <json string>}
+    │         for each instruction in wf.instructions:
+    │             upsert DraftInstruction {draft_workflow_ref_code: wfID, ...}
+    │         for each work_item in wf.work_items:
+    │             upsert DraftWorkItem {draft_workflow_ref_code: wfID, ...}
+    │             for each instruction in work_item.instructions:
+    │                 upsert DraftInstruction {draft_work_item_ref_code: wiID, ...}
+    │             for each deliverable in work_item.deliverables:
+    │                 upsert DraftDeliverable {draft_work_item_ref_code: wiID,
+    │                                          reviewer_role_code: <role.code>, ...}
+    │
+    ├─ 6. for each work_plan in spec.work_plans:
+    │         upsert WorkPlan (live, not draft-scoped)
+    │
+    └─ if auto_promote:
+            PromoteDraft(draftID) — moves Draft* sub-graph to live
+                                    and writes AgencySnapshot.
+```
+
+All entity writes go through `entitygraph.DataManager.UpsertEntity`, the same
+idempotency path used by `EntityService.CreateEntity`. Re-running the import
+updates existing entities rather than creating duplicates.
+
+### 8.1 Per-Workflow `event_flows` Contract
+
+Each workflow entry in agency.json may carry an inline `event_flows` object:
+
+```json
+{
+  "workflows": [
+    {
+      "code": "planning",
+      "name": "Planning",
+      "event_flows": { "flows": [{ "name": "planning", "steps": [...] }] },
+      "work_items": [...]
+    }
+  ]
+}
+```
+
+`importWorkflowSpec.EventFlows` decodes this as `interface{}` (yaml.v3
+accepts both YAML mappings and JSON objects) and the importer re-marshals to
+a JSON string before storing on `DraftWorkflow.event_flows`. The field is
+optional — workflows authored before FEAT-20260609-002 have no per-workflow
+flows and the property is omitted.
+
+After `PromoteDraft`, `DraftWorkflow.event_flows` is copied verbatim onto the
+live `Workflow.event_flows` via `copyPropsExcluding("draft_ref_code")`.
+Readers (e.g. the flowchart renderer) consume the JSON string from
+`GetWorkflows().eventFlows`; legacy callers may fall back to
+`Agency.event_flows` when the workflow-level field is empty.
+
+### 8.2 Caller-Side Bundling Convention
+
+The agency.json author writes per-workflow content into separate
+`flows_<workflow.code>.json` sibling files. The importer does **not** touch
+the filesystem — it only consumes what arrives in the request body. The
+naming convention is enforced at bundling time by the caller (typically the
+`/dev-reimport-agency` skill):
+
+```python
+# pseudo — bundle helper
+for wf in agency["workflows"]:
+    flow_file = dir / f"flows_{wf['code']}.json"
+    if flow_file.exists():
+        wf["event_flows"] = json.loads(flow_file.read_text())
+post(f"{BASE}/agency/{agency_id}/import", json=agency)
+```
+
+The bundler must surface three states per workflow:
+
+| State | Cause | Implication |
+|---|---|---|
+| `bundled` | `flows_<code>.json` exists for workflow `<code>` | Will land in `DraftWorkflow.event_flows` |
+| `skip` | workflow `<code>` exists but no matching file | Legitimate when that workflow has no flows yet |
+| `orphan` | `flows_<x>.json` exists but no workflow has code `<x>` | Misnaming — file is silently ignored by the importer |
+
+> ⚠️ WARNING — `orphan` files are dropped on the floor by the importer. The
+> bundler MUST log them; otherwise authors waste cycles wondering why their
+> flows never appear on the live agency.
+
+### 8.3 Verification Surface
+
+Verify post-import by calling the per-workflow endpoint, not the legacy
+agency-level one:
+
+```
+GET /agency/{agencyId}/workflows
+→ { workflows: [{ name, eventFlows: "<json string>", ... }] }
+```
+
+Parsing `workflow.eventFlows` with `JSON.parse` yields the same
+`{ flows: [...] }` shape as the source `flows_<code>.json` file, byte-for-byte
+(modulo whitespace). `Agency.eventFlows` is only populated from the legacy
+top-level `event_flows` field and **must not** be relied on for per-workflow
+content.
+
+### 8.4 Idempotency & Republish Semantics
+
+- All Draft\* upserts key on `(draft_ref_code, code)` — re-running the import
+  with the same draft updates entities in place rather than creating
+  duplicates.
+- `auto_promote=true` against an already-published agency calls
+  `CreateDraft` + `PromoteDraft` once per import; structural fields are
+  frozen by the readonly guard but `event_flows`, `work_plans`, and similar
+  refresh-tolerant fields are always rewritten.
+- The deprecation warning for top-level `event_flows` (legacy monolithic
+  blob) fires only when **zero** workflows had inline `event_flows` — mixed
+  imports silently prefer the per-workflow path.
+
+---
+
+## 9. Error Types
 
 Defined in `errors.go` at the module root.
 
@@ -229,126 +382,3 @@ Entity-layer errors are mapped in `internal/server/errors.go` via `toEntityGRPCE
 | `entitygraph.ErrRelationshipCardinalityViolation` | `codes.FailedPrecondition` |
 | `entitygraph.ErrRequiredRelationshipViolation` | `codes.FailedPrecondition` |
 | all others | `codes.Internal` |
-
----
-
-## 6. gRPC Service Definition
-
-### AgencyService
-
-Manages the live agency, drafts, publications, and convenience accessors
-for Goals, Workflows, and ConfiguredRoles.
-
-```protobuf
-service AgencyService {
-  // Bootstrap
-  rpc SetAgencyDetails   (SetAgencyDetailsRequest)      returns (Agency);
-
-  // Live agency (read-only once published)
-  rpc GetAgency          (GetAgencyRequest)              returns (Agency);
-
-  // Drafts
-  rpc CreateDraft              (CreateDraftRequest)              returns (AgencyDraft);
-  rpc GetDraft                 (GetDraftRequest)                 returns (AgencyDraft);
-  rpc ListDrafts               (ListDraftsRequest)               returns (ListDraftsResponse);
-  rpc UpdateDraftDescription   (UpdateDraftDescriptionRequest)   returns (AgencyDraft);
-  rpc PromoteDraft             (PromoteDraftRequest)             returns (Agency);
-  rpc ArchiveDraft             (ArchiveDraftRequest)             returns (AgencyDraft);
-
-  // Publications
-  rpc PublishAgency      (PublishAgencyRequest)          returns (AgencyPublication);
-  rpc GetPublication     (GetPublicationRequest)         returns (AgencyPublication);
-  rpc ListPublications   (ListPublicationsRequest)       returns (ListPublicationsResponse);
-  rpc UpdatePublicationStatus (UpdatePublicationStatusRequest) returns (AgencyPublication);
-
-  // Convenience wrappers (live agency sub-resources)
-  rpc GetGoals           (GetGoalsRequest)               returns (GetGoalsResponse);
-  rpc GetWorkflows       (GetWorkflowsRequest)           returns (GetWorkflowsResponse);
-  rpc GetConfiguredRoles (GetConfiguredRolesRequest)     returns (GetConfiguredRolesResponse);
-}
-```
-
-### EntityService
-
-Provides generic CRUD for entities and relationships. HTTP routes for each
-entity type are generated by `schemaroutes.RoutesFromSchema` and wired here;
-CodeValdCross injects `type_id` (or `name` for relationships) via
-`ConstantBinding` at dispatch time, so a single RPC serves all entity types.
-
-Implemented in `internal/server/entity_server.go`.
-
-```protobuf
-service EntityService {
-  rpc ListEntities        (ListEntitiesRequest)        returns (ListEntitiesResponse);
-  rpc CreateEntity        (CreateEntityRequest)        returns (EntityItem);
-  rpc GetEntity           (GetEntityRequest)           returns (EntityItem);
-  rpc UpdateEntity        (UpdateEntityRequest)        returns (EntityItem);
-  rpc DeleteEntity        (DeleteEntityRequest)        returns (DeleteEntityResponse);
-  rpc ListRelationships   (ListRelationshipsRequest)   returns (ListRelationshipsResponse);
-  rpc CreateRelationship  (CreateRelationshipRequest)  returns (RelationshipItem);
-  rpc DeleteRelationship  (DeleteRelationshipRequest)  returns (DeleteRelationshipResponse);
-}
-```
-
-Generated Go stubs live in `gen/go/`. **Do not hand-edit generated files.**
-
----
-
-## 7. CodeValdCross Registration
-
-`cmd/main.go` starts a registration heartbeat on startup. The loop calls
-`OrchestratorService.Register` on CodeValdCross every **20 seconds**.
-
-Routes are assembled in `internal/registrar/registrar.go:agencyRoutes()` and
-fall into two groups:
-
-**Static routes** — fixed AgencyService methods:
-
-| Method | Pattern | gRPC method |
-|---|---|---|
-| `POST` | `/agency/{agencyId}` | `AgencyService/SetAgencyDetails` |
-| `GET`  | `/agency/{agencyId}` | `AgencyService/GetAgency` |
-| `POST` | `/agency/{agencyId}/drafts` | `AgencyService/CreateDraft` |
-| `GET`  | `/agency/{agencyId}/drafts` | `AgencyService/ListDrafts` |
-| `GET`  | `/agency/{agencyId}/drafts/{draftId}` | `AgencyService/GetDraft` |
-| `PUT`  | `/agency/{agencyId}/drafts/{draftId}` | `AgencyService/UpdateDraftDescription` |
-| `POST` | `/agency/{agencyId}/drafts/{draftId}/promote` | `AgencyService/PromoteDraft` |
-| `POST` | `/agency/{agencyId}/drafts/{draftId}/archive` | `AgencyService/ArchiveDraft` |
-| `POST` | `/agency/{agencyId}/publish` | `AgencyService/PublishAgency` |
-| `GET`  | `/agency/{agencyId}/publications` | `AgencyService/ListPublications` |
-| `GET`  | `/agency/{agencyId}/publications/{version}` | `AgencyService/GetPublication` |
-| `PUT`  | `/agency/{agencyId}/publications/{version}/status` | `AgencyService/UpdatePublicationStatus` |
-
-**Dynamic routes** — generated by `schemaroutes.RoutesFromSchema(DefaultAgencySchema(), "/agency/{agencyId}", "agencyId", "/codevaldagency.v1.EntityService")`. Each `TypeDefinition` with a `PathSegment` gets a full CRUD set pointing to the generic `EntityService` RPCs. CodeValdCross injects `type_id` via `ConstantBinding` so the HTTP caller never needs to set it:
-
-```json
-[
-  {
-    "method": "GET",
-    "pattern": "/agency/{agencyId}/goals",
-    "capability": "list_goal",
-    "grpc_method": "/codevaldagency.v1.EntityService/ListEntities",
-    "path_bindings": [{"url_param": "agencyId", "field": "agency_id"}],
-    "constant_bindings": [{"field": "type_id", "value": "Goal"}]
-  },
-  {
-    "method": "POST",
-    "pattern": "/agency/{agencyId}/goals",
-    "capability": "create_goal",
-    "grpc_method": "/codevaldagency.v1.EntityService/CreateEntity",
-    "path_bindings": [{"url_param": "agencyId", "field": "agency_id"}],
-    "constant_bindings": [{"field": "type_id", "value": "Goal"}]
-  },
-  {
-    "method": "GET",
-    "pattern": "/agency/{agencyId}/goals/{entityId}/agency",
-    "capability": "list_goal_agency",
-    "grpc_method": "/codevaldagency.v1.EntityService/ListRelationships",
-    "path_bindings": [{"url_param": "agencyId", "field": "agency_id"}, {"url_param": "entityId", "field": "entity_id"}],
-    "constant_bindings": [{"field": "name", "value": "agency"}]
-  }
-]
-```
-
-Repeat calls are the **liveness signal**. Cross expires registrations that
-stop heartbeating. If Cross is unavailable, the loop retries silently.

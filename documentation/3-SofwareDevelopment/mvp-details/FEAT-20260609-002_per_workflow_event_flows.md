@@ -1,5 +1,7 @@
 # FEAT-20260609-002 — Per-Workflow `event_flows` field + multi-file flow import (`flows_<workflow.code>.json`)
 
+> **Architecture:** see [architecture-flows.md § 8 ImportDraft Flow](../../2-SoftwareDesignAndArchitecture/architecture-flows.md), [architecture-models.md § Workflow](../../2-SoftwareDesignAndArchitecture/architecture-models.md), [architecture-storage.md § DraftWorkflow](../../2-SoftwareDesignAndArchitecture/architecture-storage.md), and [architecture-graph.md § Workflow](../../2-SoftwareDesignAndArchitecture/architecture-graph.md).
+
 **Status:** ✅ Done
 **Severity:** Medium — blocks the per-workflow-file convention already used in [CodeValdImplementations/Agencies/utility-app-builder/](../../../../CodeValdImplementations/Agencies/utility-app-builder/); a new [`flows_planning.json`](../../../../CodeValdImplementations/Agencies/utility-app-builder/flows_planning.json) sits on disk but is silently ignored by every consumer (live agency, flowchart renderer, scenario-12 QA)
 **Owner:** CodeValdAgency (schema + importer); coordinated touch in CodeValdImplementations (split agency.json), CodeValdAgencyFrontend (flowchart renderer)
@@ -65,6 +67,17 @@ In [`schema.go`](../../../schema.go) add an `event_flows` property to both `Work
 
 Keep `Agency.event_flows` as a deprecated-but-tolerated field for one release (legacy frontend may read it). The importer should populate both for backwards compat: union of all workflow flows → `Agency.event_flows`; per-workflow → each `Workflow.event_flows`.
 
+> ⚠️ **Implementation note (2026-06-10) — union-backfill dropped.** The
+> shipped importer in [`internal/server/import_server.go`](../../internal/server/import_server.go) does NOT union per-workflow
+> flows back into `Agency.event_flows`. `Agency.event_flows` is only written
+> from the legacy top-level `spec.event_flows` field; absent that, the live
+> `Agency.event_flows` stays empty even when every workflow has its own
+> blob. Consumers must read per-workflow `event_flows` directly (see
+> [architecture-flows.md § 8.3 Verification Surface](../../2-SoftwareDesignAndArchitecture/architecture-flows.md)). The
+> union-backfill was deemed unnecessary because the only legacy consumer
+> (the agency-level flowchart renderer) is being replaced by a per-workflow
+> renderer in the same release.
+
 ### Phase 2 — Models (CodeValdAgency)
 
 In [`models.go`](../../../models.go) add `EventFlows string` to:
@@ -111,7 +124,7 @@ The server-side importer does NOT touch the filesystem — it only consumes what
 
 ### Phase 6 — Implementations layer (CodeValdImplementations)
 
-- Delete `flows copy.json` after confirming `flows_planning.json` content reaches the live agency end-to-end.
+- Keep `flows copy.json` in place — it is the source-of-truth pool for all 27 flows; only a subset have been migrated into per-workflow `flows_<code>.json` files so far. Migrate slice-by-slice; do not delete until every flow has a per-workflow home.
 - Add `flows_implementation.json`, `flows_failure_recovery.json`, etc. once their workflows are designed.
 - Update the bundle helper / scenario-12 QA Step 1 to use the bundling pattern.
 

@@ -22,7 +22,18 @@ import (
 // implemented; the rest return zero values.
 type importFakeDM struct {
 	upserts []entitygraph.CreateEntityRequest
+	// seeded pre-populates the in-memory store so ListEntities/UpdateEntity can
+	// exercise the retirement / cleanup paths (BUG-20260610-002).
+	seeded []entitygraph.Entity
+	// updates records every UpdateEntity call so retirement tests can assert
+	// which entities were touched and what fields changed.
+	updates []importFakeUpdate
 	counter int
+}
+
+type importFakeUpdate struct {
+	EntityID   string
+	Properties map[string]any
 }
 
 func (f *importFakeDM) nextID() string {
@@ -45,16 +56,43 @@ func (f *importFakeDM) UpsertEntity(_ context.Context, req entitygraph.CreateEnt
 	}, nil
 }
 
-func (f *importFakeDM) ListEntities(_ context.Context, _ entitygraph.EntityFilter) ([]entitygraph.Entity, error) {
-	return nil, nil
+func (f *importFakeDM) ListEntities(_ context.Context, filter entitygraph.EntityFilter) ([]entitygraph.Entity, error) {
+	var out []entitygraph.Entity
+	for _, e := range f.seeded {
+		if filter.TypeID != "" && e.TypeID != filter.TypeID {
+			continue
+		}
+		if filter.AgencyID != "" && e.AgencyID != filter.AgencyID {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out, nil
 }
 
 func (f *importFakeDM) GetEntity(_ context.Context, _, _ string) (entitygraph.Entity, error) {
 	return entitygraph.Entity{}, errors.New("not implemented")
 }
 
-func (f *importFakeDM) UpdateEntity(_ context.Context, _, _ string, _ entitygraph.UpdateEntityRequest) (entitygraph.Entity, error) {
-	return entitygraph.Entity{}, errors.New("not implemented")
+func (f *importFakeDM) UpdateEntity(_ context.Context, _, entityID string, req entitygraph.UpdateEntityRequest) (entitygraph.Entity, error) {
+	f.updates = append(f.updates, importFakeUpdate{EntityID: entityID, Properties: req.Properties})
+	for i, e := range f.seeded {
+		if e.ID != entityID {
+			continue
+		}
+		// Merge req.Properties into the seeded entity so subsequent ListEntities
+		// reflects the update (idempotency tests).
+		merged := make(map[string]any, len(e.Properties)+len(req.Properties))
+		for k, v := range e.Properties {
+			merged[k] = v
+		}
+		for k, v := range req.Properties {
+			merged[k] = v
+		}
+		f.seeded[i].Properties = merged
+		return f.seeded[i], nil
+	}
+	return entitygraph.Entity{}, errors.New("update target not seeded")
 }
 
 func (f *importFakeDM) DeleteEntity(_ context.Context, _, _ string) error { return nil }
@@ -278,6 +316,73 @@ func TestImportDraft_EventFlows_StepsPersisted(t *testing.T) {
 	wf := findWorkflowUpsert(dm.upserts, "planning")
 	if wf == nil || wf.Properties["event_flows"] == nil {
 		t.Errorf("opaque event_flows blob should still be persisted on DraftWorkflow; got %+v", wf)
+	}
+}
+
+// TestImportDraft_RetiresLegacyWorkPlans verifies BUG-20260610-002 Phase 4:
+// when a re-import omits a work plan that exists in the previous publication,
+// the importer must disable it (enabled=false) so its handler stops competing
+// for triggers. Plans still in the incoming import are untouched; an already-
+// disabled legacy plan is also untouched (idempotent re-runs don't churn).
+func TestImportDraft_RetiresLegacyWorkPlans(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{setDetailsResult: codevaldagency.Agency{ID: "uab"}}
+	dm := &importFakeDM{
+		seeded: []entitygraph.Entity{
+			// Active legacy plan — should be retired.
+			{
+				ID: "wp-legacy-active", AgencyID: "uab", TypeID: "WorkPlan",
+				Properties: map[string]any{"code": "old-handler", "enabled": true},
+			},
+			// Already-disabled legacy plan — should be left alone (no churn).
+			{
+				ID: "wp-legacy-disabled", AgencyID: "uab", TypeID: "WorkPlan",
+				Properties: map[string]any{"code": "ancient-handler", "enabled": false},
+			},
+			// Plan that IS in the new import — must NOT be retired.
+			{
+				ID: "wp-kept", AgencyID: "uab", TypeID: "WorkPlan",
+				Properties: map[string]any{"code": "new-handler", "enabled": true},
+			},
+		},
+	}
+	srv := server.New(mgr, dm, nil)
+
+	body := `{
+	  "agency": {"code": "uab", "name": "Utility App Builder"},
+	  "work_plans": [
+	    {"code": "new-handler", "name": "New Handler", "trigger_topic": "task.assigned", "handler_service": "codevaldai", "enabled": true, "ordinality": 1}
+	  ]
+	}`
+
+	_, err := srv.ImportDraft(context.Background(), &pb.ImportDraftRequest{Body: body})
+	if err != nil {
+		t.Fatalf("ImportDraft returned error: %v", err)
+	}
+
+	// Exactly one UpdateEntity call expected — the active legacy plan.
+	if len(dm.updates) != 1 {
+		t.Fatalf("expected exactly 1 UpdateEntity call (active legacy plan); got %d: %+v", len(dm.updates), dm.updates)
+	}
+	u := dm.updates[0]
+	if u.EntityID != "wp-legacy-active" {
+		t.Errorf("retired the wrong entity: got %q, want %q", u.EntityID, "wp-legacy-active")
+	}
+	if enabled, ok := u.Properties["enabled"].(bool); !ok || enabled {
+		t.Errorf("retirement must set enabled=false; got %v", u.Properties["enabled"])
+	}
+
+	// New-handler must NOT be retired — verify it's NOT in the updates list.
+	for _, upd := range dm.updates {
+		if upd.EntityID == "wp-kept" {
+			t.Errorf("kept work plan %q should not be touched by retirement", upd.EntityID)
+		}
+	}
+	// Already-disabled legacy plan must NOT be touched (idempotency).
+	for _, upd := range dm.updates {
+		if upd.EntityID == "wp-legacy-disabled" {
+			t.Errorf("already-disabled legacy plan %q must not be re-touched", upd.EntityID)
+		}
 	}
 }
 

@@ -397,7 +397,9 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 
 	// 6. Work plans (live entities, not draft-scoped).
 	log.Printf("[ImportDraft] %s: upserting %d work plans", agencyID, len(spec.WorkPlans))
+	importedPlanCodes := make(map[string]struct{}, len(spec.WorkPlans))
 	for _, wp := range spec.WorkPlans {
+		importedPlanCodes[wp.Code] = struct{}{}
 		log.Printf("[ImportDraft] %s: upsert work plan code=%s", agencyID, wp.Code)
 		// Serialise FunctionParams: agency.json sends a JSON object; store as string.
 		var fpStr string
@@ -438,6 +440,18 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			log.Printf("[ImportDraft] %s: work plan %s upsert failed: %v", agencyID, wp.Code, err)
 			return nil, status.Errorf(codes.Internal, "ImportDraft %s: work plan %s: %v", agencyID, wp.Code, err)
 		}
+	}
+
+	// 6b. Retire legacy work plans (BUG-20260610-002). Any WorkPlan whose code
+	// was NOT in the incoming import is from a prior publication and must not
+	// keep firing — set enabled=false. We do not delete the entity; history /
+	// observability is preserved by leaving it discoverable.
+	if retired, rerr := s.retireLegacyWorkPlans(ctx, agencyID, importedPlanCodes); rerr != nil {
+		// Non-fatal: log and continue. The import succeeded in placing the new
+		// plans; failing to retire old ones is bad but recoverable on next run.
+		log.Printf("[ImportDraft] %s: retire legacy work plans failed: %v", agencyID, rerr)
+	} else if retired > 0 {
+		log.Printf("[ImportDraft] %s: retired %d legacy work plan(s) not in this import", agencyID, retired)
 	}
 
 	// 7. AI Providers (live entities, not draft-scoped).
@@ -599,6 +613,48 @@ func (s *Server) importEnsureDraft(ctx context.Context, agencyID string, a impor
 		return "", fmt.Errorf("importEnsureDraft: create: %w", err)
 	}
 	return entity.ID, nil
+}
+
+// retireLegacyWorkPlans disables every live WorkPlan whose `code` is not in
+// importedCodes. Called by ImportDraft after the new publication's plans are
+// upserted so prior-publication handlers stop competing for the same triggers
+// (BUG-20260610-002).
+//
+// Retirement is enabled=false, not delete — the entity stays discoverable for
+// observability and audit. Re-importing a plan whose code matches a retired
+// row re-enables it via UpsertEntity (UniqueKey on code).
+//
+// Returns the count of plans retired and any storage error.
+func (s *Server) retireLegacyWorkPlans(ctx context.Context, agencyID string, importedCodes map[string]struct{}) (int, error) {
+	live, err := s.dm.ListEntities(ctx, entitygraph.EntityFilter{
+		AgencyID: agencyID,
+		TypeID:   "WorkPlan",
+	})
+	if err != nil {
+		return 0, fmt.Errorf("list live work plans: %w", err)
+	}
+	retired := 0
+	for _, e := range live {
+		code, _ := e.Properties["code"].(string)
+		if code == "" {
+			continue
+		}
+		if _, kept := importedCodes[code]; kept {
+			continue
+		}
+		// Already disabled — skip (idempotent re-runs don't churn).
+		if enabled, _ := e.Properties["enabled"].(bool); !enabled {
+			continue
+		}
+		if _, uerr := s.dm.UpdateEntity(ctx, agencyID, e.ID, entitygraph.UpdateEntityRequest{
+			Properties: map[string]any{"enabled": false},
+		}); uerr != nil {
+			return retired, fmt.Errorf("retire work plan %s: %w", code, uerr)
+		}
+		log.Printf("[ImportDraft] %s: retired legacy work plan code=%s id=%s", agencyID, code, e.ID)
+		retired++
+	}
+	return retired, nil
 }
 
 // importUpsert upserts a single entity via UpsertEntity (idempotent by UniqueKey).

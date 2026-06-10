@@ -57,3 +57,11 @@ var ErrContextSourceNotFound = errors.New("context source not found")
 // [AgencyManager.UpdateWorkPlan] when trigger_topic or payload_condition is not
 // a valid Go regular expression.
 var ErrInvalidRegex = errors.New("invalid regex: trigger_topic or payload_condition is not a valid Go regexp")
+
+// ErrEventFlowStepNotFound is returned by [AgencyManager.LookupFlowStep] when no
+// live EventFlowStep entity in the active publication matches the lookup criteria.
+var ErrEventFlowStepNotFound = errors.New("event flow step not found")
+
+// ErrInvalidLookup is returned by [AgencyManager.LookupFlowStep] when none of the
+// lookup keys (handler_code, trigger_topic+consumer, code) are populated.
+var ErrInvalidLookup = errors.New("invalid lookup: at least one of handler_code, (trigger_topic + consumer), or code must be set")

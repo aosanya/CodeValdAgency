@@ -363,6 +363,29 @@ func agencyRoutes() []types.RouteInfo {
 				{URLParam: "workPlanId", Field: "work_plan_id"},
 			},
 		},
+
+		// ── EventFlowStep routes (BUG-20260610-002) ───────────────────────────────
+		// Downstream services consult these to learn what the active publication's
+		// flow steps declare — instead of re-parsing the opaque event_flows blob.
+		//
+		// GET /agency/{agencyId}/event-flow-steps?workflow_code=planning
+		// Returns every step in the active publication (filtered to one workflow
+		// when workflow_code is set).
+		{
+			Method:     "GET",
+			Pattern:    "/agency/{agencyId}/event-flow-steps",
+			Capability: "list_event_flow_steps",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/ListEventFlowSteps",
+		},
+		// GET /agency/{agencyId}/event-flow-steps/lookup?handler_code=...
+		// (or ?trigger_topic=...&consumer=..., or ?code=...)
+		// Returns a single step by one of the alternate lookup keys.
+		{
+			Method:     "GET",
+			Pattern:    "/agency/{agencyId}/event-flow-steps/lookup",
+			Capability: "lookup_event_flow_step",
+			GrpcMethod: "/codevaldagency.v1.AgencyService/LookupFlowStep",
+		},
 	}
 
 	// Dynamic routes: one CRUD set per TypeDefinition with a non-empty PathSegment.

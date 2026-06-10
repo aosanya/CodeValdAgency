@@ -3224,6 +3224,392 @@ func (x *RemoveContextSourceRequest) GetSourceId() string {
 	return ""
 }
 
+// EventFlowStep is the runtime projection of one step inside a workflow's
+// event_flows block. Downstream services consult these to learn what the
+// active publication declares for a given handler — instead of re-parsing
+// the opaque event_flows JSON blob or relying on hardcoded mappings.
+type EventFlowStep struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// entity ID (server-assigned, stable across re-imports of the same step).
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// code is the deterministic "<workflow_code>:<step_number>" identifier,
+	// e.g. "planning:1.1.1.2.1".
+	Code string `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	// workflow_code denormalises the parent workflow's code for fast filtering.
+	WorkflowCode string `protobuf:"bytes,3,opt,name=workflow_code,json=workflowCode,proto3" json:"workflow_code,omitempty"`
+	// step is the dotted step number from the source flow file (e.g. "1.1.1.2.1").
+	Step        string `protobuf:"bytes,4,opt,name=step,proto3" json:"step,omitempty"`
+	Name        string `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
+	Description string `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	// step_type is "start" | "function-call" | "handler" per FLOWS_FORMAT.md.
+	StepType string `protobuf:"bytes,7,opt,name=step_type,json=stepType,proto3" json:"step_type,omitempty"`
+	// trigger_topic is the Cross topic that fires this step. Empty for "start"
+	// steps (entry points, not triggered).
+	TriggerTopic     string `protobuf:"bytes,8,opt,name=trigger_topic,json=triggerTopic,proto3" json:"trigger_topic,omitempty"`
+	TriggerPublisher string `protobuf:"bytes,9,opt,name=trigger_publisher,json=triggerPublisher,proto3" json:"trigger_publisher,omitempty"`
+	// consumer is the CodeVald service that runs the step's handler
+	// (e.g. "codevaldai", "codevaldwork", "codevaldfunctions").
+	Consumer string `protobuf:"bytes,10,opt,name=consumer,proto3" json:"consumer,omitempty"`
+	// handler_code is the WorkPlan.code that executes the step — the lookup key
+	// Work uses to ask "what does the active publication declare for the step
+	// that produced this AgentRun?"
+	HandlerCode string `protobuf:"bytes,11,opt,name=handler_code,json=handlerCode,proto3" json:"handler_code,omitempty"`
+	// emits_topics is comma-separated list of Cross topics this step publishes
+	// on success.
+	EmitsTopics string `protobuf:"bytes,12,opt,name=emits_topics,json=emitsTopics,proto3" json:"emits_topics,omitempty"`
+	// on_error_emits_topics is comma-separated list of Cross topics emitted
+	// on error.
+	OnErrorEmitsTopics string `protobuf:"bytes,13,opt,name=on_error_emits_topics,json=onErrorEmitsTopics,proto3" json:"on_error_emits_topics,omitempty"`
+	Ordinality         int32  `protobuf:"varint,14,opt,name=ordinality,proto3" json:"ordinality,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *EventFlowStep) Reset() {
+	*x = EventFlowStep{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventFlowStep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventFlowStep) ProtoMessage() {}
+
+func (x *EventFlowStep) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventFlowStep.ProtoReflect.Descriptor instead.
+func (*EventFlowStep) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *EventFlowStep) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetWorkflowCode() string {
+	if x != nil {
+		return x.WorkflowCode
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetStep() string {
+	if x != nil {
+		return x.Step
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetStepType() string {
+	if x != nil {
+		return x.StepType
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetTriggerTopic() string {
+	if x != nil {
+		return x.TriggerTopic
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetTriggerPublisher() string {
+	if x != nil {
+		return x.TriggerPublisher
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetConsumer() string {
+	if x != nil {
+		return x.Consumer
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetHandlerCode() string {
+	if x != nil {
+		return x.HandlerCode
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetEmitsTopics() string {
+	if x != nil {
+		return x.EmitsTopics
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetOnErrorEmitsTopics() string {
+	if x != nil {
+		return x.OnErrorEmitsTopics
+	}
+	return ""
+}
+
+func (x *EventFlowStep) GetOrdinality() int32 {
+	if x != nil {
+		return x.Ordinality
+	}
+	return 0
+}
+
+// LookupFlowStepRequest finds a step in the active publication.
+//
+// Exactly one of {handler_code, trigger_topic+consumer, code} must be set —
+// they are alternate ways to identify the step, used by different callers:
+//   - handler_code is the most common: Work resolves "this AgentRun came from
+//     handler X — what step is that?"
+//   - trigger_topic+consumer answers "for an event on topic T routed to
+//     service S, which step runs?"
+//   - code is the deterministic "<workflow>:<step>" identifier, used by
+//     internal/admin callers.
+//
+// Returns NOT_FOUND if no matching step exists in the active publication.
+type LookupFlowStepRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	HandlerCode   string                 `protobuf:"bytes,1,opt,name=handler_code,json=handlerCode,proto3" json:"handler_code,omitempty"`
+	TriggerTopic  string                 `protobuf:"bytes,2,opt,name=trigger_topic,json=triggerTopic,proto3" json:"trigger_topic,omitempty"`
+	Consumer      string                 `protobuf:"bytes,3,opt,name=consumer,proto3" json:"consumer,omitempty"`
+	Code          string                 `protobuf:"bytes,4,opt,name=code,proto3" json:"code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LookupFlowStepRequest) Reset() {
+	*x = LookupFlowStepRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LookupFlowStepRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LookupFlowStepRequest) ProtoMessage() {}
+
+func (x *LookupFlowStepRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LookupFlowStepRequest.ProtoReflect.Descriptor instead.
+func (*LookupFlowStepRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *LookupFlowStepRequest) GetHandlerCode() string {
+	if x != nil {
+		return x.HandlerCode
+	}
+	return ""
+}
+
+func (x *LookupFlowStepRequest) GetTriggerTopic() string {
+	if x != nil {
+		return x.TriggerTopic
+	}
+	return ""
+}
+
+func (x *LookupFlowStepRequest) GetConsumer() string {
+	if x != nil {
+		return x.Consumer
+	}
+	return ""
+}
+
+func (x *LookupFlowStepRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+// LookupFlowStepResponse returns the matched step.
+type LookupFlowStepResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Step          *EventFlowStep         `protobuf:"bytes,1,opt,name=step,proto3" json:"step,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LookupFlowStepResponse) Reset() {
+	*x = LookupFlowStepResponse{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LookupFlowStepResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LookupFlowStepResponse) ProtoMessage() {}
+
+func (x *LookupFlowStepResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LookupFlowStepResponse.ProtoReflect.Descriptor instead.
+func (*LookupFlowStepResponse) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *LookupFlowStepResponse) GetStep() *EventFlowStep {
+	if x != nil {
+		return x.Step
+	}
+	return nil
+}
+
+// ListEventFlowStepsRequest returns every step in the active publication,
+// optionally filtered to one workflow.
+type ListEventFlowStepsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// workflow_code optionally filters to a single workflow (e.g. "planning").
+	// Empty matches all workflows.
+	WorkflowCode  string `protobuf:"bytes,1,opt,name=workflow_code,json=workflowCode,proto3" json:"workflow_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListEventFlowStepsRequest) Reset() {
+	*x = ListEventFlowStepsRequest{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListEventFlowStepsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListEventFlowStepsRequest) ProtoMessage() {}
+
+func (x *ListEventFlowStepsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListEventFlowStepsRequest.ProtoReflect.Descriptor instead.
+func (*ListEventFlowStepsRequest) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *ListEventFlowStepsRequest) GetWorkflowCode() string {
+	if x != nil {
+		return x.WorkflowCode
+	}
+	return ""
+}
+
+type ListEventFlowStepsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Steps         []*EventFlowStep       `protobuf:"bytes,1,rep,name=steps,proto3" json:"steps,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListEventFlowStepsResponse) Reset() {
+	*x = ListEventFlowStepsResponse{}
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListEventFlowStepsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListEventFlowStepsResponse) ProtoMessage() {}
+
+func (x *ListEventFlowStepsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListEventFlowStepsResponse.ProtoReflect.Descriptor instead.
+func (*ListEventFlowStepsResponse) Descriptor() ([]byte, []int) {
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *ListEventFlowStepsResponse) GetSteps() []*EventFlowStep {
+	if x != nil {
+		return x.Steps
+	}
+	return nil
+}
+
 // MatchWorkPlansRequest carries the Cross event topic and raw JSON payload to match.
 type MatchWorkPlansRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -3237,7 +3623,7 @@ type MatchWorkPlansRequest struct {
 
 func (x *MatchWorkPlansRequest) Reset() {
 	*x = MatchWorkPlansRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[46]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3249,7 +3635,7 @@ func (x *MatchWorkPlansRequest) String() string {
 func (*MatchWorkPlansRequest) ProtoMessage() {}
 
 func (x *MatchWorkPlansRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[46]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3262,7 +3648,7 @@ func (x *MatchWorkPlansRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchWorkPlansRequest.ProtoReflect.Descriptor instead.
 func (*MatchWorkPlansRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{46}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *MatchWorkPlansRequest) GetTopic() string {
@@ -3289,7 +3675,7 @@ type MatchWorkPlansResponse struct {
 
 func (x *MatchWorkPlansResponse) Reset() {
 	*x = MatchWorkPlansResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[47]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3301,7 +3687,7 @@ func (x *MatchWorkPlansResponse) String() string {
 func (*MatchWorkPlansResponse) ProtoMessage() {}
 
 func (x *MatchWorkPlansResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[47]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3314,7 +3700,7 @@ func (x *MatchWorkPlansResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchWorkPlansResponse.ProtoReflect.Descriptor instead.
 func (*MatchWorkPlansResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{47}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *MatchWorkPlansResponse) GetMatches() []*WorkPlanMatch {
@@ -3342,7 +3728,7 @@ type ImportDraftRequest struct {
 
 func (x *ImportDraftRequest) Reset() {
 	*x = ImportDraftRequest{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[48]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3354,7 +3740,7 @@ func (x *ImportDraftRequest) String() string {
 func (*ImportDraftRequest) ProtoMessage() {}
 
 func (x *ImportDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[48]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3367,7 +3753,7 @@ func (x *ImportDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportDraftRequest.ProtoReflect.Descriptor instead.
 func (*ImportDraftRequest) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{48}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *ImportDraftRequest) GetBody() string {
@@ -3403,7 +3789,7 @@ type ImportDraftResponse struct {
 
 func (x *ImportDraftResponse) Reset() {
 	*x = ImportDraftResponse{}
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[49]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3415,7 +3801,7 @@ func (x *ImportDraftResponse) String() string {
 func (*ImportDraftResponse) ProtoMessage() {}
 
 func (x *ImportDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_codevaldagency_v1_agency_proto_msgTypes[49]
+	mi := &file_codevaldagency_v1_agency_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3428,7 +3814,7 @@ func (x *ImportDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportDraftResponse.ProtoReflect.Descriptor instead.
 func (*ImportDraftResponse) Descriptor() ([]byte, []int) {
-	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{49}
+	return file_codevaldagency_v1_agency_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *ImportDraftResponse) GetAgencyId() string {
@@ -3700,7 +4086,36 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x1aRemoveContextSourceRequest\x12 \n" +
 	"\fwork_plan_id\x18\x01 \x01(\tR\n" +
 	"workPlanId\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"G\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"\xc6\x03\n" +
+	"\rEventFlowStep\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12#\n" +
+	"\rworkflow_code\x18\x03 \x01(\tR\fworkflowCode\x12\x12\n" +
+	"\x04step\x18\x04 \x01(\tR\x04step\x12\x12\n" +
+	"\x04name\x18\x05 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\x12\x1b\n" +
+	"\tstep_type\x18\a \x01(\tR\bstepType\x12#\n" +
+	"\rtrigger_topic\x18\b \x01(\tR\ftriggerTopic\x12+\n" +
+	"\x11trigger_publisher\x18\t \x01(\tR\x10triggerPublisher\x12\x1a\n" +
+	"\bconsumer\x18\n" +
+	" \x01(\tR\bconsumer\x12!\n" +
+	"\fhandler_code\x18\v \x01(\tR\vhandlerCode\x12!\n" +
+	"\femits_topics\x18\f \x01(\tR\vemitsTopics\x121\n" +
+	"\x15on_error_emits_topics\x18\r \x01(\tR\x12onErrorEmitsTopics\x12\x1e\n" +
+	"\n" +
+	"ordinality\x18\x0e \x01(\x05R\n" +
+	"ordinality\"\x8f\x01\n" +
+	"\x15LookupFlowStepRequest\x12!\n" +
+	"\fhandler_code\x18\x01 \x01(\tR\vhandlerCode\x12#\n" +
+	"\rtrigger_topic\x18\x02 \x01(\tR\ftriggerTopic\x12\x1a\n" +
+	"\bconsumer\x18\x03 \x01(\tR\bconsumer\x12\x12\n" +
+	"\x04code\x18\x04 \x01(\tR\x04code\"N\n" +
+	"\x16LookupFlowStepResponse\x124\n" +
+	"\x04step\x18\x01 \x01(\v2 .codevaldagency.v1.EventFlowStepR\x04step\"@\n" +
+	"\x19ListEventFlowStepsRequest\x12#\n" +
+	"\rworkflow_code\x18\x01 \x01(\tR\fworkflowCode\"T\n" +
+	"\x1aListEventFlowStepsResponse\x126\n" +
+	"\x05steps\x18\x01 \x03(\v2 .codevaldagency.v1.EventFlowStepR\x05steps\"G\n" +
 	"\x15MatchWorkPlansRequest\x12\x14\n" +
 	"\x05topic\x18\x01 \x01(\tR\x05topic\x12\x18\n" +
 	"\apayload\x18\x02 \x01(\tR\apayload\"T\n" +
@@ -3728,7 +4143,7 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x16ACTOR_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10ACTOR_TYPE_HUMAN\x10\x01\x12\x11\n" +
 	"\rACTOR_TYPE_AI\x10\x02\x12\x15\n" +
-	"\x11ACTOR_TYPE_EITHER\x10\x032\xb1\x13\n" +
+	"\x11ACTOR_TYPE_EITHER\x10\x032\x8b\x15\n" +
 	"\rAgencyService\x12Y\n" +
 	"\x10SetAgencyDetails\x12*.codevaldagency.v1.SetAgencyDetailsRequest\x1a\x19.codevaldagency.v1.Agency\x12K\n" +
 	"\tGetAgency\x12#.codevaldagency.v1.GetAgencyRequest\x1a\x19.codevaldagency.v1.Agency\x12^\n" +
@@ -3756,7 +4171,9 @@ const file_codevaldagency_v1_agency_proto_rawDesc = "" +
 	"\x10AddContextSource\x12*.codevaldagency.v1.AddContextSourceRequest\x1a .codevaldagency.v1.ContextSource\x12q\n" +
 	"\x12ListContextSources\x12,.codevaldagency.v1.ListContextSourcesRequest\x1a-.codevaldagency.v1.ListContextSourcesResponse\x12\\\n" +
 	"\x13RemoveContextSource\x12-.codevaldagency.v1.RemoveContextSourceRequest\x1a\x16.google.protobuf.Empty\x12e\n" +
-	"\x0eMatchWorkPlans\x12(.codevaldagency.v1.MatchWorkPlansRequest\x1a).codevaldagency.v1.MatchWorkPlansResponseBMZKgithub.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1;codevaldagencyv1b\x06proto3"
+	"\x0eMatchWorkPlans\x12(.codevaldagency.v1.MatchWorkPlansRequest\x1a).codevaldagency.v1.MatchWorkPlansResponse\x12e\n" +
+	"\x0eLookupFlowStep\x12(.codevaldagency.v1.LookupFlowStepRequest\x1a).codevaldagency.v1.LookupFlowStepResponse\x12q\n" +
+	"\x12ListEventFlowSteps\x12,.codevaldagency.v1.ListEventFlowStepsRequest\x1a-.codevaldagency.v1.ListEventFlowStepsResponseBMZKgithub.com/aosanya/CodeValdAgency/gen/go/codevaldagency/v1;codevaldagencyv1b\x06proto3"
 
 var (
 	file_codevaldagency_v1_agency_proto_rawDescOnce sync.Once
@@ -3771,7 +4188,7 @@ func file_codevaldagency_v1_agency_proto_rawDescGZIP() []byte {
 }
 
 var file_codevaldagency_v1_agency_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_codevaldagency_v1_agency_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
+var file_codevaldagency_v1_agency_proto_msgTypes = make([]protoimpl.MessageInfo, 55)
 var file_codevaldagency_v1_agency_proto_goTypes = []any{
 	(AgencyDraftStatus)(0),                 // 0: codevaldagency.v1.AgencyDraftStatus
 	(RACILabel)(0),                         // 1: codevaldagency.v1.RACILabel
@@ -3822,12 +4239,17 @@ var file_codevaldagency_v1_agency_proto_goTypes = []any{
 	(*ListContextSourcesRequest)(nil),      // 46: codevaldagency.v1.ListContextSourcesRequest
 	(*ListContextSourcesResponse)(nil),     // 47: codevaldagency.v1.ListContextSourcesResponse
 	(*RemoveContextSourceRequest)(nil),     // 48: codevaldagency.v1.RemoveContextSourceRequest
-	(*MatchWorkPlansRequest)(nil),          // 49: codevaldagency.v1.MatchWorkPlansRequest
-	(*MatchWorkPlansResponse)(nil),         // 50: codevaldagency.v1.MatchWorkPlansResponse
-	(*ImportDraftRequest)(nil),             // 51: codevaldagency.v1.ImportDraftRequest
-	(*ImportDraftResponse)(nil),            // 52: codevaldagency.v1.ImportDraftResponse
-	(*timestamppb.Timestamp)(nil),          // 53: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                  // 54: google.protobuf.Empty
+	(*EventFlowStep)(nil),                  // 49: codevaldagency.v1.EventFlowStep
+	(*LookupFlowStepRequest)(nil),          // 50: codevaldagency.v1.LookupFlowStepRequest
+	(*LookupFlowStepResponse)(nil),         // 51: codevaldagency.v1.LookupFlowStepResponse
+	(*ListEventFlowStepsRequest)(nil),      // 52: codevaldagency.v1.ListEventFlowStepsRequest
+	(*ListEventFlowStepsResponse)(nil),     // 53: codevaldagency.v1.ListEventFlowStepsResponse
+	(*MatchWorkPlansRequest)(nil),          // 54: codevaldagency.v1.MatchWorkPlansRequest
+	(*MatchWorkPlansResponse)(nil),         // 55: codevaldagency.v1.MatchWorkPlansResponse
+	(*ImportDraftRequest)(nil),             // 56: codevaldagency.v1.ImportDraftRequest
+	(*ImportDraftResponse)(nil),            // 57: codevaldagency.v1.ImportDraftResponse
+	(*timestamppb.Timestamp)(nil),          // 58: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                  // 59: google.protobuf.Empty
 }
 var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	1,  // 0: codevaldagency.v1.RoleAssignment.raci:type_name -> codevaldagency.v1.RACILabel
@@ -3837,18 +4259,18 @@ var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	7,  // 4: codevaldagency.v1.Agency.goals:type_name -> codevaldagency.v1.Goal
 	6,  // 5: codevaldagency.v1.Agency.workflows:type_name -> codevaldagency.v1.Workflow
 	4,  // 6: codevaldagency.v1.Agency.configured_roles:type_name -> codevaldagency.v1.ConfiguredRole
-	53, // 7: codevaldagency.v1.Agency.created_at:type_name -> google.protobuf.Timestamp
-	53, // 8: codevaldagency.v1.Agency.updated_at:type_name -> google.protobuf.Timestamp
+	58, // 7: codevaldagency.v1.Agency.created_at:type_name -> google.protobuf.Timestamp
+	58, // 8: codevaldagency.v1.Agency.updated_at:type_name -> google.protobuf.Timestamp
 	8,  // 9: codevaldagency.v1.AgencyPublication.agency:type_name -> codevaldagency.v1.Agency
-	53, // 10: codevaldagency.v1.AgencyPublication.published_at:type_name -> google.protobuf.Timestamp
+	58, // 10: codevaldagency.v1.AgencyPublication.published_at:type_name -> google.protobuf.Timestamp
 	11, // 11: codevaldagency.v1.ListPublicationsResponse.publications:type_name -> codevaldagency.v1.AgencyPublication
 	7,  // 12: codevaldagency.v1.GetGoalsResponse.goals:type_name -> codevaldagency.v1.Goal
 	6,  // 13: codevaldagency.v1.GetWorkflowsResponse.workflows:type_name -> codevaldagency.v1.Workflow
 	4,  // 14: codevaldagency.v1.GetConfiguredRolesResponse.configured_roles:type_name -> codevaldagency.v1.ConfiguredRole
 	5,  // 15: codevaldagency.v1.GetWorkItemsResponse.work_items:type_name -> codevaldagency.v1.WorkItem
 	0,  // 16: codevaldagency.v1.AgencyDraft.status:type_name -> codevaldagency.v1.AgencyDraftStatus
-	53, // 17: codevaldagency.v1.AgencyDraft.created_at:type_name -> google.protobuf.Timestamp
-	53, // 18: codevaldagency.v1.AgencyDraft.updated_at:type_name -> google.protobuf.Timestamp
+	58, // 17: codevaldagency.v1.AgencyDraft.created_at:type_name -> google.protobuf.Timestamp
+	58, // 18: codevaldagency.v1.AgencyDraft.updated_at:type_name -> google.protobuf.Timestamp
 	25, // 19: codevaldagency.v1.ListDraftsResponse.drafts:type_name -> codevaldagency.v1.AgencyDraft
 	34, // 20: codevaldagency.v1.ContextSource.git:type_name -> codevaldagency.v1.GitContextSource
 	35, // 21: codevaldagency.v1.ContextSource.comm:type_name -> codevaldagency.v1.CommContextSource
@@ -3860,64 +4282,70 @@ var file_codevaldagency_v1_agency_proto_depIdxs = []int32{
 	35, // 27: codevaldagency.v1.AddContextSourceRequest.comm:type_name -> codevaldagency.v1.CommContextSource
 	36, // 28: codevaldagency.v1.AddContextSourceRequest.work:type_name -> codevaldagency.v1.WorkContextSource
 	37, // 29: codevaldagency.v1.ListContextSourcesResponse.context_sources:type_name -> codevaldagency.v1.ContextSource
-	38, // 30: codevaldagency.v1.MatchWorkPlansResponse.matches:type_name -> codevaldagency.v1.WorkPlanMatch
-	10, // 31: codevaldagency.v1.AgencyService.SetAgencyDetails:input_type -> codevaldagency.v1.SetAgencyDetailsRequest
-	9,  // 32: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
-	12, // 33: codevaldagency.v1.AgencyService.PublishAgency:input_type -> codevaldagency.v1.PublishAgencyRequest
-	13, // 34: codevaldagency.v1.AgencyService.GetPublication:input_type -> codevaldagency.v1.GetPublicationRequest
-	14, // 35: codevaldagency.v1.AgencyService.ListPublications:input_type -> codevaldagency.v1.ListPublicationsRequest
-	16, // 36: codevaldagency.v1.AgencyService.UpdatePublicationStatus:input_type -> codevaldagency.v1.UpdatePublicationStatusRequest
-	17, // 37: codevaldagency.v1.AgencyService.GetGoals:input_type -> codevaldagency.v1.GetGoalsRequest
-	19, // 38: codevaldagency.v1.AgencyService.GetWorkflows:input_type -> codevaldagency.v1.GetWorkflowsRequest
-	21, // 39: codevaldagency.v1.AgencyService.GetConfiguredRoles:input_type -> codevaldagency.v1.GetConfiguredRolesRequest
-	23, // 40: codevaldagency.v1.AgencyService.GetWorkItems:input_type -> codevaldagency.v1.GetWorkItemsRequest
-	26, // 41: codevaldagency.v1.AgencyService.CreateDraft:input_type -> codevaldagency.v1.CreateDraftRequest
-	27, // 42: codevaldagency.v1.AgencyService.GetDraft:input_type -> codevaldagency.v1.GetDraftRequest
-	28, // 43: codevaldagency.v1.AgencyService.ListDrafts:input_type -> codevaldagency.v1.ListDraftsRequest
-	30, // 44: codevaldagency.v1.AgencyService.UpdateDraftDescription:input_type -> codevaldagency.v1.UpdateDraftDescriptionRequest
-	31, // 45: codevaldagency.v1.AgencyService.PromoteDraft:input_type -> codevaldagency.v1.PromoteDraftRequest
-	32, // 46: codevaldagency.v1.AgencyService.ArchiveDraft:input_type -> codevaldagency.v1.ArchiveDraftRequest
-	51, // 47: codevaldagency.v1.AgencyService.ImportDraft:input_type -> codevaldagency.v1.ImportDraftRequest
-	39, // 48: codevaldagency.v1.AgencyService.CreateWorkPlan:input_type -> codevaldagency.v1.CreateWorkPlanRequest
-	40, // 49: codevaldagency.v1.AgencyService.GetWorkPlan:input_type -> codevaldagency.v1.GetWorkPlanRequest
-	41, // 50: codevaldagency.v1.AgencyService.ListWorkPlans:input_type -> codevaldagency.v1.ListWorkPlansRequest
-	43, // 51: codevaldagency.v1.AgencyService.UpdateWorkPlan:input_type -> codevaldagency.v1.UpdateWorkPlanRequest
-	44, // 52: codevaldagency.v1.AgencyService.DeleteWorkPlan:input_type -> codevaldagency.v1.DeleteWorkPlanRequest
-	45, // 53: codevaldagency.v1.AgencyService.AddContextSource:input_type -> codevaldagency.v1.AddContextSourceRequest
-	46, // 54: codevaldagency.v1.AgencyService.ListContextSources:input_type -> codevaldagency.v1.ListContextSourcesRequest
-	48, // 55: codevaldagency.v1.AgencyService.RemoveContextSource:input_type -> codevaldagency.v1.RemoveContextSourceRequest
-	49, // 56: codevaldagency.v1.AgencyService.MatchWorkPlans:input_type -> codevaldagency.v1.MatchWorkPlansRequest
-	8,  // 57: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
-	8,  // 58: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
-	11, // 59: codevaldagency.v1.AgencyService.PublishAgency:output_type -> codevaldagency.v1.AgencyPublication
-	11, // 60: codevaldagency.v1.AgencyService.GetPublication:output_type -> codevaldagency.v1.AgencyPublication
-	15, // 61: codevaldagency.v1.AgencyService.ListPublications:output_type -> codevaldagency.v1.ListPublicationsResponse
-	11, // 62: codevaldagency.v1.AgencyService.UpdatePublicationStatus:output_type -> codevaldagency.v1.AgencyPublication
-	18, // 63: codevaldagency.v1.AgencyService.GetGoals:output_type -> codevaldagency.v1.GetGoalsResponse
-	20, // 64: codevaldagency.v1.AgencyService.GetWorkflows:output_type -> codevaldagency.v1.GetWorkflowsResponse
-	22, // 65: codevaldagency.v1.AgencyService.GetConfiguredRoles:output_type -> codevaldagency.v1.GetConfiguredRolesResponse
-	24, // 66: codevaldagency.v1.AgencyService.GetWorkItems:output_type -> codevaldagency.v1.GetWorkItemsResponse
-	25, // 67: codevaldagency.v1.AgencyService.CreateDraft:output_type -> codevaldagency.v1.AgencyDraft
-	25, // 68: codevaldagency.v1.AgencyService.GetDraft:output_type -> codevaldagency.v1.AgencyDraft
-	29, // 69: codevaldagency.v1.AgencyService.ListDrafts:output_type -> codevaldagency.v1.ListDraftsResponse
-	25, // 70: codevaldagency.v1.AgencyService.UpdateDraftDescription:output_type -> codevaldagency.v1.AgencyDraft
-	8,  // 71: codevaldagency.v1.AgencyService.PromoteDraft:output_type -> codevaldagency.v1.Agency
-	25, // 72: codevaldagency.v1.AgencyService.ArchiveDraft:output_type -> codevaldagency.v1.AgencyDraft
-	52, // 73: codevaldagency.v1.AgencyService.ImportDraft:output_type -> codevaldagency.v1.ImportDraftResponse
-	33, // 74: codevaldagency.v1.AgencyService.CreateWorkPlan:output_type -> codevaldagency.v1.WorkPlan
-	33, // 75: codevaldagency.v1.AgencyService.GetWorkPlan:output_type -> codevaldagency.v1.WorkPlan
-	42, // 76: codevaldagency.v1.AgencyService.ListWorkPlans:output_type -> codevaldagency.v1.ListWorkPlansResponse
-	33, // 77: codevaldagency.v1.AgencyService.UpdateWorkPlan:output_type -> codevaldagency.v1.WorkPlan
-	54, // 78: codevaldagency.v1.AgencyService.DeleteWorkPlan:output_type -> google.protobuf.Empty
-	37, // 79: codevaldagency.v1.AgencyService.AddContextSource:output_type -> codevaldagency.v1.ContextSource
-	47, // 80: codevaldagency.v1.AgencyService.ListContextSources:output_type -> codevaldagency.v1.ListContextSourcesResponse
-	54, // 81: codevaldagency.v1.AgencyService.RemoveContextSource:output_type -> google.protobuf.Empty
-	50, // 82: codevaldagency.v1.AgencyService.MatchWorkPlans:output_type -> codevaldagency.v1.MatchWorkPlansResponse
-	57, // [57:83] is the sub-list for method output_type
-	31, // [31:57] is the sub-list for method input_type
-	31, // [31:31] is the sub-list for extension type_name
-	31, // [31:31] is the sub-list for extension extendee
-	0,  // [0:31] is the sub-list for field type_name
+	49, // 30: codevaldagency.v1.LookupFlowStepResponse.step:type_name -> codevaldagency.v1.EventFlowStep
+	49, // 31: codevaldagency.v1.ListEventFlowStepsResponse.steps:type_name -> codevaldagency.v1.EventFlowStep
+	38, // 32: codevaldagency.v1.MatchWorkPlansResponse.matches:type_name -> codevaldagency.v1.WorkPlanMatch
+	10, // 33: codevaldagency.v1.AgencyService.SetAgencyDetails:input_type -> codevaldagency.v1.SetAgencyDetailsRequest
+	9,  // 34: codevaldagency.v1.AgencyService.GetAgency:input_type -> codevaldagency.v1.GetAgencyRequest
+	12, // 35: codevaldagency.v1.AgencyService.PublishAgency:input_type -> codevaldagency.v1.PublishAgencyRequest
+	13, // 36: codevaldagency.v1.AgencyService.GetPublication:input_type -> codevaldagency.v1.GetPublicationRequest
+	14, // 37: codevaldagency.v1.AgencyService.ListPublications:input_type -> codevaldagency.v1.ListPublicationsRequest
+	16, // 38: codevaldagency.v1.AgencyService.UpdatePublicationStatus:input_type -> codevaldagency.v1.UpdatePublicationStatusRequest
+	17, // 39: codevaldagency.v1.AgencyService.GetGoals:input_type -> codevaldagency.v1.GetGoalsRequest
+	19, // 40: codevaldagency.v1.AgencyService.GetWorkflows:input_type -> codevaldagency.v1.GetWorkflowsRequest
+	21, // 41: codevaldagency.v1.AgencyService.GetConfiguredRoles:input_type -> codevaldagency.v1.GetConfiguredRolesRequest
+	23, // 42: codevaldagency.v1.AgencyService.GetWorkItems:input_type -> codevaldagency.v1.GetWorkItemsRequest
+	26, // 43: codevaldagency.v1.AgencyService.CreateDraft:input_type -> codevaldagency.v1.CreateDraftRequest
+	27, // 44: codevaldagency.v1.AgencyService.GetDraft:input_type -> codevaldagency.v1.GetDraftRequest
+	28, // 45: codevaldagency.v1.AgencyService.ListDrafts:input_type -> codevaldagency.v1.ListDraftsRequest
+	30, // 46: codevaldagency.v1.AgencyService.UpdateDraftDescription:input_type -> codevaldagency.v1.UpdateDraftDescriptionRequest
+	31, // 47: codevaldagency.v1.AgencyService.PromoteDraft:input_type -> codevaldagency.v1.PromoteDraftRequest
+	32, // 48: codevaldagency.v1.AgencyService.ArchiveDraft:input_type -> codevaldagency.v1.ArchiveDraftRequest
+	56, // 49: codevaldagency.v1.AgencyService.ImportDraft:input_type -> codevaldagency.v1.ImportDraftRequest
+	39, // 50: codevaldagency.v1.AgencyService.CreateWorkPlan:input_type -> codevaldagency.v1.CreateWorkPlanRequest
+	40, // 51: codevaldagency.v1.AgencyService.GetWorkPlan:input_type -> codevaldagency.v1.GetWorkPlanRequest
+	41, // 52: codevaldagency.v1.AgencyService.ListWorkPlans:input_type -> codevaldagency.v1.ListWorkPlansRequest
+	43, // 53: codevaldagency.v1.AgencyService.UpdateWorkPlan:input_type -> codevaldagency.v1.UpdateWorkPlanRequest
+	44, // 54: codevaldagency.v1.AgencyService.DeleteWorkPlan:input_type -> codevaldagency.v1.DeleteWorkPlanRequest
+	45, // 55: codevaldagency.v1.AgencyService.AddContextSource:input_type -> codevaldagency.v1.AddContextSourceRequest
+	46, // 56: codevaldagency.v1.AgencyService.ListContextSources:input_type -> codevaldagency.v1.ListContextSourcesRequest
+	48, // 57: codevaldagency.v1.AgencyService.RemoveContextSource:input_type -> codevaldagency.v1.RemoveContextSourceRequest
+	54, // 58: codevaldagency.v1.AgencyService.MatchWorkPlans:input_type -> codevaldagency.v1.MatchWorkPlansRequest
+	50, // 59: codevaldagency.v1.AgencyService.LookupFlowStep:input_type -> codevaldagency.v1.LookupFlowStepRequest
+	52, // 60: codevaldagency.v1.AgencyService.ListEventFlowSteps:input_type -> codevaldagency.v1.ListEventFlowStepsRequest
+	8,  // 61: codevaldagency.v1.AgencyService.SetAgencyDetails:output_type -> codevaldagency.v1.Agency
+	8,  // 62: codevaldagency.v1.AgencyService.GetAgency:output_type -> codevaldagency.v1.Agency
+	11, // 63: codevaldagency.v1.AgencyService.PublishAgency:output_type -> codevaldagency.v1.AgencyPublication
+	11, // 64: codevaldagency.v1.AgencyService.GetPublication:output_type -> codevaldagency.v1.AgencyPublication
+	15, // 65: codevaldagency.v1.AgencyService.ListPublications:output_type -> codevaldagency.v1.ListPublicationsResponse
+	11, // 66: codevaldagency.v1.AgencyService.UpdatePublicationStatus:output_type -> codevaldagency.v1.AgencyPublication
+	18, // 67: codevaldagency.v1.AgencyService.GetGoals:output_type -> codevaldagency.v1.GetGoalsResponse
+	20, // 68: codevaldagency.v1.AgencyService.GetWorkflows:output_type -> codevaldagency.v1.GetWorkflowsResponse
+	22, // 69: codevaldagency.v1.AgencyService.GetConfiguredRoles:output_type -> codevaldagency.v1.GetConfiguredRolesResponse
+	24, // 70: codevaldagency.v1.AgencyService.GetWorkItems:output_type -> codevaldagency.v1.GetWorkItemsResponse
+	25, // 71: codevaldagency.v1.AgencyService.CreateDraft:output_type -> codevaldagency.v1.AgencyDraft
+	25, // 72: codevaldagency.v1.AgencyService.GetDraft:output_type -> codevaldagency.v1.AgencyDraft
+	29, // 73: codevaldagency.v1.AgencyService.ListDrafts:output_type -> codevaldagency.v1.ListDraftsResponse
+	25, // 74: codevaldagency.v1.AgencyService.UpdateDraftDescription:output_type -> codevaldagency.v1.AgencyDraft
+	8,  // 75: codevaldagency.v1.AgencyService.PromoteDraft:output_type -> codevaldagency.v1.Agency
+	25, // 76: codevaldagency.v1.AgencyService.ArchiveDraft:output_type -> codevaldagency.v1.AgencyDraft
+	57, // 77: codevaldagency.v1.AgencyService.ImportDraft:output_type -> codevaldagency.v1.ImportDraftResponse
+	33, // 78: codevaldagency.v1.AgencyService.CreateWorkPlan:output_type -> codevaldagency.v1.WorkPlan
+	33, // 79: codevaldagency.v1.AgencyService.GetWorkPlan:output_type -> codevaldagency.v1.WorkPlan
+	42, // 80: codevaldagency.v1.AgencyService.ListWorkPlans:output_type -> codevaldagency.v1.ListWorkPlansResponse
+	33, // 81: codevaldagency.v1.AgencyService.UpdateWorkPlan:output_type -> codevaldagency.v1.WorkPlan
+	59, // 82: codevaldagency.v1.AgencyService.DeleteWorkPlan:output_type -> google.protobuf.Empty
+	37, // 83: codevaldagency.v1.AgencyService.AddContextSource:output_type -> codevaldagency.v1.ContextSource
+	47, // 84: codevaldagency.v1.AgencyService.ListContextSources:output_type -> codevaldagency.v1.ListContextSourcesResponse
+	59, // 85: codevaldagency.v1.AgencyService.RemoveContextSource:output_type -> google.protobuf.Empty
+	55, // 86: codevaldagency.v1.AgencyService.MatchWorkPlans:output_type -> codevaldagency.v1.MatchWorkPlansResponse
+	51, // 87: codevaldagency.v1.AgencyService.LookupFlowStep:output_type -> codevaldagency.v1.LookupFlowStepResponse
+	53, // 88: codevaldagency.v1.AgencyService.ListEventFlowSteps:output_type -> codevaldagency.v1.ListEventFlowStepsResponse
+	61, // [61:89] is the sub-list for method output_type
+	33, // [33:61] is the sub-list for method input_type
+	33, // [33:33] is the sub-list for extension type_name
+	33, // [33:33] is the sub-list for extension extendee
+	0,  // [0:33] is the sub-list for field type_name
 }
 
 func init() { file_codevaldagency_v1_agency_proto_init() }
@@ -3931,7 +4359,7 @@ func file_codevaldagency_v1_agency_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_codevaldagency_v1_agency_proto_rawDesc), len(file_codevaldagency_v1_agency_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   50,
+			NumMessages:   55,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

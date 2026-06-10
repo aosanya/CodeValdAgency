@@ -46,6 +46,8 @@ const (
 	AgencyService_ListContextSources_FullMethodName      = "/codevaldagency.v1.AgencyService/ListContextSources"
 	AgencyService_RemoveContextSource_FullMethodName     = "/codevaldagency.v1.AgencyService/RemoveContextSource"
 	AgencyService_MatchWorkPlans_FullMethodName          = "/codevaldagency.v1.AgencyService/MatchWorkPlans"
+	AgencyService_LookupFlowStep_FullMethodName          = "/codevaldagency.v1.AgencyService/LookupFlowStep"
+	AgencyService_ListEventFlowSteps_FullMethodName      = "/codevaldagency.v1.AgencyService/ListEventFlowSteps"
 )
 
 // AgencyServiceClient is the client API for AgencyService service.
@@ -143,6 +145,14 @@ type AgencyServiceClient interface {
 	// MatchWorkPlans evaluates the topic and payload against all enabled WorkPlans.
 	// Returns matching work plans with their ContextSources, ordered by ordinality.
 	MatchWorkPlans(ctx context.Context, in *MatchWorkPlansRequest, opts ...grpc.CallOption) (*MatchWorkPlansResponse, error)
+	// LookupFlowStep finds a single EventFlowStep in the active publication by
+	// handler_code, (trigger_topic, consumer), or deterministic code.
+	// Error: NOT_FOUND if no step matches.
+	// Error: INVALID_ARGUMENT if none of the lookup keys are populated.
+	LookupFlowStep(ctx context.Context, in *LookupFlowStepRequest, opts ...grpc.CallOption) (*LookupFlowStepResponse, error)
+	// ListEventFlowSteps returns every step in the active publication,
+	// optionally filtered to one workflow.
+	ListEventFlowSteps(ctx context.Context, in *ListEventFlowStepsRequest, opts ...grpc.CallOption) (*ListEventFlowStepsResponse, error)
 }
 
 type agencyServiceClient struct {
@@ -413,6 +423,26 @@ func (c *agencyServiceClient) MatchWorkPlans(ctx context.Context, in *MatchWorkP
 	return out, nil
 }
 
+func (c *agencyServiceClient) LookupFlowStep(ctx context.Context, in *LookupFlowStepRequest, opts ...grpc.CallOption) (*LookupFlowStepResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LookupFlowStepResponse)
+	err := c.cc.Invoke(ctx, AgencyService_LookupFlowStep_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agencyServiceClient) ListEventFlowSteps(ctx context.Context, in *ListEventFlowStepsRequest, opts ...grpc.CallOption) (*ListEventFlowStepsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListEventFlowStepsResponse)
+	err := c.cc.Invoke(ctx, AgencyService_ListEventFlowSteps_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgencyServiceServer is the server API for AgencyService service.
 // All implementations must embed UnimplementedAgencyServiceServer
 // for forward compatibility.
@@ -508,6 +538,14 @@ type AgencyServiceServer interface {
 	// MatchWorkPlans evaluates the topic and payload against all enabled WorkPlans.
 	// Returns matching work plans with their ContextSources, ordered by ordinality.
 	MatchWorkPlans(context.Context, *MatchWorkPlansRequest) (*MatchWorkPlansResponse, error)
+	// LookupFlowStep finds a single EventFlowStep in the active publication by
+	// handler_code, (trigger_topic, consumer), or deterministic code.
+	// Error: NOT_FOUND if no step matches.
+	// Error: INVALID_ARGUMENT if none of the lookup keys are populated.
+	LookupFlowStep(context.Context, *LookupFlowStepRequest) (*LookupFlowStepResponse, error)
+	// ListEventFlowSteps returns every step in the active publication,
+	// optionally filtered to one workflow.
+	ListEventFlowSteps(context.Context, *ListEventFlowStepsRequest) (*ListEventFlowStepsResponse, error)
 	mustEmbedUnimplementedAgencyServiceServer()
 }
 
@@ -595,6 +633,12 @@ func (UnimplementedAgencyServiceServer) RemoveContextSource(context.Context, *Re
 }
 func (UnimplementedAgencyServiceServer) MatchWorkPlans(context.Context, *MatchWorkPlansRequest) (*MatchWorkPlansResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MatchWorkPlans not implemented")
+}
+func (UnimplementedAgencyServiceServer) LookupFlowStep(context.Context, *LookupFlowStepRequest) (*LookupFlowStepResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LookupFlowStep not implemented")
+}
+func (UnimplementedAgencyServiceServer) ListEventFlowSteps(context.Context, *ListEventFlowStepsRequest) (*ListEventFlowStepsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListEventFlowSteps not implemented")
 }
 func (UnimplementedAgencyServiceServer) mustEmbedUnimplementedAgencyServiceServer() {}
 func (UnimplementedAgencyServiceServer) testEmbeddedByValue()                       {}
@@ -1085,6 +1129,42 @@ func _AgencyService_MatchWorkPlans_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgencyService_LookupFlowStep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LookupFlowStepRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).LookupFlowStep(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_LookupFlowStep_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).LookupFlowStep(ctx, req.(*LookupFlowStepRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgencyService_ListEventFlowSteps_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListEventFlowStepsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgencyServiceServer).ListEventFlowSteps(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgencyService_ListEventFlowSteps_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgencyServiceServer).ListEventFlowSteps(ctx, req.(*ListEventFlowStepsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgencyService_ServiceDesc is the grpc.ServiceDesc for AgencyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1195,6 +1275,14 @@ var AgencyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MatchWorkPlans",
 			Handler:    _AgencyService_MatchWorkPlans_Handler,
+		},
+		{
+			MethodName: "LookupFlowStep",
+			Handler:    _AgencyService_LookupFlowStep_Handler,
+		},
+		{
+			MethodName: "ListEventFlowSteps",
+			Handler:    _AgencyService_ListEventFlowSteps_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

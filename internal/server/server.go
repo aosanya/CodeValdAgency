@@ -480,6 +480,53 @@ func (s *Server) MatchWorkPlans(ctx context.Context, req *pb.MatchWorkPlansReque
 	return &pb.MatchWorkPlansResponse{Matches: out}, nil
 }
 
+// LookupFlowStep implements pb.AgencyServiceServer (BUG-20260610-002).
+func (s *Server) LookupFlowStep(ctx context.Context, req *pb.LookupFlowStepRequest) (*pb.LookupFlowStepResponse, error) {
+	step, err := s.mgr.LookupFlowStep(ctx, codevaldagency.EventFlowStepLookup{
+		HandlerCode:  req.GetHandlerCode(),
+		TriggerTopic: req.GetTriggerTopic(),
+		Consumer:     req.GetConsumer(),
+		Code:         req.GetCode(),
+	})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &pb.LookupFlowStepResponse{Step: eventFlowStepToProto(step)}, nil
+}
+
+// ListEventFlowSteps implements pb.AgencyServiceServer (BUG-20260610-002).
+func (s *Server) ListEventFlowSteps(ctx context.Context, req *pb.ListEventFlowStepsRequest) (*pb.ListEventFlowStepsResponse, error) {
+	steps, err := s.mgr.ListEventFlowSteps(ctx, req.GetWorkflowCode())
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	out := make([]*pb.EventFlowStep, len(steps))
+	for i, st := range steps {
+		out[i] = eventFlowStepToProto(st)
+	}
+	return &pb.ListEventFlowStepsResponse{Steps: out}, nil
+}
+
+// eventFlowStepToProto converts a Go EventFlowStep to its proto projection.
+func eventFlowStepToProto(s codevaldagency.EventFlowStep) *pb.EventFlowStep {
+	return &pb.EventFlowStep{
+		Id:                 s.ID,
+		Code:               s.Code,
+		WorkflowCode:       s.WorkflowCode,
+		Step:               s.Step,
+		Name:               s.Name,
+		Description:        s.Description,
+		StepType:           s.StepType,
+		TriggerTopic:       s.TriggerTopic,
+		TriggerPublisher:   s.TriggerPublisher,
+		Consumer:           s.Consumer,
+		HandlerCode:        s.HandlerCode,
+		EmitsTopics:        s.EmitsTopics,
+		OnErrorEmitsTopics: s.OnErrorEmitsTopics,
+		Ordinality:         int32(s.Ordinality),
+	}
+}
+
 // ── WorkPlan domain → proto converters ───────────────────────────────────────
 
 func workPlanToProto(r codevaldagency.WorkPlan) *pb.WorkPlan {

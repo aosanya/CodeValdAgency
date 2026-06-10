@@ -464,6 +464,54 @@ type WorkPlanMatch struct {
 	ContextSources []ContextSource
 }
 
+// EventFlowStep is the runtime projection of one step inside a workflow's
+// event_flows block. Downstream services (CodeValdWork, CodeValdAI, …) consult
+// these via [AgencyManager.LookupFlowStep] to learn what the active publication
+// declares for a given handler — instead of re-parsing the opaque event_flows
+// JSON blob or relying on hardcoded mappings. See BUG-20260610-002.
+type EventFlowStep struct {
+	// ID is the entity ID (server-assigned).
+	ID string
+	// Code is the deterministic "<workflow_code>:<step_number>" identifier.
+	Code string
+	// WorkflowCode denormalises the parent workflow's code for fast filtering.
+	WorkflowCode string
+	// Step is the dotted step number from the source flow file (e.g. "1.1.1.2.1").
+	Step string
+	Name string
+	// Description is the prose explanation from the flow file.
+	Description string
+	// StepType is "start" | "function-call" | "handler" per FLOWS_FORMAT.md.
+	StepType string
+	// TriggerTopic is the Cross topic that fires this step. Empty for "start"
+	// steps (entry points, not triggered).
+	TriggerTopic     string
+	TriggerPublisher string
+	// Consumer is the CodeVald service that runs the step's handler.
+	Consumer string
+	// HandlerCode is the WorkPlan.code that executes this step.
+	HandlerCode string
+	// EmitsTopics is comma-separated list of Cross topics emitted on success.
+	EmitsTopics string
+	// OnErrorEmitsTopics is comma-separated list of Cross topics emitted on error.
+	OnErrorEmitsTopics string
+	Ordinality         int
+}
+
+// EventFlowStepLookup carries the alternate lookup keys for
+// [AgencyManager.LookupFlowStep]. Exactly one shape must be populated:
+//   • HandlerCode — most common; Work resolves "this AgentRun came from
+//     handler X — what step is that?"
+//   • TriggerTopic + Consumer — answers "for an event on topic T routed to
+//     service S, which step runs?"
+//   • Code — deterministic "<workflow>:<step>" identifier (admin / internal).
+type EventFlowStepLookup struct {
+	HandlerCode  string
+	TriggerTopic string
+	Consumer     string
+	Code         string
+}
+
 // CreateWorkPlanRequest carries the fields for creating a new [WorkPlan].
 type CreateWorkPlanRequest struct {
 	// Name is a human-readable label for the work plan.

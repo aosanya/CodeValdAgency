@@ -165,6 +165,18 @@ type AgencyManager interface {
 	// matching work plans with their linked [ContextSource] entities, ordered by
 	// WorkPlan.Ordinality ascending.
 	MatchWorkPlans(ctx context.Context, topic, payload string) ([]WorkPlanMatch, error)
+
+	// LookupFlowStep finds a single live [EventFlowStep] in the active publication
+	// by one of: handler_code, (trigger_topic, consumer), or deterministic code
+	// ("<workflow>:<step>"). Exactly one shape must be populated; the lookup keys
+	// are alternates used by different callers (Work consults by handler_code;
+	// dispatchers by trigger_topic+consumer; admin tooling by code).
+	// Returns [ErrEventFlowStepNotFound] if no step matches.
+	LookupFlowStep(ctx context.Context, lookup EventFlowStepLookup) (EventFlowStep, error)
+
+	// ListEventFlowSteps returns every live [EventFlowStep] in the active
+	// publication, optionally filtered to one workflow by code (empty = all).
+	ListEventFlowSteps(ctx context.Context, workflowCode string) ([]EventFlowStep, error)
 }
 
 // AgencySchemaManager manages schema versions for the Agency entity graph.

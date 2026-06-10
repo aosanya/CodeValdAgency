@@ -53,6 +53,11 @@ type mockManager struct {
 	getWorkPlanErr         error
 	matchWorkPlansResult   []codevaldagency.WorkPlanMatch
 	matchWorkPlansErr      error
+
+	lookupFlowStepResult     codevaldagency.EventFlowStep
+	lookupFlowStepErr        error
+	listEventFlowStepsResult []codevaldagency.EventFlowStep
+	listEventFlowStepsErr    error
 }
 
 func (m *mockManager) SetAgencyDetails(_ context.Context, _ string) (codevaldagency.Agency, error) {
@@ -131,6 +136,12 @@ func (m *mockManager) RemoveContextSource(_ context.Context, _, _ string) error 
 }
 func (m *mockManager) MatchWorkPlans(_ context.Context, _, _ string) ([]codevaldagency.WorkPlanMatch, error) {
 	return m.matchWorkPlansResult, m.matchWorkPlansErr
+}
+func (m *mockManager) LookupFlowStep(_ context.Context, _ codevaldagency.EventFlowStepLookup) (codevaldagency.EventFlowStep, error) {
+	return m.lookupFlowStepResult, m.lookupFlowStepErr
+}
+func (m *mockManager) ListEventFlowSteps(_ context.Context, _ string) ([]codevaldagency.EventFlowStep, error) {
+	return m.listEventFlowStepsResult, m.listEventFlowStepsErr
 }
 func (m *mockManager) GetWorkItems(_ context.Context) ([]codevaldagency.WorkItem, error) {
 	return nil, nil

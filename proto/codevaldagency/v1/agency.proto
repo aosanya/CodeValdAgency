@@ -440,6 +440,82 @@ message RemoveContextSourceRequest {
   string source_id    = 2;
 }
 
+// ── EventFlowStep messages (BUG-20260610-002) ───────────────────────────────
+
+// EventFlowStep is the runtime projection of one step inside a workflow's
+// event_flows block. Downstream services consult these to learn what the
+// active publication declares for a given handler — instead of re-parsing
+// the opaque event_flows JSON blob or relying on hardcoded mappings.
+message EventFlowStep {
+  // entity ID (server-assigned, stable across re-imports of the same step).
+  string id            = 1;
+  // code is the deterministic "<workflow_code>:<step_number>" identifier,
+  // e.g. "planning:1.1.1.2.1".
+  string code          = 2;
+  // workflow_code denormalises the parent workflow's code for fast filtering.
+  string workflow_code = 3;
+  // step is the dotted step number from the source flow file (e.g. "1.1.1.2.1").
+  string step          = 4;
+  string name          = 5;
+  string description   = 6;
+  // step_type is "start" | "function-call" | "handler" per FLOWS_FORMAT.md.
+  string step_type     = 7;
+  // trigger_topic is the Cross topic that fires this step. Empty for "start"
+  // steps (entry points, not triggered).
+  string trigger_topic     = 8;
+  string trigger_publisher = 9;
+  // consumer is the CodeVald service that runs the step's handler
+  // (e.g. "codevaldai", "codevaldwork", "codevaldfunctions").
+  string consumer      = 10;
+  // handler_code is the WorkPlan.code that executes the step — the lookup key
+  // Work uses to ask "what does the active publication declare for the step
+  // that produced this AgentRun?"
+  string handler_code  = 11;
+  // emits_topics is comma-separated list of Cross topics this step publishes
+  // on success.
+  string emits_topics  = 12;
+  // on_error_emits_topics is comma-separated list of Cross topics emitted
+  // on error.
+  string on_error_emits_topics = 13;
+  int32  ordinality    = 14;
+}
+
+// LookupFlowStepRequest finds a step in the active publication.
+//
+// Exactly one of {handler_code, trigger_topic+consumer, code} must be set —
+// they are alternate ways to identify the step, used by different callers:
+//   • handler_code is the most common: Work resolves "this AgentRun came from
+//     handler X — what step is that?"
+//   • trigger_topic+consumer answers "for an event on topic T routed to
+//     service S, which step runs?"
+//   • code is the deterministic "<workflow>:<step>" identifier, used by
+//     internal/admin callers.
+//
+// Returns NOT_FOUND if no matching step exists in the active publication.
+message LookupFlowStepRequest {
+  string handler_code  = 1;
+  string trigger_topic = 2;
+  string consumer      = 3;
+  string code          = 4;
+}
+
+// LookupFlowStepResponse returns the matched step.
+message LookupFlowStepResponse {
+  EventFlowStep step = 1;
+}
+
+// ListEventFlowStepsRequest returns every step in the active publication,
+// optionally filtered to one workflow.
+message ListEventFlowStepsRequest {
+  // workflow_code optionally filters to a single workflow (e.g. "planning").
+  // Empty matches all workflows.
+  string workflow_code = 1;
+}
+
+message ListEventFlowStepsResponse {
+  repeated EventFlowStep steps = 1;
+}
+
 // MatchWorkPlansRequest carries the Cross event topic and raw JSON payload to match.
 message MatchWorkPlansRequest {
   // topic is the Cross event topic, e.g. "work.task.status.changed".
@@ -602,4 +678,16 @@ service AgencyService {
   // MatchWorkPlans evaluates the topic and payload against all enabled WorkPlans.
   // Returns matching work plans with their ContextSources, ordered by ordinality.
   rpc MatchWorkPlans(MatchWorkPlansRequest) returns (MatchWorkPlansResponse);
+
+  // ── EventFlowStep RPCs (BUG-20260610-002) ─────────────────────────────────
+
+  // LookupFlowStep finds a single EventFlowStep in the active publication by
+  // handler_code, (trigger_topic, consumer), or deterministic code.
+  // Error: NOT_FOUND if no step matches.
+  // Error: INVALID_ARGUMENT if none of the lookup keys are populated.
+  rpc LookupFlowStep(LookupFlowStepRequest) returns (LookupFlowStepResponse);
+
+  // ListEventFlowSteps returns every step in the active publication,
+  // optionally filtered to one workflow.
+  rpc ListEventFlowSteps(ListEventFlowStepsRequest) returns (ListEventFlowStepsResponse);
 }

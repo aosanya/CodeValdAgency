@@ -37,6 +37,10 @@ func toGRPCError(err error) error {
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, codevaldagency.ErrInvalidRegex):
 		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, codevaldagency.ErrEventFlowStepNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, codevaldagency.ErrInvalidLookup):
+		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, codevaldagency.ErrNoChangesDetected):
 		return status.Error(codes.AlreadyExists, err.Error())
 	default:

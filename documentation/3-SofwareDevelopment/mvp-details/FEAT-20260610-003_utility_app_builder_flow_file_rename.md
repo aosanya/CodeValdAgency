@@ -2,7 +2,7 @@
 
 > **Architecture:** see [architecture-flows.md § 8.2 Caller-Side Bundling Convention](../../2-SoftwareDesignAndArchitecture/architecture-flows.md).
 
-**Status:** 📋 Not Started
+**Status:** 🚀 In Progress
 **Severity:** Medium — until this lands, no per-workflow `event_flows` reach the live utility-app-builder agency; the bundler reports 0 flows bundled and 1 orphan on every `/dev-reimport-agency` run.
 **Owner:** CodeValdAgency (convention owner) — data lives in `CodeValdImplementations/Agencies/utility-app-builder/`
 **Estimated effort:** ~30 minutes (rename + reimport + verify)

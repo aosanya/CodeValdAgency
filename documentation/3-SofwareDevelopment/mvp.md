@@ -61,7 +61,7 @@ The MVP delivers:
 | [FEAT-20260609-003](mvp-details/FEAT-20260609-003_auto_draft_on_import.md) | Auto-draft-and-promote on import of a published agency — adds `auto_promote` flag to `ImportDraftRequest` | ✅ Done | ~~FEAT-20260609-002~~ ✅ |
 | [FEAT-20260610-001](mvp-details/FEAT-20260610-001_dev_reimport_agency_bundling.md) | `/dev-reimport-agency` per-workflow flow bundling + per-workflow verification | ✅ Done | ~~FEAT-20260609-002~~ ✅ |
 | [FEAT-20260610-002](mvp-details/FEAT-20260610-002_architecture_doc_refactor.md) | Architecture doc refactor — extract `architecture-models.md`; relocate gRPC + Cross-registration; fix duplicate section numbering | ✅ Done | — |
-| [FEAT-20260610-003](mvp-details/FEAT-20260610-003_utility_app_builder_flow_file_rename.md) | utility-app-builder: rename `flows_planning.json` → `flows_feature-development.json` so the bundler lands the planning flow on a workflow | 📋 Not Started | ~~FEAT-20260609-002~~ ✅, ~~FEAT-20260610-001~~ ✅ |
+| [FEAT-20260610-003](mvp-details/FEAT-20260610-003_utility_app_builder_flow_file_rename.md) | utility-app-builder: rename `flows_planning.json` → `flows_feature-development.json` so the bundler lands the planning flow on a workflow | 🚀 In Progress | ~~FEAT-20260609-002~~ ✅, ~~FEAT-20260610-001~~ ✅ |
 
 ---
 

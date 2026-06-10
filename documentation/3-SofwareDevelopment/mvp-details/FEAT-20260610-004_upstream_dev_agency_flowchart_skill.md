@@ -1,6 +1,6 @@
 # FEAT-20260610-004 — Upstream `dev-agency-flowchart` skill into `CodeValdAgency/.claude/commands/`
 
-**Status:** 📋 Not Started
+**Status:** ✅ Done (2026-06-10, merged `c657aaa`)
 **Severity:** Low — the skill currently works correctly from `/home/vscode/.claude/commands/`; this is a reproducibility / discoverability fix, not a functional gap.
 **Owner:** CodeValdAgency
 **Estimated effort:** ~30 minutes (file move + .gitignore carve-out + verification across services)

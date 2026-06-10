@@ -4,14 +4,14 @@ _Newest items first. Fixed bugs are moved to [`bugs_done.md`](bugs_done.md)._
 
 | Bug ID | Title | Severity | Status | Detail |
 |--------|-------|----------|--------|--------|
-| [BUG-20260609-002](bug-details/BUG-20260609-002_storage_doc_missing_reviewer_role_code.md) | `architecture-storage.md` does not document `DraftDeliverable.reviewer_role_code` | Low | 📋 Open | [detail](bug-details/BUG-20260609-002_storage_doc_missing_reviewer_role_code.md) |
+| [BUG-20260609-002](bug-details/BUG-20260609-002_storage_doc_missing_reviewer_role_code.md) | `architecture-storage.md` does not document `DraftDeliverable.reviewer_role_code` | Low | 🚀 In Progress | [detail](bug-details/BUG-20260609-002_storage_doc_missing_reviewer_role_code.md) |
 
 ---
 
 ## BUG-20260609-002 — `architecture-storage.md` does not document `DraftDeliverable.reviewer_role_code`
 
 **Severity:** Low — minor doc gap
-**Status:** 📋 Open
+**Status:** 🚀 In Progress
 **Detail:** [bug-details/BUG-20260609-002](bug-details/BUG-20260609-002_storage_doc_missing_reviewer_role_code.md)
 
 `DraftDeliverable.reviewer_role_code` is declared in `schema.go` and populated by `import_server.go`, but the storage doc's draft-entity description never mentions it. May be bundled with BUG-20260609-001 into a single doc-sweep pass.

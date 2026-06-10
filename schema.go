@@ -245,6 +245,65 @@ func DefaultAgencySchema() types.Schema {
 				},
 			},
 			{
+				// EventFlowStep is the structured projection of a single step inside a
+				// workflow's event_flows block. One EventFlowStep per `steps[*]` entry
+				// in the per-workflow flow file (e.g. flows_planning.json step 1.1.1.2.1).
+				//
+				// Created by ImportDraft (as DraftEventFlowStep, then promoted) so
+				// downstream services can query the active publication's flow without
+				// re-parsing the opaque JSON blob on Workflow.event_flows. The blob is
+				// preserved on Workflow for round-trip / debugging; this entity is the
+				// queryable form. See BUG-20260610-002.
+				Name:              "EventFlowStep",
+				DisplayName:       "Event Flow Step",
+				StorageCollection: "agency_event_flow_steps",
+				// PathSegment empty — live steps are created by PromoteDraft, not via
+				// direct HTTP CRUD. CRUD routes exist only for DraftEventFlowStep.
+				UniqueKey: []string{"code"},
+				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
+					// code is a deterministic identifier "<workflow_code>:<step_number>"
+					// e.g. "planning:1.1.1.2.1". Required for UniqueKey enforcement so
+					// re-imports update existing steps instead of duplicating.
+					{Name: "code", Type: types.PropertyTypeString, Required: true},
+					// workflow_code denormalises the parent workflow's code for fast
+					// filtering. The belongs_to_workflow edge is the authoritative link.
+					{Name: "workflow_code", Type: types.PropertyTypeString, Required: true},
+					// step is the dotted step number from the source flow file
+					// (e.g. "1.1.1.2.1"). Human-readable, hierarchical.
+					{Name: "step", Type: types.PropertyTypeString, Required: true},
+					{Name: "name", Type: types.PropertyTypeString, Required: true},
+					{Name: "description", Type: types.PropertyTypeString, Required: false},
+					// step_type is "start" | "function-call" | "handler" per the flow
+					// schema (see CodeValdImplementations/Agencies/FLOWS_FORMAT.md).
+					{Name: "step_type", Type: types.PropertyTypeString, Required: false},
+					// trigger_topic is the Cross topic that fires this step. Empty for
+					// "start" steps (which are entry points, not triggered).
+					{Name: "trigger_topic", Type: types.PropertyTypeString, Required: false},
+					{Name: "trigger_publisher", Type: types.PropertyTypeString, Required: false},
+					// consumer is the CodeVald service that runs the step's handler
+					// (e.g. "codevaldai", "codevaldwork", "codevaldfunctions").
+					{Name: "consumer", Type: types.PropertyTypeString, Required: false},
+					// handler_code is the WorkPlan.code that executes the step. This is
+					// the lookup key Work uses to ask "what does the active publication
+					// declare for the step that produced this AgentRun?"
+					{Name: "handler_code", Type: types.PropertyTypeString, Required: false},
+					// emits_topics is a comma-separated list of Cross topics this step
+					// publishes on success.
+					{Name: "emits_topics", Type: types.PropertyTypeString, Required: false},
+					// on_error_emits_topics is a comma-separated list of Cross topics
+					// this step publishes on error.
+					{Name: "on_error_emits_topics", Type: types.PropertyTypeString, Required: false},
+					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: false},
+				},
+				Relationships: []types.RelationshipDefinition{
+					// ToMany=false, Required=true: a step must belong to exactly one Workflow.
+					{Name: "belongs_to_workflow", Label: "Workflow", PathSegment: "workflow", ToType: "Workflow", ToMany: false, Required: true},
+					// ToMany=false, optional: set when this step is a draft copy.
+					{Name: "belongs_to_draft", Label: "Draft", PathSegment: "draft", ToType: "AgencyDraft", ToMany: false},
+				},
+			},
+			{
 				Name:              "WorkItem",
 				DisplayName:       "Work Item",
 				StorageCollection: "agency_work_items",
@@ -487,6 +546,36 @@ func DefaultAgencySchema() types.Schema {
 					// event_flows mirrors the live Workflow property; carried through draft
 					// promotion so per-workflow flow blocks survive draft→promote.
 					{Name: "event_flows", Type: types.PropertyTypeString, Required: false},
+				},
+			},
+			{
+				// DraftEventFlowStep — draft-scoped projection of a flow step. Created
+				// by ImportDraft from each per-workflow flows_<code>.json steps[*],
+				// promoted to EventFlowStep by PromoteDraft. See BUG-20260610-002.
+				Name:              "DraftEventFlowStep",
+				DisplayName:       "Draft Event Flow Step",
+				PathSegment:       "drafts/{draftRefCode}/event-flow-steps",
+				EntityIDParam:     "stepId",
+				StorageCollection: "agency_draft_entities",
+				UniqueKey:         []string{"draft_ref_code", "code"},
+				Properties: []types.PropertyDefinition{
+					{Name: "ref_code", Type: types.PropertyTypeUUID, Required: true},
+					{Name: "code", Type: types.PropertyTypeString, Required: true},
+					{Name: "draft_ref_code", Type: types.PropertyTypeString, Required: true},
+					// draft_workflow_ref_code links to the parent DraftWorkflow.
+					{Name: "draft_workflow_ref_code", Type: types.PropertyTypeString, Required: true},
+					{Name: "workflow_code", Type: types.PropertyTypeString, Required: true},
+					{Name: "step", Type: types.PropertyTypeString, Required: true},
+					{Name: "name", Type: types.PropertyTypeString, Required: true},
+					{Name: "description", Type: types.PropertyTypeString, Required: false},
+					{Name: "step_type", Type: types.PropertyTypeString, Required: false},
+					{Name: "trigger_topic", Type: types.PropertyTypeString, Required: false},
+					{Name: "trigger_publisher", Type: types.PropertyTypeString, Required: false},
+					{Name: "consumer", Type: types.PropertyTypeString, Required: false},
+					{Name: "handler_code", Type: types.PropertyTypeString, Required: false},
+					{Name: "emits_topics", Type: types.PropertyTypeString, Required: false},
+					{Name: "on_error_emits_topics", Type: types.PropertyTypeString, Required: false},
+					{Name: "ordinality", Type: types.PropertyTypeInteger, Required: false},
 				},
 			},
 			{

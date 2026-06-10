@@ -283,11 +283,14 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 		// Per-workflow event_flows (FEAT-20260609-002): caller bundles
 		// flows_<workflow.code>.json into wf.event_flows. Re-marshal to a JSON
 		// string for storage — same pattern as the agency-level event_flows in
-		// importSetDetails.
+		// importSetDetails. The blob is preserved on Workflow for round-trip /
+		// debugging; the per-step entities below are the queryable form.
+		var eventFlowsJSON string
 		if wf.EventFlows != nil {
 			b, merr := json.Marshal(wf.EventFlows)
 			if merr == nil {
-				wfProps["event_flows"] = string(b)
+				eventFlowsJSON = string(b)
+				wfProps["event_flows"] = eventFlowsJSON
 				perWorkflowFlowsSeen++
 			} else {
 				log.Printf("[ImportDraft] %s: workflow %s event_flows marshal failed: %v", agencyID, wf.Code, merr)
@@ -299,6 +302,17 @@ func (s *Server) ImportDraft(ctx context.Context, req *pb.ImportDraftRequest) (*
 			return nil, status.Errorf(codes.Internal, "ImportDraft %s: workflow %s: %v", agencyID, wf.Code, err)
 		}
 		log.Printf("[ImportDraft] %s: workflow %s -> id=%s", agencyID, wf.Code, wfID)
+
+		// Project the event_flows blob into per-step DraftEventFlowStep entities
+		// (BUG-20260610-002). Failures here are logged but non-fatal — the blob
+		// itself is already persisted on the DraftWorkflow above so nothing is lost.
+		if eventFlowsJSON != "" {
+			if stepsUpserted, ferr := s.importEventFlowSteps(ctx, agencyID, draftID, wfID, wf.Code, eventFlowsJSON); ferr != nil {
+				log.Printf("[ImportDraft] %s: workflow %s event_flow_steps projection failed: %v", agencyID, wf.Code, ferr)
+			} else {
+				log.Printf("[ImportDraft] %s: workflow %s -> %d event_flow_steps", agencyID, wf.Code, stepsUpserted)
+			}
+		}
 
 		// Workflow-scoped instructions.
 		for _, inst := range wf.Instructions {

@@ -403,7 +403,7 @@ func (m *agencyManager) PromoteDraft(ctx context.Context, draftID string) (Agenc
 // collectLiveSubEntityIDs returns the entity IDs of all current live Goal,
 // Workflow, WorkItem, and ConfiguredRole entities.
 func (m *agencyManager) collectLiveSubEntityIDs(ctx context.Context) ([]string, error) {
-	typeIDs := []string{"Goal", "Workflow", "WorkItem", "ConfiguredRole"}
+	typeIDs := []string{"Goal", "Workflow", "WorkItem", "ConfiguredRole", "EventFlowStep"}
 	var ids []string
 	for _, typeID := range typeIDs {
 		entities, err := m.dm.ListEntities(ctx, entitygraph.EntityFilter{
@@ -513,6 +513,31 @@ func (m *agencyManager) promoteSubEntities(ctx context.Context, agencyEntityID, 
 			Relationships: rels,
 		}); err != nil {
 			return fmt.Errorf("promote work item %s: %w", dwi.ID, err)
+		}
+	}
+
+	// ── EventFlowSteps (re-map draft_workflow_ref_code → new live WF ID) ────────
+	// Per BUG-20260610-002 — the active publication's per-step entities are
+	// the runtime source of truth downstream services consult.
+	draftSteps, err := listByDraftID("DraftEventFlowStep")
+	if err != nil {
+		return fmt.Errorf("promote event flow steps: %w", err)
+	}
+	for _, ds := range draftSteps {
+		props := copyPropsExcluding(ds.Properties, "draft_ref_code", "draft_workflow_ref_code")
+		var rels []entitygraph.EntityRelationshipRequest
+		if draftWFID := strProp(ds.Properties, "draft_workflow_ref_code"); draftWFID != "" {
+			if liveWFID, ok := draftWFToLiveWF[draftWFID]; ok {
+				rels = append(rels, entitygraph.EntityRelationshipRequest{Name: "belongs_to_workflow", ToID: liveWFID})
+			}
+		}
+		if _, err := m.dm.CreateEntity(ctx, entitygraph.CreateEntityRequest{
+			AgencyID:      m.agencyID,
+			TypeID:        "EventFlowStep",
+			Properties:    props,
+			Relationships: rels,
+		}); err != nil {
+			return fmt.Errorf("promote event flow step %s: %w", ds.ID, err)
 		}
 	}
 	return nil

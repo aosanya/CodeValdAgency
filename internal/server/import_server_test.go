@@ -178,6 +178,130 @@ func TestImportDraft_PerWorkflowEventFlows_OmittedNoProp(t *testing.T) {
 	}
 }
 
+// TestImportDraft_EventFlows_StepsPersisted verifies BUG-20260610-002 Phase 1:
+// when a workflow bundles a per-workflow event_flows block, the importer
+// projects each `steps[*]` entry into a DraftEventFlowStep entity with the
+// declared trigger / consumer / handler / emits_topics flattened into queryable
+// properties. The opaque event_flows blob is still preserved on DraftWorkflow.
+func TestImportDraft_EventFlows_StepsPersisted(t *testing.T) {
+	t.Parallel()
+	mgr := &mockManager{setDetailsResult: codevaldagency.Agency{ID: "uab"}}
+	dm := &importFakeDM{}
+	srv := server.New(mgr, dm, nil)
+
+	body := `{
+	  "agency": {"code": "uab", "name": "Utility App Builder"},
+	  "workflows": [
+	    {
+	      "code": "planning",
+	      "name": "Planning",
+	      "ordinality": 1,
+	      "event_flows": {
+	        "flows": [
+	          {
+	            "name": "planning",
+	            "steps": [
+	              {
+	                "step": "1",
+	                "name": "Task Assigned Entry",
+	                "type": "start",
+	                "emits_topics": ["task.assigned"],
+	                "description": "Workflow entry point."
+	              },
+	              {
+	                "step": "1.1",
+	                "name": "Evaluate task complexity",
+	                "trigger": "task.assigned",
+	                "trigger_publisher": "codevaldwork",
+	                "consumer": "codevaldai",
+	                "action": {
+	                  "handler": "planner-assigned-handler",
+	                  "emits_topics": ["task.request-decompose", "task.request-split"]
+	                },
+	                "on-error": {"emits_topics": ["task.planning-failed"]}
+	              }
+	            ]
+	          }
+	        ]
+	      }
+	    }
+	  ]
+	}`
+
+	_, err := srv.ImportDraft(context.Background(), &pb.ImportDraftRequest{Body: body})
+	if err != nil {
+		t.Fatalf("ImportDraft returned error: %v", err)
+	}
+
+	steps := findStepUpserts(dm.upserts)
+	if len(steps) != 2 {
+		t.Fatalf("expected 2 DraftEventFlowStep upserts, got %d: %+v", len(steps), steps)
+	}
+
+	// Step "1" — start step, no handler, emits at top level.
+	s1 := findStepByCode(steps, "planning:1")
+	if s1 == nil {
+		t.Fatalf("missing DraftEventFlowStep code=planning:1; have %+v", steps)
+	}
+	if s1.Properties["step"] != "1" || s1.Properties["name"] != "Task Assigned Entry" {
+		t.Errorf("step 1 fields wrong: %+v", s1.Properties)
+	}
+	if s1.Properties["step_type"] != "start" {
+		t.Errorf("step 1 step_type: want \"start\", got %v", s1.Properties["step_type"])
+	}
+	if s1.Properties["emits_topics"] != "task.assigned" {
+		t.Errorf("step 1 emits_topics: want \"task.assigned\", got %v", s1.Properties["emits_topics"])
+	}
+
+	// Step "1.1" — handler step, action + on-error blocks flattened.
+	s11 := findStepByCode(steps, "planning:1.1")
+	if s11 == nil {
+		t.Fatalf("missing DraftEventFlowStep code=planning:1.1; have %+v", steps)
+	}
+	if s11.Properties["trigger_topic"] != "task.assigned" {
+		t.Errorf("step 1.1 trigger_topic: want \"task.assigned\", got %v", s11.Properties["trigger_topic"])
+	}
+	if s11.Properties["consumer"] != "codevaldai" {
+		t.Errorf("step 1.1 consumer: want \"codevaldai\", got %v", s11.Properties["consumer"])
+	}
+	if s11.Properties["handler_code"] != "planner-assigned-handler" {
+		t.Errorf("step 1.1 handler_code: want \"planner-assigned-handler\", got %v", s11.Properties["handler_code"])
+	}
+	if s11.Properties["emits_topics"] != "task.request-decompose,task.request-split" {
+		t.Errorf("step 1.1 emits_topics: want comma-joined, got %v", s11.Properties["emits_topics"])
+	}
+	if s11.Properties["on_error_emits_topics"] != "task.planning-failed" {
+		t.Errorf("step 1.1 on_error_emits_topics: want \"task.planning-failed\", got %v", s11.Properties["on_error_emits_topics"])
+	}
+
+	// Workflow still carries the opaque event_flows blob (round-trip preserved).
+	wf := findWorkflowUpsert(dm.upserts, "planning")
+	if wf == nil || wf.Properties["event_flows"] == nil {
+		t.Errorf("opaque event_flows blob should still be persisted on DraftWorkflow; got %+v", wf)
+	}
+}
+
+// findStepUpserts returns every DraftEventFlowStep upsert in chronological order.
+func findStepUpserts(reqs []entitygraph.CreateEntityRequest) []entitygraph.CreateEntityRequest {
+	var out []entitygraph.CreateEntityRequest
+	for _, r := range reqs {
+		if r.TypeID == "DraftEventFlowStep" {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// findStepByCode returns the upsert whose `code` property matches.
+func findStepByCode(reqs []entitygraph.CreateEntityRequest, code string) *entitygraph.CreateEntityRequest {
+	for i, r := range reqs {
+		if r.Properties["code"] == code {
+			return &reqs[i]
+		}
+	}
+	return nil
+}
+
 // promoteCountingMockManager wraps mockManager to count PromoteDraft invocations
 // so the FEAT-20260609-003 tests can assert auto-promote actually fired (or did
 // not) along the import path.

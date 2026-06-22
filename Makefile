@@ -1,4 +1,4 @@
-.PHONY: build build-server run-server restart kill proto test test-arango test-all vet lint clean reset-db
+.PHONY: build build-server run-server restart kill proto test test-arango test-all vet lint clean reset-db serve-templates
 
 export PATH := /usr/local/go/bin:$(PATH)
 
@@ -127,3 +127,15 @@ reset-db:
 		esac; \
 	done; \
 	echo "Done."
+
+# ── Templates ─────────────────────────────────────────────────────────────────
+
+TEMPLATES_DIR := /workspaces/CodeVald-AIProject/dehallu/documentation/2-SoftwareDesignAndArchitecture/templates
+
+## Serve the dehallu UI templates folder over HTTP for local preview.
+## Usage: make serve-templates            # serves on http://localhost:8080
+##        make serve-templates PORT=9000  # override the port
+serve-templates:
+	@PORT=$${PORT:-8080}; \
+	echo "Serving $(TEMPLATES_DIR) at http://localhost:$$PORT ..."; \
+	python3 -m http.server $$PORT --directory "$(TEMPLATES_DIR)"

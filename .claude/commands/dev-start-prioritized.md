@@ -1,5 +1,5 @@
 ---
-description: Pick the next task from prioritization.md, create a Dev- prefixed feature branch in the target repo, and walk through the standard implementation workflow.
+description: Pick the next task from prioritization.md, create a Dev- prefixed feature branch in the target repo, walk through the standard implementation workflow, and run /dev-document-feature before merging back.
 ---
 
 # Start Prioritized Task
@@ -323,6 +323,24 @@ flutter analyze                                        # must show 0 issues
 flutter test                                           # must pass
 dart format --set-exit-if-changed lib/ test/           # must show 0 changes
 ```
+
+### Document the feature — `/dev-document-feature` (MANDATORY, before merge)
+
+Once validation has passed and **before** merging the feature branch back into `main`, run the `/dev-document-feature` skill from the **target repo** to capture the architectural/design footprint of the work just completed.
+
+```bash
+cd {REPO_PATH}
+# still on feature/Dev-{PREFIX}-{NNN}_{description}
+```
+
+Then invoke `/dev-document-feature` (no arguments → document every distinct design-level feature surfaced this session; or pass a short slug if only a subset of the conversation's features belongs to this task).
+
+Why this lands here:
+- The feature branch still holds the in-progress design context (new types, flows, interfaces) — easiest to document while it's fresh.
+- The skill's contradiction sweep against existing `architecture*.md` files should run **before** the merge so any "doc says X, code does Y" findings get resolved on the feature branch alongside the code, not as a follow-up PR.
+- Any doc edits the skill writes must be committed to the **feature branch** (`git add documentation/2-SoftwareDesignAndArchitecture/ && git commit -m "{TASK-ID}: document <feature>"`) so they merge into `main` together with the implementation.
+
+Only after `/dev-document-feature` has completed (including the contradiction resolutions it asks about) and its doc changes are committed to the feature branch may you proceed to the Merge step below. If the skill reports zero new feature material to document (rare — usually a pure refactor / status-only change), state that explicitly to the user and continue.
 
 ### Merge and delete — ALWAYS, in the target repo (MANDATORY)
 
